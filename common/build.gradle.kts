@@ -1,5 +1,3 @@
-import org.jetbrains.compose.compose
-
 plugins {
     kotlin("multiplatform")
     id("org.jetbrains.compose")
@@ -56,6 +54,8 @@ kotlin {
                 implementation("io.ktor:ktor-client-cio:2.3.1")
                 implementation("com.squareup.okio:okio:3.3.0")
                 implementation("org.jmdns:jmdns:3.5.8")
+                api("io.insert-koin:koin-core:3.4.0")
+                api("co.touchlab:kermit:1.1.1")
             }
         }
         val commonTest by getting {
