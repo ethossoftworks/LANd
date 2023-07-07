@@ -1,6 +1,8 @@
 package com.ethossoftworks.land.common
 
+import com.ethossoftworks.land.common.coordinator.AppCoordinator
 import com.ethossoftworks.land.common.interactor.discovery.DiscoveryInteractor
+import com.ethossoftworks.land.common.ui.home.HomeScreenViewInteractor
 import org.koin.core.KoinApplication
 import org.koin.core.context.startKoin
 import org.koin.core.context.stopKoin
@@ -22,5 +24,9 @@ fun initDI(
 }
 
 fun commonModule() = module {
+    single { AppCoordinator() }
+
+    factory { HomeScreenViewInteractor(get(), get()) }
+
     single { DiscoveryInteractor(get()) }
 }

@@ -10,7 +10,6 @@ import com.outsidesource.oskitkmp.lib.Platform
 import com.outsidesource.oskitkmp.lib.current
 import com.outsidesource.oskitkmp.outcome.Outcome
 import kotlinx.coroutines.launch
-import okio.internal.commonToUtf8String
 import kotlin.math.roundToInt
 
 data class DiscoveryState(
@@ -33,36 +32,40 @@ class DiscoveryInteractor(
         }
     }
 
-    suspend fun discoverDevices() {
-        discoveryService.observeServices(DISCOVERY_TYPE).collect {
-            when (it) {
-                is NSDServiceEvent.ServiceResolved -> {
-                    if (it.service.iPv4Addresses.firstOrNull() == null) return@collect
-                    if (it.service.name == state.broadcastingDeviceName) return@collect
+    fun startDeviceDiscovery() {
+        interactorScope.launch {
+            discoveryService.observeServices(DISCOVERY_TYPE).collect {
+                when (it) {
+                    is NSDServiceEvent.ServiceResolved -> {
+                        if (it.service.iPv4Addresses.firstOrNull() == null) return@collect
+                        if (it.service.name == state.broadcastingDeviceName) return@collect
 
-                    update { state ->
-                        state.copy(
-                            discoveredDevices = state.discoveredDevices.toMutableMap().apply {
-                                put(it.service.name, it.service.toDevice())
-                            }
-                        )
+                        update { state ->
+                            state.copy(
+                                discoveredDevices = state.discoveredDevices.toMutableMap().apply {
+                                    put(it.service.name, it.service.toDevice())
+                                }
+                            )
+                        }
                     }
-                }
-                is NSDServiceEvent.ServiceRemoved -> {
-                    update { state ->
-                        state.copy(
-                            discoveredDevices = state.discoveredDevices.toMutableMap().apply {
-                                remove(it.service.name)
-                            }
-                        )
+
+                    is NSDServiceEvent.ServiceRemoved -> {
+                        update { state ->
+                            state.copy(
+                                discoveredDevices = state.discoveredDevices.toMutableMap().apply {
+                                    remove(it.service.name)
+                                }
+                            )
+                        }
                     }
+
+                    else -> {}
                 }
-                else -> {}
             }
         }
     }
 
-    suspend fun startBroadcasting(): Outcome<Unit, Exception> {
+    suspend fun startServiceBroadcasting(): Outcome<Unit, Exception> {
         val name = (Math.random() * 10_000).roundToInt().toString()
 
         update { state -> state.copy(broadcastingDeviceName = name) }
@@ -83,7 +86,7 @@ class DiscoveryInteractor(
         return outcome
     }
 
-    suspend fun stopBroadcasting() {
+    suspend fun stopServiceBroadcasting() {
         val broadcastingDeviceName = state.broadcastingDeviceName ?: return
 
         update { state -> state.copy(broadcastingDeviceName = null) }
