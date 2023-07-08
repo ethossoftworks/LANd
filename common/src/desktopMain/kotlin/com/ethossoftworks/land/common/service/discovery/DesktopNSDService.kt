@@ -13,6 +13,10 @@ import java.net.DatagramSocket
 import java.net.InetAddress
 import javax.jmdns.*
 
+enum class DesktopNSDError {
+    NotProperlyInitialized
+}
+
 class DesktopNSDService : INSDService {
     private var jmDNS: JmDNS? = null
     private val isInitialized = CompletableDeferred<Unit>()
@@ -39,10 +43,16 @@ class DesktopNSDService : INSDService {
         }
     }
 
-    override suspend fun unregisterService(type: String, name: String, port: Int) {
+    override suspend fun unregisterService(type: String, name: String, port: Int): Outcome<Unit, Any> {
         isInitialized.join()
-        val info = ServiceInfo.create(type, name, port, "")
-        jmDNS?.unregisterService(info)
+        val jmDNS = jmDNS ?: return Outcome.Error(DesktopNSDError.NotProperlyInitialized)
+        return try {
+            val info = ServiceInfo.create(type, name, port, "")
+            jmDNS.unregisterService(info)
+            Outcome.Ok(Unit)
+        } catch (e: Exception) {
+            Outcome.Error(e)
+        }
     }
 
     override suspend fun observeServiceTypes(): Flow<NSDServiceType> = callbackFlow {

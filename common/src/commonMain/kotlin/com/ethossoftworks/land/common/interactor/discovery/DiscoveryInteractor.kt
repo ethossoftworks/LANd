@@ -65,7 +65,7 @@ class DiscoveryInteractor(
         }
     }
 
-    suspend fun startServiceBroadcasting(): Outcome<Unit, Exception> {
+    suspend fun startServiceBroadcasting(): Outcome<Unit, Any> {
         val name = (Math.random() * 10_000).roundToInt().toString()
 
         update { state -> state.copy(broadcastingDeviceName = name) }
@@ -86,8 +86,8 @@ class DiscoveryInteractor(
         return outcome
     }
 
-    suspend fun stopServiceBroadcasting() {
-        val broadcastingDeviceName = state.broadcastingDeviceName ?: return
+    suspend fun stopServiceBroadcasting(): Outcome<Unit, Any> {
+        val broadcastingDeviceName = state.broadcastingDeviceName ?: return Outcome.Error(Unit)
 
         update { state -> state.copy(broadcastingDeviceName = null) }
 

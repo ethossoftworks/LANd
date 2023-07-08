@@ -2,12 +2,14 @@
 
 package com.ethossoftworks.land.common.ui.home
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.outsidesource.oskitcompose.interactor.collectAsState
 import com.outsidesource.oskitcompose.lib.rememberInjectForRoute
@@ -24,7 +26,13 @@ fun HomeScreen(
 
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         for (device in state.discoveredDevices.values) {
-            Text(device.name)
+            Text(
+                modifier = Modifier
+                    .clickable {
+
+                    },
+                text = device.name
+            )
         }
     }
 }

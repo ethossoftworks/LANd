@@ -14,6 +14,9 @@ repositories {
 dependencies {
     implementation(project(":common"))
     implementation("androidx.activity:activity-compose:1.7.2")
+    implementation("com.outsidesource:oskit-kmp:3.1.0")
+    implementation("com.outsidesource:oskit-compose:2.1.0")
+    implementation("io.insert-koin:koin-core:3.4.0")
 }
 
 android {

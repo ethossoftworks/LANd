@@ -10,8 +10,8 @@ interface INSDService {
         name: String,
         port: Int,
         properties: Map<String, Any> = emptyMap()
-    ): Outcome<Unit, Exception>
-    suspend fun unregisterService(type: String, name: String, port: Int)
+    ): Outcome<Unit, Any>
+    suspend fun unregisterService(type: String, name: String, port: Int): Outcome<Unit, Any>
     suspend fun observeServiceTypes(): Flow<NSDServiceType>
     suspend fun observeServices(type: String): Flow<NSDServiceEvent>
 }
