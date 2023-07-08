@@ -6,7 +6,7 @@ plugins {
 }
 
 group = "com.ethossoftworks"
-version = "1.0-SNAPSHOT"
+version = "0.1.0"
 
 
 kotlin {
@@ -31,6 +31,7 @@ compose.desktop {
         nativeDistributions {
             targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.Deb)
             packageName = "LANd"
+            vendor = "Ethos Softworks"
             packageVersion = "1.0.0"
         }
     }
