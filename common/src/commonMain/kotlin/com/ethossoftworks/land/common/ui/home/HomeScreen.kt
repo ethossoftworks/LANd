@@ -27,6 +27,7 @@ import com.outsidesource.oskitcompose.interactor.collectAsState
 import com.outsidesource.oskitcompose.lib.rememberInjectForRoute
 import com.outsidesource.oskitcompose.systemui.KMPWindowInsets
 import com.outsidesource.oskitcompose.systemui.StatusBarIconColorEffect
+import com.outsidesource.oskitcompose.systemui.verticalInsets
 
 
 @Composable
@@ -42,7 +43,7 @@ fun HomeScreen(
         modifier = Modifier
             .background(color = Color.White)
             .padding(bottom = 16.dp)
-            .windowInsetsPadding(KMPWindowInsets.systemBars)
+            .windowInsetsPadding(KMPWindowInsets.verticalInsets)
     ) {
         val ringSpacing = maxHeight / 6f
         val sizeAnim = remember { Animatable(0f) }

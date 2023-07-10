@@ -3,12 +3,8 @@ package com.ethossoftworks.land.common.ui
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.window.WindowDraggableArea
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.ApplicationScope
 import com.outsidesource.oskitcompose.lib.rememberInject
@@ -50,7 +46,9 @@ fun ApplicationScope.DesktopApp(
         }
 
         CompositionLocalProvider(
-            LocalKMPWindowInsets provides KMPWindowInsetsHolder(statusBarSize = DpSize(0.dp, 24.dp))
+            LocalKMPWindowInsets provides remember {
+                if (Platform.current == Platform.MacOS) KMPWindowInsetsHolder(top = 24.dp) else null
+            }
         ) {
             App()
         }
