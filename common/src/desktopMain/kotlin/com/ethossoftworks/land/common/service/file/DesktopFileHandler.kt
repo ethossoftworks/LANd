@@ -16,7 +16,7 @@ actual sealed class FileHandlerContext {
 class DesktopFileHandler : IFileHandler {
     private var window: ComposeWindow? = null
 
-    override fun defaultWriteFolder(): String? {
+    override fun defaultSaveFolder(): String? {
         return "${System.getProperty("user.home")}/Desktop"
     }
 

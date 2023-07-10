@@ -1,5 +1,6 @@
 package com.ethossoftworks.land.common.interactor.discovery
 
+import com.ethossoftworks.land.common.interactor.preferences.AppPreferencesInteractor
 import com.ethossoftworks.land.common.model.device.Device
 import com.ethossoftworks.land.common.model.device.DevicePlatform
 import com.ethossoftworks.land.common.service.discovery.INSDService
@@ -10,7 +11,6 @@ import com.outsidesource.oskitkmp.lib.Platform
 import com.outsidesource.oskitkmp.lib.current
 import com.outsidesource.oskitkmp.outcome.Outcome
 import kotlinx.coroutines.launch
-import kotlin.math.roundToInt
 
 data class DiscoveryState(
     val discoveredDevices: Map<String, Device> = emptyMap(),
@@ -24,7 +24,7 @@ private const val DISCOVERY_PORT = 7788
 class DiscoveryInteractor(
     private val discoveryService: INSDService,
 ): Interactor<DiscoveryState>(
-    initialState = DiscoveryState()
+    initialState = DiscoveryState(),
 ) {
     init {
         interactorScope.launch {
@@ -65,9 +65,7 @@ class DiscoveryInteractor(
         }
     }
 
-    suspend fun startServiceBroadcasting(): Outcome<Unit, Any> {
-        val name = (Math.random() * 10_000).roundToInt().toString()
-
+    suspend fun startServiceBroadcasting(name: String): Outcome<Unit, Any> {
         update { state -> state.copy(broadcastingDeviceName = name) }
 
         val outcome = discoveryService.registerService(

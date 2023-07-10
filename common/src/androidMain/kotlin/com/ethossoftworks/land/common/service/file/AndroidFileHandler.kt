@@ -39,7 +39,7 @@ class AndroidFileHandler: IFileHandler {
     private var openFolderResultLauncher: ActivityResultLauncher<Uri?>? = null
     private val openFolderResultFlow = MutableSharedFlow<Uri?>(1, onBufferOverflow = BufferOverflow.DROP_OLDEST)
 
-    override fun defaultWriteFolder(): String? {
+    override fun defaultSaveFolder(): String? {
         return null
     }
 

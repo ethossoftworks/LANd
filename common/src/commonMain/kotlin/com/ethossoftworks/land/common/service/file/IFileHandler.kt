@@ -13,7 +13,7 @@ enum class FileHandlerError {
 }
 
 interface IFileHandler {
-    fun defaultWriteFolder(): String?
+    fun defaultSaveFolder(): String?
     fun init(fileHandlerContext: FileHandlerContext)
     suspend fun selectFolder(): Outcome<String?, Any>
     suspend fun selectFile(): Outcome<String?, Any>
