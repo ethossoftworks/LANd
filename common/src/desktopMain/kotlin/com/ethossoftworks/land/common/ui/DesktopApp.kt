@@ -7,6 +7,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.ApplicationScope
+import com.ethossoftworks.land.common.ui.app.App
 import com.outsidesource.oskitcompose.lib.rememberInject
 import com.outsidesource.oskitcompose.systemui.KMPWindowInsetsHolder
 import com.outsidesource.oskitcompose.systemui.LocalKMPWindowInsets

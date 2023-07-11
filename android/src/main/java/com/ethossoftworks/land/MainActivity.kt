@@ -5,14 +5,10 @@ package com.ethossoftworks.land
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.appcompat.app.AppCompatActivity
-import androidx.compose.foundation.layout.Column
-import androidx.compose.runtime.DisposableEffect
 import androidx.core.view.WindowCompat
 import com.ethossoftworks.land.common.service.file.FileHandlerContext
 import com.ethossoftworks.land.common.service.file.IFileHandler
-import com.ethossoftworks.land.common.ui.App
-import com.outsidesource.oskitcompose.lib.rememberInject
+import com.ethossoftworks.land.common.ui.app.App
 import org.koin.java.KoinJavaComponent.inject
 
 class MainActivity : ComponentActivity() {
