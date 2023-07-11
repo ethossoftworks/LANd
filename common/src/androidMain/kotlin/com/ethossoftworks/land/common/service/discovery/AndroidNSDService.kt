@@ -15,6 +15,10 @@ import java.net.DatagramSocket
 import java.net.InetAddress
 import javax.jmdns.*
 
+enum class AndroidNSDError {
+    NotProperlyInitialized
+}
+
 class AndroidNSDService(
     applicationContext: Context
 ) : INSDService {
@@ -45,10 +49,16 @@ class AndroidNSDService(
         }
     }
 
-    override suspend fun unregisterService(type: String, name: String, port: Int) {
+    override suspend fun unregisterService(type: String, name: String, port: Int): Outcome<Unit, Any> {
         isInitialized.join()
-        val info = ServiceInfo.create(type, name, port, "")
-        jmDNS?.unregisterService(info)
+        val jmDNS = jmDNS ?: return Outcome.Error(AndroidNSDError.NotProperlyInitialized)
+        return try {
+            val info = ServiceInfo.create(type, name, port, "")
+            jmDNS.unregisterService(info)
+            Outcome.Ok(Unit)
+        } catch (e: Exception) {
+            Outcome.Error(e)
+        }
     }
 
     override suspend fun observeServiceTypes(): Flow<NSDServiceType> = callbackFlow {
