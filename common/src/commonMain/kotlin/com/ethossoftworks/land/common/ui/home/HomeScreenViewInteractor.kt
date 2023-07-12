@@ -6,6 +6,7 @@ import com.ethossoftworks.land.common.interactor.filetransfer.FileTransferIntera
 import com.ethossoftworks.land.common.interactor.preferences.AppPreferencesInteractor
 import com.ethossoftworks.land.common.model.device.Device
 import com.ethossoftworks.land.common.service.file.IFileHandler
+import com.ethossoftworks.land.common.service.filetransfer.FileTransfer
 import com.outsidesource.oskitkmp.interactor.Interactor
 import com.outsidesource.oskitkmp.outcome.Outcome
 import kotlinx.coroutines.launch
@@ -65,12 +66,21 @@ class HomeScreenViewInteractor(
 
             // TODO: Handle providing the user details for early returns
             val file = fileOutcome.value ?: return@launch
-            val saveFolder = appPreferencesInteractor.state.saveFolder ?: return@launch
 
-            val metadataOutcome = fileHandler.readFileMetadata(saveFolder, file)
+            val metadataOutcome = fileHandler.readFileMetadata(file)
             if (metadataOutcome !is Outcome.Ok) return@launch
 
-//            fileTransferInteractor.sendFile(device)
+            val sourceOutcome = fileHandler.openFileToRead(file)
+            if (sourceOutcome !is Outcome.Ok) return@launch
+
+            val fileTransfer = FileTransfer(
+                senderName = appPreferencesInteractor.state.displayName,
+                name = metadataOutcome.value.name,
+                length = metadataOutcome.value.length,
+                source = sourceOutcome.value,
+            )
+
+            fileTransferInteractor.sendFile(device, fileTransfer)
         }
     }
 }

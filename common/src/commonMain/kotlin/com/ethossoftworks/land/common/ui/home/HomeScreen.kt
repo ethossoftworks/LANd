@@ -188,9 +188,10 @@ private fun DiscoveredDevice(
                 .background(
                     Brush.linearGradient(
                         colors = listOf(
-                            Color(0xFFEEEEEE),
-//                    Color(0xFFd5dae3),
-                            Color(0x22155fd4)
+//                            Color(0xFFEEEEEE),
+//                            Color(0x22155fd4),
+                            Color(0xCC155fd4),
+                            Color(0xCC6198ef),
                         )
                     )
                 ),

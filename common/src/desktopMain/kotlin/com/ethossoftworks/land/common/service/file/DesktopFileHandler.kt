@@ -37,7 +37,7 @@ class DesktopFileHandler : IFileHandler {
             val window = this.window ?: return Outcome.Error(FileHandlerError.NotInitialized)
             val dialog = FileDialog(window, "Select File", FileDialog.LOAD)
             dialog.isVisible = true
-            Outcome.Ok(dialog.file)
+            Outcome.Ok("${dialog.directory ?: ""}${dialog.file}")
         } catch (e: Exception) {
             Outcome.Error(e)
         }
@@ -51,20 +51,20 @@ class DesktopFileHandler : IFileHandler {
         }
     }
 
-    override suspend fun openFileToRead(folder: String, name: String): Outcome<Source, Any> {
+    override suspend fun openFileToRead(path: String): Outcome<Source, Any> {
         return try {
-            Outcome.Ok(FileSystem.SYSTEM.source("$folder/$name".toPath()))
+            Outcome.Ok(FileSystem.SYSTEM.source(path.toPath()))
         } catch (e: Exception) {
             Outcome.Error(e)
         }
     }
 
-    override suspend fun readFileMetadata(folder: String, name: String): Outcome<FileMetadata, Any> {
+    override suspend fun readFileMetadata(path: String): Outcome<FileMetadata, Any> {
         return try {
-            val path = "${folder}/${name}".toPath()
-            val metadata = FileSystem.SYSTEM.metadata(path)
+            val okioPath = path.toPath()
+            val metadata = FileSystem.SYSTEM.metadata(okioPath)
             val length = metadata.size ?: return Outcome.Error(FileHandlerError.NoMetaData)
-            Outcome.Ok(FileMetadata(length = length))
+            Outcome.Ok(FileMetadata(name = okioPath.name, length = length))
         } catch (e: Exception) {
             Outcome.Error(e)
         }

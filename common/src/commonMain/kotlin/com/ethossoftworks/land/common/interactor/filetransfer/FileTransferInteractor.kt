@@ -6,8 +6,6 @@ import com.ethossoftworks.land.common.service.filetransfer.FileTransferServerEve
 import com.ethossoftworks.land.common.service.filetransfer.IFileTransferService
 import com.outsidesource.oskitkmp.interactor.Interactor
 import kotlinx.coroutines.launch
-import okio.FileSystem
-import okio.Path.Companion.toPath
 
 data class FileTransferState(
     val lastServerEvent: FileTransferServerEvent = FileTransferServerEvent.Idle,

@@ -20,24 +20,24 @@ sealed class FileTransferServerEvent {
     object ServerStarted: FileTransferServerEvent()
     data class ServerStopped(val error: Any?): FileTransferServerEvent()
     data class TransferRequested(
-        val requestId: Int,
+        val requestId: Short,
         val senderName: String,
         val fileName: String,
         val length: Long,
-    )
+    ): FileTransferServerEvent()
     data class TransferRejected(
-        val requestId: Int,
+        val requestId: Short,
         val reason: FileTransferRejectReason,
-    )
+    ): FileTransferServerEvent()
     data class TransferProgress(
-        val requestId: Int,
+        val requestId: Short,
         val bytesSent: Long,
         val totalBytes: Long,
     ): FileTransferServerEvent()
     data class TransferStopped(
-        val requestId: Int,
+        val requestId: Short,
         val reason: FileTransferStopReason
-    )
+    ): FileTransferServerEvent()
     data class TransferComplete(val requestId: Int)
 }
 
@@ -54,11 +54,11 @@ enum class FileTransferRejectReason {
 
 sealed class FileTransferProgress {
     data class TransferStopped(
-        val requestId: Int,
+        val requestId: Short,
         val reason: FileTransferStopReason
     ): FileTransferProgress()
     data class TransferProgress(
-        val requestId: Int,
+        val requestId: Short,
         val bytesSent: Long,
         val totalBytes: Long,
     ): FileTransferProgress()

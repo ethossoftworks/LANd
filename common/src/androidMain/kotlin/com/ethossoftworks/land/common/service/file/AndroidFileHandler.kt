@@ -107,12 +107,10 @@ class AndroidFileHandler: IFileHandler {
         }
     }
 
-    override suspend fun openFileToRead(folder: String, name: String): Outcome<Source, Any> {
+    override suspend fun openFileToRead(path: String): Outcome<Source, Any> {
         return try {
             val context = context ?: return Outcome.Error(FileHandlerError.NotInitialized)
-            val parentUri = DocumentFile.fromTreeUri(context, folder.toUri()) ?: return Outcome.Error(FileHandlerError.FolderDoesntExist)
-            val file = parentUri.findFile(name) ?: return Outcome.Error(FileHandlerError.FileDoesntExist)
-            val stream = context.contentResolver.openInputStream(file.uri) ?: return Outcome.Error(FileHandlerError.FileDoesntExist)
+            val stream = context.contentResolver.openInputStream(path.toUri()) ?: return Outcome.Error(FileHandlerError.FileDoesntExist)
 
             return Outcome.Ok(stream.source())
         } catch (e: Exception) {
@@ -120,15 +118,14 @@ class AndroidFileHandler: IFileHandler {
         }
     }
 
-    override suspend fun readFileMetadata(folder: String, name: String): Outcome<FileMetadata, Any> {
+    override suspend fun readFileMetadata(path: String): Outcome<FileMetadata, Any> {
         return try {
             val context = context ?: return Outcome.Error(FileHandlerError.NotInitialized)
-            val parentUri = DocumentFile.fromTreeUri(context, folder.toUri()) ?: return Outcome.Error(FileHandlerError.FolderDoesntExist)
-            val file = parentUri.findFile(name) ?: return Outcome.Error(FileHandlerError.FileDoesntExist)
             val size: Long
+            val name: String
 
             val cursor = context.contentResolver.query(
-                file.uri,
+                path.toUri(),
                 null,
                 null,
                 null,
@@ -137,11 +134,13 @@ class AndroidFileHandler: IFileHandler {
 
             cursor.use {
                 val sizeIndex = it.getColumnIndex(OpenableColumns.SIZE)
+                val nameIndex = it.getColumnIndex(OpenableColumns.DISPLAY_NAME)
                 it.moveToFirst()
                 size = it.getLong(sizeIndex)
+                name = it.getString(nameIndex)
             }
 
-            Outcome.Ok(FileMetadata(length = size))
+            Outcome.Ok(FileMetadata(length = size, name = name))
         } catch (e: Exception) {
             Outcome.Error(e)
         }
