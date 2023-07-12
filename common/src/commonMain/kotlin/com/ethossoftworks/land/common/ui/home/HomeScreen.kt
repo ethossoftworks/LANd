@@ -66,20 +66,6 @@ fun HomeScreen(
 
     BoxWithConstraints {
         val ringSpacing = maxHeight / 6f
-        val sizeAnim = remember { Animatable(0f) }
-
-        LaunchedEffect(ringSpacing) {
-            sizeAnim.snapTo(0f)
-            sizeAnim.animateTo(
-                targetValue = with(density) { ringSpacing.toPx() },
-                animationSpec = infiniteRepeatable(
-                    animation = tween(
-                        durationMillis = 2_000,
-                        easing = LinearEasing
-                    )
-                ),
-            )
-        }
 
         ImageButton(
             modifier = Modifier
@@ -98,22 +84,6 @@ fun HomeScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .drawBehind {
-                    for (i in 0..6) {
-                        drawCircle(
-                            color = Color(0xFFEEEEEE).copy(
-                                alpha = when (i) {
-                                    6 -> (1f - sizeAnim.value / ringSpacing.toPx()).coerceIn(0f..1f)
-                                    0 -> (sizeAnim.value / ringSpacing.toPx()).coerceIn(0f..1f)
-                                    else -> 1f
-                                }
-                            ),
-                            radius = 40.dp.toPx() + (ringSpacing.toPx() * i) + sizeAnim.value,
-                            style = Stroke(1.dp.toPx()),
-                            center = Offset(size.center.x, size.height - 72.dp.toPx()) // 72 = 16 (padding) + 16 (text) + 40 (.5 image height)
-                        )
-                    }
-                }
                 .windowInsetsPadding(KMPWindowInsets.verticalInsets)
                 .padding(16.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
@@ -147,13 +117,7 @@ fun HomeScreen(
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
-                Image(
-                    modifier = Modifier
-                        .size(80.dp),
-                    painter = rememberKmpPainterResource(Resources.WifiTethering),
-                    colorFilter = ColorFilter.tint(Color(0xFF155fd4)),
-                    contentDescription = ""
-                )
+                RadiatingLogo(ringSpacing)
                 TextButton(
                     label = "Visible as ${state.displayName}",
                     onClick = {}
@@ -164,12 +128,56 @@ fun HomeScreen(
 }
 
 @Composable
+private fun RadiatingLogo(ringSpacing: Dp) {
+    val density = LocalDensity.current
+    val sizeAnim = remember { Animatable(0f) }
+
+    LaunchedEffect(ringSpacing) {
+        sizeAnim.snapTo(0f)
+        sizeAnim.animateTo(
+            targetValue = with(density) { ringSpacing.toPx() },
+            animationSpec = infiniteRepeatable(
+                animation = tween(
+                    durationMillis = 2_000,
+                    easing = LinearEasing
+                )
+            ),
+        )
+    }
+
+    Image(
+        modifier = Modifier
+            .size(80.dp)
+            .drawBehind {
+                for (i in 0..6) {
+                    drawCircle(
+                        color = Color(0xFFEEEEEE).copy(
+                            alpha = when (i) {
+                                6 -> (1f - sizeAnim.value / ringSpacing.toPx()).coerceIn(0f..1f)
+                                0 -> (sizeAnim.value / ringSpacing.toPx()).coerceIn(0f..1f)
+                                else -> 1f
+                            }
+                        ),
+                        radius = 40.dp.toPx() + (ringSpacing.toPx() * i) + sizeAnim.value,
+                        style = Stroke(1.dp.toPx()),
+                        center = Offset(size.center.x, size.center.y)
+                    )
+                }
+            },
+        painter = rememberKmpPainterResource(Resources.WifiTethering),
+        colorFilter = ColorFilter.tint(Color(0xFF155fd4)),
+        contentDescription = ""
+    )
+}
+
+@Composable
 private fun DiscoveredDevice(
     discoveredDevice: Device,
     onClick: () -> Unit,
 ) {
     Column(
-        modifier = Modifier.width(80.dp),
+        modifier = Modifier
+            .width(80.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
