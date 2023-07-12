@@ -20,7 +20,7 @@ class FileTransferService: IFileTransferService {
     private val bufferSize = 65_536
     private val requestId = atomic<Short>(0)
 
-    fun getRequestId(): Short {
+    private fun getRequestId(): Short {
         if (requestId.value == Short.MAX_VALUE) return requestId.updateAndGet { 0 }
         return requestId.updateAndGet { (it + 1).toShort() }
     }

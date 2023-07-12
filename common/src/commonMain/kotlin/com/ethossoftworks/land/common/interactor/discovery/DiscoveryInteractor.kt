@@ -15,6 +15,7 @@ import kotlinx.coroutines.launch
 data class DiscoveryState(
     val discoveredDevices: Map<String, Device> = emptyMap(),
     val broadcastingDeviceName: String? = null,
+    val isBroadcasting: Boolean = false,
 )
 
 private const val DISCOVERY_TYPE = "_land._tcp.local."
@@ -75,9 +76,9 @@ class DiscoveryInteractor(
         )
 
         if (outcome is Outcome.Ok) {
-            update { state -> state.copy(broadcastingDeviceName = name) }
+            update { state -> state.copy(isBroadcasting = true) }
         } else {
-            update { state -> state.copy(broadcastingDeviceName = null) }
+            update { state -> state.copy(isBroadcasting = false, broadcastingDeviceName = null) }
         }
 
         return outcome
@@ -86,7 +87,7 @@ class DiscoveryInteractor(
     suspend fun stopServiceBroadcasting(): Outcome<Unit, Any> {
         val broadcastingDeviceName = state.broadcastingDeviceName ?: return Outcome.Error(Unit)
 
-        update { state -> state.copy(broadcastingDeviceName = null) }
+        update { state -> state.copy(broadcastingDeviceName = null, isBroadcasting = false) }
 
         return discoveryService.unregisterService(
             type = DISCOVERY_TYPE,

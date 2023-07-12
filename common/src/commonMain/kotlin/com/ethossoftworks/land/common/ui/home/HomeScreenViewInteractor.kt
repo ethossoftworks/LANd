@@ -40,9 +40,12 @@ class HomeScreenViewInteractor(
             appPreferencesInteractor.awaitInitialization()
             fileTransferInteractor.startServer()
             discoveryInteractor.startDeviceDiscovery()
-            discoveryInteractor.startServiceBroadcasting(appPreferencesInteractor.state.displayName)
 
-            // TODO: Need to stop broadcasting if the server has stopped
+            if (!discoveryInteractor.state.isBroadcasting) {
+                discoveryInteractor.startServiceBroadcasting(appPreferencesInteractor.state.displayName)
+            }
+
+            // TODO: Need to stop broadcasting if the file transfer server has stopped
         }
     }
 
