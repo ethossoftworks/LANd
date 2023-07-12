@@ -1,11 +1,11 @@
 package com.ethossoftworks.land.common.interactor.discovery
 
-import com.ethossoftworks.land.common.interactor.preferences.AppPreferencesInteractor
 import com.ethossoftworks.land.common.model.device.Device
 import com.ethossoftworks.land.common.model.device.DevicePlatform
 import com.ethossoftworks.land.common.service.discovery.INSDService
 import com.ethossoftworks.land.common.service.discovery.NSDService
 import com.ethossoftworks.land.common.service.discovery.NSDServiceEvent
+import com.ethossoftworks.land.common.service.filetransfer.FILE_TRANSFER_PORT
 import com.outsidesource.oskitkmp.interactor.Interactor
 import com.outsidesource.oskitkmp.lib.Platform
 import com.outsidesource.oskitkmp.lib.current
@@ -19,7 +19,6 @@ data class DiscoveryState(
 
 private const val DISCOVERY_TYPE = "_land._tcp.local."
 private const val DISCOVERY_PROP_PLATFORM_KEY = "platform"
-private const val DISCOVERY_PORT = 7788
 
 class DiscoveryInteractor(
     private val discoveryService: INSDService,
@@ -71,7 +70,7 @@ class DiscoveryInteractor(
         val outcome = discoveryService.registerService(
             type = DISCOVERY_TYPE,
             name = name,
-            port = DISCOVERY_PORT,
+            port = FILE_TRANSFER_PORT,
             properties = mapOf(DISCOVERY_PROP_PLATFORM_KEY to Platform.current.toDevicePlatform().toDiscoveryString())
         )
 
@@ -92,7 +91,7 @@ class DiscoveryInteractor(
         return discoveryService.unregisterService(
             type = DISCOVERY_TYPE,
             name = broadcastingDeviceName,
-            port = DISCOVERY_PORT,
+            port = FILE_TRANSFER_PORT,
         )
     }
 }

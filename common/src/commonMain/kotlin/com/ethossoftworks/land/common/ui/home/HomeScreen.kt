@@ -8,6 +8,7 @@ import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.Text
@@ -57,15 +58,15 @@ fun HomeScreen(
     val state by interactor.collectAsState()
     val density = LocalDensity.current
 
+    LaunchedEffect(Unit) {
+        interactor.viewMounted()
+    }
+
     StatusBarIconColorEffect(useDarkIcons = true)
 
     BoxWithConstraints {
         val ringSpacing = maxHeight / 6f
         val sizeAnim = remember { Animatable(0f) }
-
-        LaunchedEffect(Unit) {
-            interactor.viewMounted()
-        }
 
         LaunchedEffect(ringSpacing) {
             sizeAnim.snapTo(0f)
@@ -122,15 +123,16 @@ fun HomeScreen(
             Row(
                 horizontalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-//                for (device in state.discoveredDevices.values) {
-//                    DiscoveredDevice(device)
-//                }
-                DiscoveredDevice(Device("Test 1", DevicePlatform.iOS, ""))
-                DiscoveredDevice(Device("Test 2", DevicePlatform.Android, ""))
-                DiscoveredDevice(Device("Ryan's MacBook Pro", DevicePlatform.MacOS, ""))
-                DiscoveredDevice(Device("Test 4", DevicePlatform.Windows, ""))
-                DiscoveredDevice(Device("Test 5", DevicePlatform.Linux, ""))
-                DiscoveredDevice(Device("Test 6", DevicePlatform.Unknown, ""))
+                for (device in state.discoveredDevices.values) {
+                    // TODO: Animate devices as the appear
+                    DiscoveredDevice(device, onClick = { interactor.onDeviceClicked(device) })
+                }
+//                DiscoveredDevice(Device("Test 1", DevicePlatform.iOS, ""))
+//                DiscoveredDevice(Device("Test 2", DevicePlatform.Android, ""))
+//                DiscoveredDevice(Device("Ryan's MacBook Pro", DevicePlatform.MacOS, ""))
+//                DiscoveredDevice(Device("Test 4", DevicePlatform.Windows, ""))
+//                DiscoveredDevice(Device("Test 5", DevicePlatform.Linux, ""))
+//                DiscoveredDevice(Device("Test 6", DevicePlatform.Unknown, ""))
             }
 
             if (!state.hasSaveFolder) {
@@ -162,7 +164,10 @@ fun HomeScreen(
 }
 
 @Composable
-private fun DiscoveredDevice(discoveredDevice: Device) {
+private fun DiscoveredDevice(
+    discoveredDevice: Device,
+    onClick: () -> Unit,
+) {
     Column(
         modifier = Modifier.width(80.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -178,6 +183,7 @@ private fun DiscoveredDevice(discoveredDevice: Device) {
                     offset = DpOffset(0.dp, 2.dp)
                 )
                 .clip(CircleShape)
+                .clickable { onClick() }
                 .background(Color(0xFFEEEEEE))
                 .background(
                     Brush.linearGradient(
@@ -202,7 +208,7 @@ private fun DiscoveredDevice(discoveredDevice: Device) {
                         DevicePlatform.Unknown -> Resources.DeviceUnknown
                     }
                 ),
-                contentDescription = null
+                contentDescription = null,
             )
         }
         Text(
