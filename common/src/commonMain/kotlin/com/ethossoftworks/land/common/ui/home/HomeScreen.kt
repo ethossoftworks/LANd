@@ -2,24 +2,26 @@
 
 package com.ethossoftworks.land.common.ui.home
 
+import androidx.compose.animation.*
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.center
 import androidx.compose.ui.graphics.Brush
@@ -29,10 +31,7 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.DpOffset
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.em
-import androidx.compose.ui.unit.sp
+import androidx.compose.ui.unit.*
 import androidx.compose.ui.zIndex
 import com.ethossoftworks.land.common.model.device.Device
 import com.ethossoftworks.land.common.model.device.DevicePlatform
@@ -51,12 +50,12 @@ import com.outsidesource.oskitkmp.lib.Platform
 import com.outsidesource.oskitkmp.lib.current
 
 
+@OptIn(ExperimentalFoundationApi::class, ExperimentalAnimationApi::class, ExperimentalLayoutApi::class)
 @Composable
 fun HomeScreen(
     interactor: HomeScreenViewInteractor = rememberInjectForRoute()
 ) {
     val state by interactor.collectAsState()
-    val density = LocalDensity.current
 
     LaunchedEffect(Unit) {
         interactor.viewMounted()
@@ -88,21 +87,32 @@ fun HomeScreen(
                 .padding(16.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            Spacer(modifier = Modifier.weight(1f))
-
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
-                for (device in state.discoveredDevices.values) {
-                    // TODO: Animate devices as the appear
-                    DiscoveredDevice(device, onClick = { interactor.onDeviceClicked(device) })
+            AnimatedContent(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f)
+                    .zIndex(1f),
+                targetState = state.discoveredDevices,
+                transitionSpec = { EnterTransition.None with ExitTransition.None },
+            ) { devices ->
+                Row(
+                    modifier = Modifier
+                        .fillMaxHeight(),
+                    horizontalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterHorizontally),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    for (device in devices.values) {
+                        Box(
+                            modifier = Modifier.animateEnterExit(
+                                enter = fadeIn() + scaleIn(initialScale = .85f),
+                                exit = fadeOut() + scaleOut(targetScale = .85f),
+                            ),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            DiscoveredDevice(device, onClick = { interactor.onDeviceClicked(device) })
+                        }
+                    }
                 }
-//                DiscoveredDevice(Device("Test 1", DevicePlatform.iOS, ""))
-//                DiscoveredDevice(Device("Test 2", DevicePlatform.Android, ""))
-//                DiscoveredDevice(Device("Ryan's MacBook Pro", DevicePlatform.MacOS, ""))
-//                DiscoveredDevice(Device("Test 4", DevicePlatform.Windows, ""))
-//                DiscoveredDevice(Device("Test 5", DevicePlatform.Linux, ""))
-//                DiscoveredDevice(Device("Test 6", DevicePlatform.Unknown, ""))
             }
 
             if (!state.hasSaveFolder) {
@@ -111,8 +121,6 @@ fun HomeScreen(
                     onClick = interactor::onSelectSaveFolderClicked
                 )
             }
-
-            Spacer(modifier = Modifier.weight(1f))
 
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,

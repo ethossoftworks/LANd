@@ -10,6 +10,7 @@ import com.outsidesource.oskitkmp.interactor.Interactor
 import com.outsidesource.oskitkmp.lib.Platform
 import com.outsidesource.oskitkmp.lib.current
 import com.outsidesource.oskitkmp.outcome.Outcome
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 data class DiscoveryState(
@@ -34,6 +35,16 @@ class DiscoveryInteractor(
 
     fun startDeviceDiscovery() {
         interactorScope.launch {
+//            for (i in 0..10) {
+//                update { state ->
+//                    state.copy(
+//                        discoveredDevices = state.discoveredDevices.toMutableMap().apply {
+//                            put("Test $i", Device("Test $i", DevicePlatform.MacOS, ""))
+//                        }
+//                    )
+//                }
+//                delay(1_000)
+//            }
             discoveryService.observeServices(DISCOVERY_TYPE).collect {
                 when (it) {
                     is NSDServiceEvent.ServiceResolved -> {

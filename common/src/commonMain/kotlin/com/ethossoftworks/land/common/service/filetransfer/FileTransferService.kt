@@ -18,11 +18,11 @@ const val AUTH_CHALLENGE_LENGTH = 32
 class FileTransferService: IFileTransferService {
     private val selectorManager = SelectorManager(Dispatchers.IO)
     private val bufferSize = 65_536
-    private val requestId = atomic<Short>(0)
+    private val connectionId = atomic<Short>(0)
 
-    private fun getRequestId(): Short {
-        if (requestId.value == Short.MAX_VALUE) return requestId.updateAndGet { 0 }
-        return requestId.updateAndGet { (it + 1).toShort() }
+    private fun generateConnectionId(): Short {
+        if (connectionId.value == Short.MAX_VALUE) return connectionId.updateAndGet { 0 }
+        return connectionId.updateAndGet { (it + 1).toShort() }
     }
 
     override suspend fun startServer(): Flow<FileTransferServerEvent> = channelFlow {
@@ -46,11 +46,15 @@ class FileTransferService: IFileTransferService {
         }
     }
 
+    override suspend fun respondToTransferRequest(requestId: Short, response: FileTransferResponse) {
+
+    }
+
     override suspend fun sendFile(
         file: FileTransfer,
         destinationIp: String
     ): Flow<FileTransferProgress> = channelFlow {
-        val requestId = getRequestId()
+        val requestId = generateConnectionId()
         try {
             val socket = aSocket(selectorManager).tcp().connect(destinationIp, FILE_TRANSFER_PORT)
             val readBuffer = ByteArray(bufferSize)
@@ -72,7 +76,7 @@ class FileTransferService: IFileTransferService {
         socket: Socket,
         sendChannel: SendChannel<FileTransferServerEvent>
     ) {
-        val requestId = getRequestId()
+        val requestId = generateConnectionId()
 
         try {
             val readBuffer = ByteArray(bufferSize)
