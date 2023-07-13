@@ -17,6 +17,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.Text
 import androidx.compose.runtime.*
+import androidx.compose.runtime.snapshots.SnapshotContextElement
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -40,6 +41,7 @@ import com.ethossoftworks.land.common.ui.common.ImageButton
 import com.ethossoftworks.land.common.ui.common.TextButton
 import com.outsidesource.oskitcompose.canvas.rememberKmpPainterResource
 import com.outsidesource.oskitcompose.interactor.collectAsState
+import com.outsidesource.oskitcompose.layout.WrappableRow
 import com.outsidesource.oskitcompose.lib.rememberInjectForRoute
 import com.outsidesource.oskitcompose.modifier.outerShadow
 import com.outsidesource.oskitcompose.systemui.KMPWindowInsets
@@ -89,17 +91,16 @@ fun HomeScreen(
         ) {
             AnimatedContent(
                 modifier = Modifier
-                    .fillMaxWidth()
                     .weight(1f)
                     .zIndex(1f),
                 targetState = state.discoveredDevices,
                 transitionSpec = { EnterTransition.None with ExitTransition.None },
             ) { devices ->
-                Row(
-                    modifier = Modifier
-                        .fillMaxHeight(),
+                WrappableRow(
+                    modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterHorizontally),
                     verticalAlignment = Alignment.CenterVertically,
+                    verticalSpacing = 16.dp,
                 ) {
                     for (device in devices.values) {
                         Box(

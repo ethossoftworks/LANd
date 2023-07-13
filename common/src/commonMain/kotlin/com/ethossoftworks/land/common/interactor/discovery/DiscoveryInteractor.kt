@@ -35,16 +35,6 @@ class DiscoveryInteractor(
 
     fun startDeviceDiscovery() {
         interactorScope.launch {
-//            for (i in 0..10) {
-//                update { state ->
-//                    state.copy(
-//                        discoveredDevices = state.discoveredDevices.toMutableMap().apply {
-//                            put("Test $i", Device("Test $i", DevicePlatform.MacOS, ""))
-//                        }
-//                    )
-//                }
-//                delay(1_000)
-//            }
             discoveryService.observeServices(DISCOVERY_TYPE).collect {
                 when (it) {
                     is NSDServiceEvent.ServiceResolved -> {
