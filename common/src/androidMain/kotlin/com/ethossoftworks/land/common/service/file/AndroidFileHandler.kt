@@ -35,9 +35,9 @@ class AndroidFileHandler: IFileHandler {
 
     private val coroutineScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
     private var openFileResultLauncher: ActivityResultLauncher<Array<String>>? = null
-    private val openFileResultFlow = MutableSharedFlow<Uri?>(1, onBufferOverflow = BufferOverflow.DROP_OLDEST)
+    private val openFileResultFlow = MutableSharedFlow<Uri?>(extraBufferCapacity = 1, onBufferOverflow = BufferOverflow.DROP_OLDEST)
     private var openFolderResultLauncher: ActivityResultLauncher<Uri?>? = null
-    private val openFolderResultFlow = MutableSharedFlow<Uri?>(1, onBufferOverflow = BufferOverflow.DROP_OLDEST)
+    private val openFolderResultFlow = MutableSharedFlow<Uri?>(extraBufferCapacity = 1, onBufferOverflow = BufferOverflow.DROP_OLDEST)
 
     override fun defaultSaveFolder(): String? {
         return null
