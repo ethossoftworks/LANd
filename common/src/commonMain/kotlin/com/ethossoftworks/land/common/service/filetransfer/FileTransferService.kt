@@ -1,6 +1,5 @@
 package com.ethossoftworks.land.common.service.filetransfer
 
-import com.ethossoftworks.land.common.service.file.IFileHandler
 import io.ktor.network.selector.*
 import io.ktor.network.sockets.*
 import io.ktor.utils.io.*
@@ -14,7 +13,6 @@ import kotlinx.coroutines.flow.*
 import okio.Sink
 import okio.buffer
 import kotlin.experimental.xor
-import kotlin.math.sin
 
 const val FILE_TRANSFER_PORT = 7788
 private const val AUTH_CHALLENGE_LENGTH = 32
