@@ -93,16 +93,18 @@ class FileTransferService(): IFileTransferService {
             socketWriteChannel.flush()
 
             // Await Response
+            send(FileTransferClientEvent.AwaitingAcceptance(requestId))
             val response = socketReadChannel.readByte().toInt()
             val existingFileLength = socketReadChannel.readLong()
 
             if (response == 0x00) {
-                send(FileTransferClientEvent.TransferRejected)
+                send(FileTransferClientEvent.TransferStopped(requestId, FileTransferStopReason.Rejected))
                 socket.close()
                 return@channelFlow
             }
 
             // Send File
+            send(FileTransferClientEvent.TransferProgress(requestId, 0, file.length))
             val reader = file.source.buffer()
             reader.skip(existingFileLength)
             var totalRead = existingFileLength
@@ -185,6 +187,7 @@ class FileTransferService(): IFileTransferService {
                 return
             }
 
+            eventChannel.send(FileTransferServerEvent.TransferProgress(requestId, 0, payloadLength))
             val writer = sink.buffer()
             var totalWritten = response.existingFileLength
 

@@ -41,8 +41,6 @@ enum class FileTransferResponseType {
 }
 
 sealed class FileTransferServerEvent {
-    object Idle: FileTransferServerEvent()
-
     object ServerStarted: FileTransferServerEvent()
 
     data class ServerStopped(val error: Any?): FileTransferServerEvent()
@@ -70,13 +68,13 @@ sealed class FileTransferServerEvent {
 
 enum class FileTransferStopReason {
     AuthorizationChallengeFail,
-    CancelledByClient,
+    Rejected,
     UnableToOpenFile,
     Unknown,
 }
 
 sealed class FileTransferClientEvent {
-    object TransferRejected: FileTransferClientEvent()
+    data class AwaitingAcceptance(val requestId: Short): FileTransferClientEvent()
 
     data class TransferProgress(
         val requestId: Short,
