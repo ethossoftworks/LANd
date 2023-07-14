@@ -35,7 +35,7 @@ fun commonModule() = module {
 
     single { DiscoveryInteractor(get()) }
     single { AppPreferencesInteractor(get(), get()) }
-    single { FileTransferInteractor(get()) }
+    single { FileTransferInteractor(get(), get(), get()) }
 
     single { FileTransferService() } bind IFileTransferService::class
 }

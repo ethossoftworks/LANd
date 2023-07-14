@@ -18,7 +18,7 @@ const val FILE_TRANSFER_PORT = 7788
 private const val AUTH_CHALLENGE_LENGTH = 32
 private const val PROTOCOL_VERSION = 1
 
-class FileTransferService(): IFileTransferService {
+class FileTransferService: IFileTransferService {
     private val selectorManager = SelectorManager(Dispatchers.IO)
     private val bufferSize = 65_536
     private val connectionId = atomic<Short>(0)
@@ -30,25 +30,20 @@ class FileTransferService(): IFileTransferService {
     }
 
     override suspend fun startServer(): Flow<FileTransferServerEvent> = channelFlow {
-        withContext(Dispatchers.IO) {
-            try {
-                val serverSocket = aSocket(selectorManager).tcp().bind("0.0.0.0", FILE_TRANSFER_PORT)
-                send(FileTransferServerEvent.ServerStarted)
+        try {
+            val serverSocket = aSocket(selectorManager).tcp().bind("0.0.0.0", FILE_TRANSFER_PORT)
+            send(FileTransferServerEvent.ServerStarted)
 
-                supervisorScope {
-                    while (isActive) {
-                        val socket = serverSocket.accept()
-
-                        launch {
-                            receiveConnection(socket, channel)
-                        }
-                    }
+            supervisorScope {
+                while (isActive) {
+                    val socket = serverSocket.accept()
+                    launch { receiveConnection(socket, channel) }
                 }
-            } catch (e: Exception) {
-                send(FileTransferServerEvent.ServerStopped(e))
             }
+        } catch (e: Exception) {
+            send(FileTransferServerEvent.ServerStopped(e))
         }
-    }
+    }.flowOn(Dispatchers.IO)
 
     override suspend fun respondToTransferRequest(
         requestId: Short,
@@ -64,6 +59,7 @@ class FileTransferService(): IFileTransferService {
         destinationIp: String
     ): Flow<FileTransferClientEvent> = channelFlow {
         val requestId = generateConnectionId()
+
         try {
             val socket = aSocket(selectorManager).tcp().connect(destinationIp, FILE_TRANSFER_PORT)
             val readBuffer = ByteArray(bufferSize)
@@ -165,7 +161,7 @@ class FileTransferService(): IFileTransferService {
             val senderName = ByteArray(senderNameLength).apply { socketReadChannel.readFully(this) }.decodeToString()
             val fileName = ByteArray(fileNameLength).apply { socketReadChannel.readFully(this) }.decodeToString()
 
-            // Wait for user response and send Response to client
+            // Wait for user response and send response to client
             eventChannel.send(FileTransferServerEvent.TransferRequested(requestId, senderName, fileName, payloadLength))
             val response = transferResponseFlow.first { it.requestId == requestId }
             val responseByte = if (response.responseType == FileTransferResponseType.Accepted) 0x01 else 0x00
