@@ -17,9 +17,15 @@ interface IFileHandler {
     fun init(fileHandlerContext: FileHandlerContext)
     suspend fun selectFolder(): Outcome<String?, Any>
     suspend fun selectFile(): Outcome<String?, Any>
-    suspend fun openFileToWrite(folder: String, name: String): Outcome<Sink, Any>
+    suspend fun openFileToWrite(folder: String, name: String, mode: FileWriteMode = FileWriteMode.Overwrite): Outcome<Sink, Any>
     suspend fun openFileToRead(path: String): Outcome<Source, Any>
     suspend fun readFileMetadata(path: String): Outcome<FileMetadata, Any>
+    suspend fun readFileMetadata(folder: String, name: String): Outcome<FileMetadata, Any>
+}
+
+enum class FileWriteMode {
+    Append,
+    Overwrite,
 }
 
 expect sealed class FileHandlerContext

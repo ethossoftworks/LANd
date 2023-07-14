@@ -43,9 +43,18 @@ class DesktopFileHandler : IFileHandler {
         }
     }
 
-    override suspend fun openFileToWrite(folder: String, name: String): Outcome<Sink, Any> {
+    override suspend fun openFileToWrite(
+        folder: String,
+        name: String,
+        mode: FileWriteMode,
+    ): Outcome<Sink, Any> {
         return try {
-            Outcome.Ok(FileSystem.SYSTEM.sink("$folder/$name".toPath()))
+            val path = "$folder/$name".toPath()
+            val sink = when (mode) {
+                FileWriteMode.Append -> FileSystem.SYSTEM.appendingSink(path)
+                FileWriteMode.Overwrite -> FileSystem.SYSTEM.sink(path)
+            }
+            Outcome.Ok(sink)
         } catch (e: Exception) {
             Outcome.Error(e)
         }
@@ -58,6 +67,9 @@ class DesktopFileHandler : IFileHandler {
             Outcome.Error(e)
         }
     }
+
+    override suspend fun readFileMetadata(folder: String, name: String): Outcome<FileMetadata, Any> =
+        readFileMetadata("$folder/$name")
 
     override suspend fun readFileMetadata(path: String): Outcome<FileMetadata, Any> {
         return try {

@@ -52,7 +52,7 @@ import com.outsidesource.oskitkmp.lib.Platform
 import com.outsidesource.oskitkmp.lib.current
 
 
-@OptIn(ExperimentalFoundationApi::class, ExperimentalAnimationApi::class, ExperimentalLayoutApi::class)
+@OptIn(ExperimentalAnimationApi::class)
 @Composable
 fun HomeScreen(
     interactor: HomeScreenViewInteractor = rememberInjectForRoute()

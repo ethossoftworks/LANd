@@ -10,7 +10,6 @@ import com.outsidesource.oskitkmp.interactor.Interactor
 import com.outsidesource.oskitkmp.lib.Platform
 import com.outsidesource.oskitkmp.lib.current
 import com.outsidesource.oskitkmp.outcome.Outcome
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 data class DiscoveryState(

@@ -94,12 +94,21 @@ class AndroidFileHandler: IFileHandler {
         }
     }
 
-    override suspend fun openFileToWrite(folder: String, name: String): Outcome<Sink, Any> {
+    override suspend fun openFileToWrite(
+        folder: String,
+        name: String,
+        mode: FileWriteMode,
+    ): Outcome<Sink, Any> {
         return try {
+            val modeString = when (mode) {
+                FileWriteMode.Overwrite -> "wt"
+                FileWriteMode.Append -> "wa"
+            }
+
             val context = context ?: return Outcome.Error(FileHandlerError.NotInitialized)
             val parentUri = DocumentFile.fromTreeUri(context, folder.toUri()) ?: return Outcome.Error(FileHandlerError.FolderDoesntExist)
             val file = parentUri.createFile("", name) ?: return Outcome.Error(FileHandlerError.CouldNotCreateFile)
-            val outputStream = context.contentResolver.openOutputStream(file.uri) ?: return Outcome.Error(FileHandlerError.CouldNotCreateFile)
+            val outputStream = context.contentResolver.openOutputStream(file.uri, modeString) ?: return Outcome.Error(FileHandlerError.CouldNotCreateFile)
 
             Outcome.Ok(outputStream.sink())
         } catch (e: Exception) {
@@ -116,6 +125,13 @@ class AndroidFileHandler: IFileHandler {
         } catch (e: Exception) {
             Outcome.Error(e)
         }
+    }
+
+    override suspend fun readFileMetadata(folder: String, name: String): Outcome<FileMetadata, Any> {
+        val context = context ?: return Outcome.Error(FileHandlerError.NotInitialized)
+        val parentUri = DocumentFile.fromTreeUri(context, folder.toUri()) ?: return Outcome.Error(FileHandlerError.FolderDoesntExist)
+        val file = parentUri.findFile(name) ?: return Outcome.Error(FileHandlerError.FileDoesntExist)
+        return readFileMetadata(file.uri.toString())
     }
 
     override suspend fun readFileMetadata(path: String): Outcome<FileMetadata, Any> {
