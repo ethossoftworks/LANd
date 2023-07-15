@@ -1,6 +1,7 @@
 package com.ethossoftworks.land.common.ui.common
 
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
@@ -16,10 +17,34 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.ethossoftworks.land.common.ui.common.theme.AppTheme
 import com.outsidesource.oskitcompose.canvas.rememberKmpPainterResource
+import com.outsidesource.oskitcompose.modifier.outerShadow
 import com.outsidesource.oskitcompose.resources.KMPResource
+
+@Composable
+fun PrimaryButton(
+    label: String,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit,
+) {
+    Text(
+        modifier = modifier
+            .clip(RoundedCornerShape(4.dp))
+            .background(AppTheme.colors.primaryButtonBg)
+            .clickable(
+                onClick = onClick,
+                interactionSource = remember { MutableInteractionSource() },
+                indication = rememberRipple(),
+            )
+            .padding(horizontal = 12.dp, vertical = 8.dp),
+        text = label,
+        style = AppTheme.typography.primaryButton,
+    )
+}
 
 @Composable
 fun ImageButton(

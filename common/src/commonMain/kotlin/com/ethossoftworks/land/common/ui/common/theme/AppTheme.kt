@@ -66,10 +66,14 @@ fun AppTheme(
 
 interface AppColors {
     val screenBackground: Color
+    val accentColor: Color
+    val primaryButtonBg: Color
 }
 
 object AppLightTheme : AppColors {
     override val screenBackground = Color.White
+    override val accentColor = Color(0xFF155fd4)
+    override val primaryButtonBg = accentColor
 }
 
 data class AppDimensions internal constructor(
@@ -84,5 +88,9 @@ data class AppTypography internal constructor(
     val requestText: TextStyle = TextStyle(
         color = Color.White,
         fontSize = 12.sp,
+    ),
+    val primaryButton: TextStyle = TextStyle(
+        color = Color.White,
+        fontSize = 16.sp,
     )
 )

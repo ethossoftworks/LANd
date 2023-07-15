@@ -41,6 +41,7 @@ import com.ethossoftworks.land.common.resources.Resources
 import com.ethossoftworks.land.common.service.file.FileWriteMode
 import com.ethossoftworks.land.common.service.filetransfer.FileTransferResponseType
 import com.ethossoftworks.land.common.ui.common.ImageButton
+import com.ethossoftworks.land.common.ui.common.PrimaryButton
 import com.ethossoftworks.land.common.ui.common.TextButton
 import com.ethossoftworks.land.common.ui.common.theme.AppTheme
 import com.outsidesource.oskitcompose.canvas.rememberKmpPainterResource
@@ -95,38 +96,47 @@ fun HomeScreen(
                 .padding(16.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            AnimatedContent(
-                modifier = Modifier
-                    .weight(1f)
-                    .zIndex(1f),
-                targetState = state.discoveredDevices,
-                transitionSpec = { EnterTransition.None with ExitTransition.None },
-            ) { devices ->
-                WrappableRow(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterHorizontally),
-                    verticalAlignment = Alignment.CenterVertically,
-                    verticalSpacing = 16.dp,
+            if (!state.hasSaveFolder) {
+                Column(
+                    modifier = Modifier
+                        .weight(1f)
+                        .zIndex(1f),
+                    verticalArrangement = Arrangement.spacedBy(12.dp, Alignment.CenterVertically),
+                    horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
-                    for (device in devices.values) {
-                        Box(
-                            modifier = Modifier.animateEnterExit(
-                                enter = fadeIn() + scaleIn(initialScale = .85f),
-                                exit = fadeOut() + scaleOut(targetScale = .85f),
-                            ),
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            DiscoveredDevice(device, onClick = { interactor.onDeviceClicked(device) })
+                    Text("Please select a save folder for receiving files")
+                    PrimaryButton(
+                        label = "Select Folder",
+                        onClick = interactor::onSelectSaveFolderClicked
+                    )
+                }
+            } else {
+                AnimatedContent(
+                    modifier = Modifier
+                        .weight(1f)
+                        .zIndex(1f),
+                    targetState = state.discoveredDevices,
+                    transitionSpec = { EnterTransition.None with ExitTransition.None },
+                ) { devices ->
+                    WrappableRow(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterHorizontally),
+                        verticalAlignment = Alignment.CenterVertically,
+                        verticalSpacing = 16.dp,
+                    ) {
+                        for (device in devices.values) {
+                            Box(
+                                modifier = Modifier.animateEnterExit(
+                                    enter = fadeIn() + scaleIn(initialScale = .85f),
+                                    exit = fadeOut() + scaleOut(targetScale = .85f),
+                                ),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                DiscoveredDevice(device, onClick = { interactor.onDeviceClicked(device) })
+                            }
                         }
                     }
                 }
-            }
-
-            if (!state.hasSaveFolder) {
-                TextButton(
-                    label = "Select a save folder",
-                    onClick = interactor::onSelectSaveFolderClicked
-                )
             }
 
             Column(
@@ -297,7 +307,7 @@ private fun RadiatingLogo(ringSpacing: Dp) {
                 }
             },
         painter = rememberKmpPainterResource(Resources.WifiTethering),
-        colorFilter = ColorFilter.tint(Color(0xFF155fd4)),
+        colorFilter = ColorFilter.tint(AppTheme.colors.accentColor),
         contentDescription = ""
     )
 }
