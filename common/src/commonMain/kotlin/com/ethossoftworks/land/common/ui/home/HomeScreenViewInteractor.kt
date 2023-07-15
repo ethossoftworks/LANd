@@ -2,11 +2,14 @@ package com.ethossoftworks.land.common.ui.home
 
 import com.ethossoftworks.land.common.coordinator.AppCoordinator
 import com.ethossoftworks.land.common.interactor.discovery.DiscoveryInteractor
+import com.ethossoftworks.land.common.interactor.filetransfer.FileTransfer
 import com.ethossoftworks.land.common.interactor.filetransfer.FileTransferInteractor
 import com.ethossoftworks.land.common.interactor.preferences.AppPreferencesInteractor
 import com.ethossoftworks.land.common.model.device.Device
+import com.ethossoftworks.land.common.service.file.FileWriteMode
 import com.ethossoftworks.land.common.service.file.IFileHandler
-import com.ethossoftworks.land.common.service.filetransfer.FileTransfer
+import com.ethossoftworks.land.common.service.filetransfer.FileTransferRequest
+import com.ethossoftworks.land.common.service.filetransfer.FileTransferResponseType
 import com.outsidesource.oskitkmp.interactor.Interactor
 import com.outsidesource.oskitkmp.outcome.Outcome
 import kotlinx.coroutines.launch
@@ -15,6 +18,9 @@ data class HomeViewState(
     val discoveredDevices: Map<String, Device> = emptyMap(),
     val hasSaveFolder: Boolean = false,
     val displayName: String = "",
+    val pendingRequests: Map<Short, FileTransfer> = emptyMap(),
+    val activeRequests: Map<Short, FileTransfer> = emptyMap(),
+    val finishedRequests: Map<Short, FileTransfer> = emptyMap(),
 )
 
 class HomeScreenViewInteractor(
@@ -32,6 +38,9 @@ class HomeScreenViewInteractor(
             discoveredDevices = discoveryInteractor.state.discoveredDevices,
             hasSaveFolder = appPreferencesInteractor.state.saveFolder != null,
             displayName = appPreferencesInteractor.state.displayName,
+            pendingRequests = fileTransferInteractor.state.pendingRequests,
+            activeRequests = fileTransferInteractor.state.activeRequests,
+            finishedRequests = fileTransferInteractor.state.finishedRequests,
         )
     }
 
@@ -76,14 +85,24 @@ class HomeScreenViewInteractor(
             val sourceOutcome = fileHandler.openFileToRead(file)
             if (sourceOutcome !is Outcome.Ok) return@launch
 
-            val fileTransfer = FileTransfer(
+            val fileTransfer = FileTransferRequest(
                 senderName = appPreferencesInteractor.state.displayName,
-                name = metadataOutcome.value.name,
+                fileName = metadataOutcome.value.name,
                 length = metadataOutcome.value.length,
                 source = sourceOutcome.value,
             )
 
             fileTransferInteractor.sendFile(device, fileTransfer)
+        }
+    }
+
+    fun respondToRequest(
+        request: FileTransfer,
+        response: FileTransferResponseType,
+        mode: FileWriteMode = FileWriteMode.Overwrite,
+    ) {
+        interactorScope.launch {
+            fileTransferInteractor.respondToRequest(request, response, mode)
         }
     }
 }

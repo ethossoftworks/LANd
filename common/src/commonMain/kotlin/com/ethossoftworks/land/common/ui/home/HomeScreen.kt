@@ -7,14 +7,12 @@ import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.tween
-import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.Text
 import androidx.compose.runtime.*
 import androidx.compose.runtime.snapshots.SnapshotContextElement
@@ -34,20 +32,28 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.*
 import androidx.compose.ui.zIndex
+import com.ethossoftworks.land.common.interactor.filetransfer.FileTransfer
+import com.ethossoftworks.land.common.interactor.filetransfer.FileTransferDirection
+import com.ethossoftworks.land.common.interactor.filetransfer.FileTransferInteractor
 import com.ethossoftworks.land.common.model.device.Device
 import com.ethossoftworks.land.common.model.device.DevicePlatform
 import com.ethossoftworks.land.common.resources.Resources
+import com.ethossoftworks.land.common.service.file.FileWriteMode
+import com.ethossoftworks.land.common.service.filetransfer.FileTransferResponseType
 import com.ethossoftworks.land.common.ui.common.ImageButton
 import com.ethossoftworks.land.common.ui.common.TextButton
+import com.ethossoftworks.land.common.ui.common.theme.AppTheme
 import com.outsidesource.oskitcompose.canvas.rememberKmpPainterResource
 import com.outsidesource.oskitcompose.interactor.collectAsState
 import com.outsidesource.oskitcompose.layout.WrappableRow
+import com.outsidesource.oskitcompose.layout.spaceBetweenPadded
+import com.outsidesource.oskitcompose.lib.ValRef
 import com.outsidesource.oskitcompose.lib.rememberInjectForRoute
+import com.outsidesource.oskitcompose.lib.rememberValRef
 import com.outsidesource.oskitcompose.modifier.outerShadow
-import com.outsidesource.oskitcompose.systemui.KMPWindowInsets
-import com.outsidesource.oskitcompose.systemui.StatusBarIconColorEffect
-import com.outsidesource.oskitcompose.systemui.topInsets
-import com.outsidesource.oskitcompose.systemui.verticalInsets
+import com.outsidesource.oskitcompose.popup.Popover
+import com.outsidesource.oskitcompose.popup.PopoverAnchors
+import com.outsidesource.oskitcompose.systemui.*
 import com.outsidesource.oskitkmp.lib.Platform
 import com.outsidesource.oskitkmp.lib.current
 
@@ -130,6 +136,123 @@ fun HomeScreen(
                 TextButton(
                     label = "Visible as ${state.displayName}",
                     onClick = {}
+                )
+            }
+        }
+
+        val pendingRequest = remember(state.pendingRequests) {
+            state.pendingRequests.values.firstOrNull()
+        }
+        RequestPopup(
+            pendingRequest,
+            rememberValRef(interactor)
+        )
+    }
+}
+
+@Composable
+private fun BoxScope.RequestPopup(
+    pendingRequest: FileTransfer?,
+    interactorRef: ValRef<HomeScreenViewInteractor>,
+) {
+    val interactor = interactorRef.value
+
+    Box(
+        modifier = Modifier.align(Alignment.BottomEnd),
+    ) {
+        if (pendingRequest == null) return@Box
+        Column(
+            modifier = Modifier
+                .widthIn(max = 350.dp)
+                .padding(AppTheme.dimensions.screenHPadding, AppTheme.dimensions.screenVPadding)
+                .windowInsetsPadding(KMPWindowInsets.bottomInsets)
+                .outerShadow(blur = 4.dp, shape = RoundedCornerShape(8.dp), offset = DpOffset(0.dp, 2.dp), color = Color.Black.copy(alpha = .25f))
+                .clip(RoundedCornerShape(8.dp))
+                .background(Color(0xFF333333))
+                .padding(12.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp),
+            horizontalAlignment = Alignment.End,
+        ) {
+            // TODO: Clean this up. It's disgusting
+
+            if (pendingRequest.direction == FileTransferDirection.Receiving) {
+                Text(
+                    text = "${pendingRequest.senderName} wants to send you a file:",
+                    style = AppTheme.typography.requestText,
+                    overflow = TextOverflow.Ellipsis,
+                    maxLines = 1,
+                )
+                Row(horizontalArrangement = Arrangement.spaceBetweenPadded(8.dp)) {
+                    Text(
+                        modifier = Modifier.weight(1f),
+                        text = pendingRequest.fileName,
+                        style = AppTheme.typography.requestText,
+                        overflow = TextOverflow.Ellipsis,
+                        maxLines = 1,
+                    )
+                    Text(
+                        text = pendingRequest.sizeString(),
+                        style = AppTheme.typography.requestText,
+                    )
+                }
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    if (pendingRequest.bytesExisting > 0 && pendingRequest.bytesExisting != pendingRequest.bytesTotal) {
+                        Text(
+                            modifier = Modifier.clickable {
+                                interactor.respondToRequest(
+                                    pendingRequest,
+                                    FileTransferResponseType.Accepted,
+                                    FileWriteMode.Overwrite
+                                )
+                            },
+                            style = AppTheme.typography.requestText,
+                            text = "Accept Overwrite"
+                        )
+                        Text(
+                            modifier = Modifier.clickable {
+                                interactor.respondToRequest(
+                                    pendingRequest,
+                                    FileTransferResponseType.Accepted,
+                                    FileWriteMode.Append
+                                )
+                            },
+                            style = AppTheme.typography.requestText,
+                            text = "Accept Continue"
+                        )
+                        Text(
+                            modifier = Modifier.clickable {
+                                interactor.respondToRequest(pendingRequest, FileTransferResponseType.Rejected)
+                            },
+                            style = AppTheme.typography.requestText,
+                            text = "Reject"
+                        )
+                    } else {
+                        Text(
+                            modifier = Modifier.clickable {
+                                interactor.respondToRequest(
+                                    pendingRequest,
+                                    FileTransferResponseType.Accepted,
+                                    FileWriteMode.Overwrite
+                                )
+                            },
+                            style = AppTheme.typography.requestText,
+                            text = "Accept"
+                        )
+                        Text(
+                            modifier = Modifier.clickable {
+                                interactor.respondToRequest(pendingRequest, FileTransferResponseType.Rejected)
+                            },
+                            style = AppTheme.typography.requestText,
+                            text = "Reject"
+                        )
+                    }
+                }
+            } else {
+                Text(
+                    style = AppTheme.typography.requestText,
+                    text = "Waiting to send file..."
                 )
             }
         }

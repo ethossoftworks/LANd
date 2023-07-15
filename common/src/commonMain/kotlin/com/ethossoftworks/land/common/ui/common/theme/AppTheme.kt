@@ -81,4 +81,8 @@ data class AppDimensions internal constructor(
 data class AppTypography internal constructor(
     val default: TextStyle = TextStyle(fontSize = 14.sp),
     val textButton: TextStyle = TextStyle(fontSize = 14.sp),
+    val requestText: TextStyle = TextStyle(
+        color = Color.White,
+        fontSize = 12.sp,
+    )
 )

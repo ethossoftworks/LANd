@@ -17,16 +17,15 @@ interface IFileTransferServer {
 }
 
 interface IFileTransferClient {
-    suspend fun sendFile(file: FileTransfer, destinationIp: String): Flow<FileTransferClientEvent>
+    suspend fun sendFile(file: FileTransferRequest, destinationIp: String): Flow<FileTransferClientEvent>
 }
 
-data class FileTransfer(
+data class FileTransferRequest(
     val senderName: String,
-    val name: String,
+    val fileName: String,
     val length: Long,
     val source: Source,
 )
-
 
 data class FileTransferResponse(
     val requestId: Short,
@@ -55,7 +54,7 @@ sealed class FileTransferServerEvent {
     data class TransferProgress(
         val requestId: Short,
         val bytesReceived: Long,
-        val totalBytes: Long,
+        val bytesTotal: Long,
     ): FileTransferServerEvent()
 
     data class TransferStopped(
@@ -76,10 +75,12 @@ enum class FileTransferStopReason {
 sealed class FileTransferClientEvent {
     data class AwaitingAcceptance(val requestId: Short): FileTransferClientEvent()
 
+    data class TransferAccepted(val requestId: Short): FileTransferClientEvent()
+
     data class TransferProgress(
         val requestId: Short,
         val bytesSent: Long,
-        val totalBytes: Long,
+        val bytesTotal: Long,
     ): FileTransferClientEvent()
 
     data class TransferStopped(

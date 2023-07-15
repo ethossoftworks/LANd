@@ -55,7 +55,7 @@ class FileTransferService: IFileTransferService {
     }
 
     override suspend fun sendFile(
-        file: FileTransfer,
+        file: FileTransferRequest,
         destinationIp: String
     ): Flow<FileTransferClientEvent> = channelFlow {
         val requestId = generateConnectionId()
@@ -75,7 +75,7 @@ class FileTransferService: IFileTransferService {
             // Send Fixed Header
             socketWriteChannel.writeByte(PROTOCOL_VERSION) // Header Version
             socketWriteChannel.writeByte(file.senderName.length) // Sender Name Length
-            socketWriteChannel.writeShort(file.name.length.toShort()) // File Name Length
+            socketWriteChannel.writeShort(file.fileName.length.toShort()) // File Name Length
             socketWriteChannel.writeLong(file.length) // Payload Length
             socketWriteChannel.writeByte(0) // Is Folder
             socketWriteChannel.writeByte(0) // Command Channel (future use)
@@ -83,7 +83,7 @@ class FileTransferService: IFileTransferService {
 
             // Send Dynamic Header
             socketWriteChannel.writeStringUtf8(file.senderName)
-            socketWriteChannel.writeStringUtf8(file.name)
+            socketWriteChannel.writeStringUtf8(file.fileName)
             socketWriteChannel.flush()
 
             // Await Response
@@ -98,6 +98,7 @@ class FileTransferService: IFileTransferService {
             }
 
             // Send File
+            send(FileTransferClientEvent.TransferAccepted(requestId))
             send(FileTransferClientEvent.TransferProgress(requestId, 0, file.length))
             val reader = file.source.buffer()
             reader.skip(existingFileLength)
