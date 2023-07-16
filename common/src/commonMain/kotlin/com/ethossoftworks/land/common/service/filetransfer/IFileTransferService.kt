@@ -67,7 +67,6 @@ sealed class FileTransferServerEvent {
 
 enum class FileTransferStopReason {
     AuthorizationChallengeFail,
-    Rejected,
     UnableToOpenFile,
     Unknown,
 }
@@ -75,7 +74,10 @@ enum class FileTransferStopReason {
 sealed class FileTransferClientEvent {
     data class AwaitingAcceptance(val requestId: Short): FileTransferClientEvent()
 
-    data class TransferAccepted(val requestId: Short): FileTransferClientEvent()
+    data class TransferResponseReceived(
+        val requestId: Short,
+        val response: FileTransferResponseType,
+    ): FileTransferClientEvent()
 
     data class TransferProgress(
         val requestId: Short,

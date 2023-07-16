@@ -18,9 +18,8 @@ data class HomeViewState(
     val discoveredDevices: Map<String, Device> = emptyMap(),
     val hasSaveFolder: Boolean = false,
     val displayName: String = "",
-    val pendingRequests: Map<Short, FileTransfer> = emptyMap(),
     val activeRequests: Map<Short, FileTransfer> = emptyMap(),
-    val finishedRequests: Map<Short, FileTransfer> = emptyMap(),
+    val transferMessageQueue: List<FileTransfer> = emptyList(),
 )
 
 class HomeScreenViewInteractor(
@@ -38,9 +37,8 @@ class HomeScreenViewInteractor(
             discoveredDevices = discoveryInteractor.state.discoveredDevices,
             hasSaveFolder = appPreferencesInteractor.state.saveFolder != null,
             displayName = appPreferencesInteractor.state.displayName,
-            pendingRequests = fileTransferInteractor.state.pendingRequests,
             activeRequests = fileTransferInteractor.state.activeRequests,
-            finishedRequests = fileTransferInteractor.state.finishedRequests,
+            transferMessageQueue = fileTransferInteractor.state.transferMessageQueue,
         )
     }
 

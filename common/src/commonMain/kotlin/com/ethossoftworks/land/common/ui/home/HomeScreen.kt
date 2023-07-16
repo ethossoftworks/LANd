@@ -9,18 +9,14 @@ import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.Text
 import androidx.compose.runtime.*
-import androidx.compose.runtime.snapshots.SnapshotContextElement
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
-import androidx.compose.ui.draw.scale
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.center
 import androidx.compose.ui.graphics.Brush
@@ -34,7 +30,6 @@ import androidx.compose.ui.unit.*
 import androidx.compose.ui.zIndex
 import com.ethossoftworks.land.common.interactor.filetransfer.FileTransfer
 import com.ethossoftworks.land.common.interactor.filetransfer.FileTransferDirection
-import com.ethossoftworks.land.common.interactor.filetransfer.FileTransferInteractor
 import com.ethossoftworks.land.common.model.device.Device
 import com.ethossoftworks.land.common.model.device.DevicePlatform
 import com.ethossoftworks.land.common.resources.Resources
@@ -52,8 +47,6 @@ import com.outsidesource.oskitcompose.lib.ValRef
 import com.outsidesource.oskitcompose.lib.rememberInjectForRoute
 import com.outsidesource.oskitcompose.lib.rememberValRef
 import com.outsidesource.oskitcompose.modifier.outerShadow
-import com.outsidesource.oskitcompose.popup.Popover
-import com.outsidesource.oskitcompose.popup.PopoverAnchors
 import com.outsidesource.oskitcompose.systemui.*
 import com.outsidesource.oskitkmp.lib.Platform
 import com.outsidesource.oskitkmp.lib.current
@@ -150,11 +143,11 @@ fun HomeScreen(
             }
         }
 
-        val pendingRequest = remember(state.pendingRequests) {
-            state.pendingRequests.values.firstOrNull()
+        val response = remember(state.transferMessageQueue) {
+            state.transferMessageQueue.firstOrNull()
         }
         RequestPopup(
-            pendingRequest,
+            response,
             rememberValRef(interactor)
         )
     }
@@ -187,7 +180,7 @@ private fun BoxScope.RequestPopup(
 
             if (pendingRequest.direction == FileTransferDirection.Receiving) {
                 Text(
-                    text = "${pendingRequest.senderName} wants to send you a file:",
+                    text = "${pendingRequest.deviceName} wants to send you a file:",
                     style = AppTheme.typography.requestText,
                     overflow = TextOverflow.Ellipsis,
                     maxLines = 1,

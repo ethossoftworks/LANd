@@ -13,21 +13,21 @@ import kotlin.math.roundToInt
 
 data class FileTransferState(
     val isServerRunning: Boolean = false,
-    val senderRequestIdMap: Map<String, List<Short>> = LinkedHashMap(),
-    val pendingRequests: Map<Short, FileTransfer> = LinkedHashMap(),
+    val deviceNameRequestIdMap: Map<String, List<Short>> = LinkedHashMap(),
     val activeRequests: Map<Short, FileTransfer> = LinkedHashMap(),
-    val finishedRequests: Map<Short, FileTransfer> = LinkedHashMap(),
+    val transferMessageQueue: List<FileTransfer> = emptyList(),
 )
 
 data class FileTransfer(
     val requestId: Short,
-    val senderName: String = "",
+    val deviceName: String = "",
     val fileName: String = "",
     val bytesTransferred: Long = 0,
     val bytesTotal: Long = 0,
     val bytesExisting: Long = 0,
     val direction: FileTransferDirection = FileTransferDirection.Sending,
     val stopReason: FileTransferStopReason? = null,
+    val status: FileTransferStatus = FileTransferStatus.AwaitingAcceptance,
 ) {
     fun sizeString(): String {
         return when {
@@ -37,6 +37,13 @@ data class FileTransfer(
             else -> "$bytesTotal bytes"
         }
     }
+}
+
+enum class FileTransferStatus {
+    AwaitingAcceptance,
+    Rejected,
+    Progress,
+    Stopped,
 }
 
 enum class FileTransferDirection {
@@ -65,20 +72,19 @@ class FileTransferInteractor(
 
                         update { state ->
                             state.copy(
-                                pendingRequests = state.pendingRequests.toMutableMap().apply {
-                                    val fileTransfer = FileTransfer(
+                                transferMessageQueue = state.transferMessageQueue +
+                                    FileTransfer(
                                         requestId = it.requestId,
                                         fileName = it.fileName,
-                                        senderName = it.senderName,
+                                        deviceName = it.senderName,
                                         bytesTotal = it.length,
                                         bytesExisting = when (metadataOutcome) {
                                             is Outcome.Ok -> metadataOutcome.value.length
                                             else -> 0
                                         },
                                         direction = FileTransferDirection.Receiving,
+                                        status = FileTransferStatus.AwaitingAcceptance,
                                     )
-                                    put(it.requestId, fileTransfer)
-                                }
                             )
                         }
                     }
@@ -94,30 +100,23 @@ class FileTransferInteractor(
                     }
                     is FileTransferServerEvent.TransferComplete -> {
                         update { state ->
-                            val sender = state.activeRequests[it.requestId]?.senderName ?: return@update state
-                            val request = state.activeRequests[it.requestId] ?: return@update state
+                            val sender = state.activeRequests[it.requestId]?.deviceName ?: return@update state
 
                             state.copy(
                                 activeRequests = state.activeRequests.toMutableMap().apply { remove(it.requestId) },
-                                senderRequestIdMap = state.senderRequestIdMap.toMutableMap().apply {
-                                    val existingMap = this[sender] ?: emptyList()
-                                    put(sender, existingMap.toMutableList().apply { remove(it.requestId) })
+                                deviceNameRequestIdMap = state.deviceNameRequestIdMap.toMutableMap().apply {
+                                    put(sender, (this[sender] ?: emptyList()) - it.requestId)
                                 },
-                                finishedRequests = state.finishedRequests.toMutableMap().apply { put(it.requestId, request) }
                             )
                         }
                     }
                     is FileTransferServerEvent.TransferStopped -> {
                         update { state ->
-                            val sender = state.activeRequests[it.requestId]?.senderName ?: return@update state
                             val request = state.activeRequests[it.requestId]?.copy(stopReason = it.reason) ?: return@update state
 
                             state.copy(
-                                senderRequestIdMap = state.senderRequestIdMap.toMutableMap().apply {
-                                    val existingMap = this[sender] ?: emptyList()
-                                    put(sender, existingMap.toMutableList().apply { remove(it.requestId) })
-                                },
-                                finishedRequests = state.finishedRequests.toMutableMap().apply { put(it.requestId, request) }
+                                activeRequests = state.activeRequests.toMutableMap().apply { remove(request.requestId) },
+                                transferMessageQueue = state.transferMessageQueue + request.copy(status = FileTransferStatus.Stopped),
                             )
                         }
                     }
@@ -128,69 +127,75 @@ class FileTransferInteractor(
 
     suspend fun sendFile(device: Device, file: FileTransferRequest) {
         interactorScope.launch {
-            fileTransferService.sendFile(file, device.ipAddress).collect {
-                when (it) {
+            fileTransferService.sendFile(file, device.ipAddress).collect { event ->
+                when (event) {
                     is FileTransferClientEvent.AwaitingAcceptance -> {
+                        val transfer = FileTransfer(
+                            requestId = event.requestId,
+                            fileName = file.fileName,
+                            deviceName = device.name,
+                            bytesTotal = file.length,
+                            direction = FileTransferDirection.Sending,
+                        )
+
                         update { state ->
-                            state.copy(pendingRequests = state.pendingRequests.toMutableMap().apply {
-                                val fileTransfer = FileTransfer(
-                                    requestId = it.requestId,
-                                    fileName = file.fileName,
-                                    senderName = file.senderName,
-                                    bytesTotal = file.length,
-                                    direction = FileTransferDirection.Sending,
-                                )
-                                put(it.requestId, fileTransfer)
-                            })
+                            state.copy(
+                                deviceNameRequestIdMap = state.deviceNameRequestIdMap.toMutableMap().apply {
+                                    put(device.name, (this[device.name] ?: emptyList()) + event.requestId)
+                                },
+                                activeRequests = state.activeRequests.toMutableMap().apply {
+                                    put(transfer.requestId, transfer)
+                                }
+                            )
                         }
                     }
-                    is FileTransferClientEvent.TransferAccepted -> {
+                    is FileTransferClientEvent.TransferResponseReceived -> {
                         update { state ->
-                            val pendingRequest = state.pendingRequests[it.requestId] ?: return@update state
+                            val request = state.activeRequests[event.requestId] ?: return@update state
+
                             state.copy(
-                                pendingRequests = state.pendingRequests.toMutableMap().apply { remove(it.requestId) },
-                                activeRequests = state.pendingRequests.toMutableMap().apply { put(it.requestId, pendingRequest) },
+                                transferMessageQueue = if (event.response == FileTransferResponseType.Rejected) {
+                                    state.transferMessageQueue + request.copy(status = FileTransferStatus.Rejected)
+                                } else {
+                                    state.transferMessageQueue
+                                },
+                                activeRequests = if (event.response == FileTransferResponseType.Rejected) {
+                                    state.activeRequests.toMutableMap().apply { remove(event.requestId) }
+                                } else {
+                                    state.activeRequests.toMutableMap().apply {
+                                        this[event.requestId] = request.copy(status = FileTransferStatus.Progress)
+                                    }
+                                },
                             )
                         }
                     }
                     is FileTransferClientEvent.TransferProgress -> {
                         update { state ->
-                            state.copy(activeRequests = state.activeRequests.toMutableMap().apply {
-                                val request = this[it.requestId] ?: return@apply
-                                put(it.requestId, request.copy(bytesTransferred = it.bytesSent))
-                            })
+                            state.copy(
+                                activeRequests = state.activeRequests.toMutableMap().apply {
+                                    val request = this[event.requestId] ?: return@apply
+                                    put(event.requestId, request.copy(bytesTransferred = event.bytesSent))
+                                }
+                            )
                         }
                     }
                     is FileTransferClientEvent.TransferComplete -> {
                         update { state ->
-                            val request = state.activeRequests[it.requestId] ?: return@update state
-
                             state.copy(
-                                activeRequests = state.activeRequests.toMutableMap().apply { remove(it.requestId) },
-                                finishedRequests = state.finishedRequests.toMutableMap().apply { put(it.requestId, request) }
+                                activeRequests = state.activeRequests.toMutableMap().apply { remove(event.requestId) },
                             )
                         }
                     }
                     is FileTransferClientEvent.TransferStopped -> {
-                        val activeRequest = state.activeRequests[it.requestId]
-                        val pendingRequest = state.pendingRequests[it.requestId]
-                        val request = activeRequest ?: pendingRequest ?: return@collect
+                        val request = state.activeRequests[event.requestId] ?: return@collect
 
                         update { state ->
                             state.copy(
-                                pendingRequests = if (pendingRequest != null) {
-                                    state.pendingRequests.toMutableMap().apply { remove(it.requestId) }
-                                } else {
-                                    state.pendingRequests
-                                },
-                                activeRequests = if (activeRequest != null) {
-                                    state.activeRequests.toMutableMap().apply { remove(it.requestId) }
-                                } else {
-                                    state.activeRequests
-                                },
-                                finishedRequests = state.finishedRequests.toMutableMap().apply {
-                                    put(it.requestId, request.copy(stopReason = it.reason))
-                                }
+                                activeRequests = state.activeRequests.toMutableMap().apply { remove(event.requestId) },
+                                transferMessageQueue = state.transferMessageQueue + request.copy(
+                                    stopReason = event.reason,
+                                    status = FileTransferStatus.Stopped,
+                                ),
                             )
                         }
                     }
@@ -214,6 +219,23 @@ class FileTransferInteractor(
             null
         }
 
+        update { state ->
+            val pendingRequest = state.transferMessageQueue.firstOrNull { it.requestId == request.requestId } ?: return@update state
+
+            state.copy(
+                activeRequests = if (response == FileTransferResponseType.Accepted) {
+                    state.activeRequests.toMutableMap().apply {
+                        put(request.requestId, pendingRequest.copy(status = FileTransferStatus.Progress))
+                    }
+                } else {
+                    state.activeRequests
+                },
+                deviceNameRequestIdMap = state.deviceNameRequestIdMap.toMutableMap().apply {
+                    put(request.deviceName, (this[request.deviceName] ?: emptyList()) + request.requestId)
+                }
+            )
+        }
+
         fileTransferService.respondToTransferRequest(
             requestId = request.requestId,
             existingFileLength = when (mode) {
@@ -224,28 +246,17 @@ class FileTransferInteractor(
             sink = sink
         )
 
-        update { state ->
-            val pendingRequest = state.pendingRequests[request.requestId] ?: return@update state
+        return Outcome.Ok(Unit)
+    }
 
+    fun transferResponseQueueItemHandled(item: FileTransfer) {
+        update { state ->
             state.copy(
-                pendingRequests = state.pendingRequests.toMutableMap().apply { remove(request.requestId) },
-                activeRequests = if (response == FileTransferResponseType.Accepted) {
-                    state.activeRequests.toMutableMap().apply { put(request.requestId, pendingRequest) }
-                } else {
-                    state.activeRequests
-                },
-                finishedRequests = if (response == FileTransferResponseType.Rejected) {
-                    state.finishedRequests.toMutableMap().apply { put(request.requestId, pendingRequest) }
-                } else {
-                    state.finishedRequests
-                },
-                senderRequestIdMap = state.senderRequestIdMap.toMutableMap().apply {
-                    val existingMap = this[request.senderName] ?: emptyList()
-                    put(request.senderName, existingMap.toMutableList().apply { add(request.requestId) })
+                transferMessageQueue = state.transferMessageQueue - item,
+                deviceNameRequestIdMap = state.deviceNameRequestIdMap.toMutableMap().apply {
+                    put(item.deviceName, (this[item.deviceName] ?: emptyList()) - item.requestId)
                 }
             )
         }
-
-        return Outcome.Ok(Unit)
     }
 }

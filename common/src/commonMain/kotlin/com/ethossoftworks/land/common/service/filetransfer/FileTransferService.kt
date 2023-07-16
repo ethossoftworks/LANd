@@ -91,14 +91,15 @@ class FileTransferService: IFileTransferService {
             val response = socketReadChannel.readByte().toInt()
             val existingFileLength = socketReadChannel.readLong()
 
-            if (response == 0x00) {
-                send(FileTransferClientEvent.TransferStopped(requestId, FileTransferStopReason.Rejected))
+            if (response == 0x01) {
+                send(FileTransferClientEvent.TransferResponseReceived(requestId, FileTransferResponseType.Accepted))
+            } else if (response == 0x00) {
+                send(FileTransferClientEvent.TransferResponseReceived(requestId, FileTransferResponseType.Rejected))
                 socket.close()
                 return@channelFlow
             }
 
             // Send File
-            send(FileTransferClientEvent.TransferAccepted(requestId))
             send(FileTransferClientEvent.TransferProgress(requestId, 0, file.length))
             val reader = file.source.buffer()
             reader.skip(existingFileLength)
