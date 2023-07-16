@@ -103,4 +103,8 @@ class HomeScreenViewInteractor(
             fileTransferInteractor.respondToRequest(request, response, mode)
         }
     }
+
+    fun transferMessageQueueItemHandled(item: FileTransfer) {
+        fileTransferInteractor.transferMessageQueueItemHandled(item)
+    }
 }

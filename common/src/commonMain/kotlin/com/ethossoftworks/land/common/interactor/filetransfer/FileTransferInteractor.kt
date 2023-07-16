@@ -230,6 +230,7 @@ class FileTransferInteractor(
                 } else {
                     state.activeRequests
                 },
+                transferMessageQueue = state.transferMessageQueue - pendingRequest,
                 deviceNameRequestIdMap = state.deviceNameRequestIdMap.toMutableMap().apply {
                     put(request.deviceName, (this[request.deviceName] ?: emptyList()) + request.requestId)
                 }
@@ -249,7 +250,7 @@ class FileTransferInteractor(
         return Outcome.Ok(Unit)
     }
 
-    fun transferResponseQueueItemHandled(item: FileTransfer) {
+    fun transferMessageQueueItemHandled(item: FileTransfer) {
         update { state ->
             state.copy(
                 transferMessageQueue = state.transferMessageQueue - item,

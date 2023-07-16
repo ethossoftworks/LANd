@@ -30,6 +30,7 @@ import androidx.compose.ui.unit.*
 import androidx.compose.ui.zIndex
 import com.ethossoftworks.land.common.interactor.filetransfer.FileTransfer
 import com.ethossoftworks.land.common.interactor.filetransfer.FileTransferDirection
+import com.ethossoftworks.land.common.interactor.filetransfer.FileTransferStatus
 import com.ethossoftworks.land.common.model.device.Device
 import com.ethossoftworks.land.common.model.device.DevicePlatform
 import com.ethossoftworks.land.common.resources.Resources
@@ -143,120 +144,126 @@ fun HomeScreen(
             }
         }
 
-        val response = remember(state.transferMessageQueue) {
-            state.transferMessageQueue.firstOrNull()
-        }
-        RequestPopup(
-            response,
+        TransferInfo(
+            state.transferMessageQueue.firstOrNull(),
             rememberValRef(interactor)
         )
     }
 }
 
 @Composable
-private fun BoxScope.RequestPopup(
-    pendingRequest: FileTransfer?,
+private fun BoxScope.TransferInfo(
+    fileTransfer: FileTransfer?,
     interactorRef: ValRef<HomeScreenViewInteractor>,
 ) {
     val interactor = interactorRef.value
 
     Box(
-        modifier = Modifier.align(Alignment.BottomEnd),
+        modifier = Modifier.align(if (Platform.current.isDesktop) Alignment.BottomEnd else Alignment.BottomCenter),
     ) {
-        if (pendingRequest == null) return@Box
+        if (fileTransfer == null) return@Box
         Column(
             modifier = Modifier
                 .widthIn(max = 350.dp)
                 .padding(AppTheme.dimensions.screenHPadding, AppTheme.dimensions.screenVPadding)
                 .windowInsetsPadding(KMPWindowInsets.bottomInsets)
-                .outerShadow(blur = 4.dp, shape = RoundedCornerShape(8.dp), offset = DpOffset(0.dp, 2.dp), color = Color.Black.copy(alpha = .25f))
+                .outerShadow(blur = 8.dp, shape = RoundedCornerShape(8.dp), offset = DpOffset(0.dp, 2.dp), color = Color.Black.copy(alpha = .4f))
                 .clip(RoundedCornerShape(8.dp))
-                .background(Color(0xFF333333))
+                .background(Color(0xFF444444))
                 .padding(12.dp),
             verticalArrangement = Arrangement.spacedBy(4.dp),
             horizontalAlignment = Alignment.End,
         ) {
-            // TODO: Clean this up. It's disgusting
-
-            if (pendingRequest.direction == FileTransferDirection.Receiving) {
-                Text(
-                    text = "${pendingRequest.deviceName} wants to send you a file:",
-                    style = AppTheme.typography.requestText,
-                    overflow = TextOverflow.Ellipsis,
-                    maxLines = 1,
-                )
-                Row(horizontalArrangement = Arrangement.spaceBetweenPadded(8.dp)) {
+            when (fileTransfer.status) {
+                FileTransferStatus.AwaitingAcceptance -> {
                     Text(
-                        modifier = Modifier.weight(1f),
-                        text = pendingRequest.fileName,
+                        modifier = Modifier.fillMaxWidth(),
+                        text = "${fileTransfer.deviceName} wants to send you a file:",
                         style = AppTheme.typography.requestText,
                         overflow = TextOverflow.Ellipsis,
                         maxLines = 1,
                     )
-                    Text(
-                        text = pendingRequest.sizeString(),
-                        style = AppTheme.typography.requestText,
-                    )
-                }
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(16.dp)
-                ) {
-                    if (pendingRequest.bytesExisting > 0 && pendingRequest.bytesExisting != pendingRequest.bytesTotal) {
+                    Row(horizontalArrangement = Arrangement.spaceBetweenPadded(8.dp)) {
                         Text(
-                            modifier = Modifier.clickable {
-                                interactor.respondToRequest(
-                                    pendingRequest,
-                                    FileTransferResponseType.Accepted,
-                                    FileWriteMode.Overwrite
-                                )
-                            },
+                            modifier = Modifier.weight(1f),
+                            text = fileTransfer.fileName,
                             style = AppTheme.typography.requestText,
-                            text = "Accept Overwrite"
+                            overflow = TextOverflow.Ellipsis,
+                            maxLines = 1,
                         )
                         Text(
-                            modifier = Modifier.clickable {
-                                interactor.respondToRequest(
-                                    pendingRequest,
-                                    FileTransferResponseType.Accepted,
-                                    FileWriteMode.Append
-                                )
-                            },
+                            text = fileTransfer.sizeString(),
                             style = AppTheme.typography.requestText,
-                            text = "Accept Continue"
-                        )
-                        Text(
-                            modifier = Modifier.clickable {
-                                interactor.respondToRequest(pendingRequest, FileTransferResponseType.Rejected)
-                            },
-                            style = AppTheme.typography.requestText,
-                            text = "Reject"
-                        )
-                    } else {
-                        Text(
-                            modifier = Modifier.clickable {
-                                interactor.respondToRequest(
-                                    pendingRequest,
-                                    FileTransferResponseType.Accepted,
-                                    FileWriteMode.Overwrite
-                                )
-                            },
-                            style = AppTheme.typography.requestText,
-                            text = "Accept"
-                        )
-                        Text(
-                            modifier = Modifier.clickable {
-                                interactor.respondToRequest(pendingRequest, FileTransferResponseType.Rejected)
-                            },
-                            style = AppTheme.typography.requestText,
-                            text = "Reject"
                         )
                     }
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        if (fileTransfer.bytesExisting > 0 && fileTransfer.bytesExisting != fileTransfer.bytesTotal) {
+                            Text(
+                                modifier = Modifier.clickable {
+                                    interactor.respondToRequest(
+                                        fileTransfer,
+                                        FileTransferResponseType.Accepted,
+                                        FileWriteMode.Overwrite
+                                    )
+                                },
+                                style = AppTheme.typography.requestText,
+                                text = "Accept Overwrite"
+                            )
+                            Text(
+                                modifier = Modifier.clickable {
+                                    interactor.respondToRequest(
+                                        fileTransfer,
+                                        FileTransferResponseType.Accepted,
+                                        FileWriteMode.Append
+                                    )
+                                },
+                                style = AppTheme.typography.requestText,
+                                text = "Accept Continue"
+                            )
+                            Text(
+                                modifier = Modifier.clickable {
+                                    interactor.respondToRequest(fileTransfer, FileTransferResponseType.Rejected)
+                                },
+                                style = AppTheme.typography.requestText,
+                                text = "Reject"
+                            )
+                        } else {
+                            Text(
+                                modifier = Modifier.clickable {
+                                    interactor.respondToRequest(
+                                        fileTransfer,
+                                        FileTransferResponseType.Accepted,
+                                        FileWriteMode.Overwrite
+                                    )
+                                },
+                                style = AppTheme.typography.requestText,
+                                text = "Accept"
+                            )
+                            Text(
+                                modifier = Modifier.clickable {
+                                    interactor.respondToRequest(fileTransfer, FileTransferResponseType.Rejected)
+                                },
+                                style = AppTheme.typography.requestText,
+                                text = "Reject"
+                            )
+                        }
+                    }
                 }
-            } else {
-                Text(
-                    style = AppTheme.typography.requestText,
-                    text = "Waiting to send file..."
-                )
+                FileTransferStatus.Stopped -> {
+                    Column {
+                        Text(text ="File Transfer Stopped", style = AppTheme.typography.requestText)
+                        TextButton(label = "Ok", onClick = { interactor.transferMessageQueueItemHandled(fileTransfer) })
+                    }
+                }
+                FileTransferStatus.Rejected -> {
+                    Column {
+                        Text(text = "File Transfer Rejected", style = AppTheme.typography.requestText)
+                        TextButton(label = "Ok", onClick = { interactor.transferMessageQueueItemHandled(fileTransfer)})
+                    }
+                }
+                else -> {}
             }
         }
     }
