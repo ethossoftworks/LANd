@@ -33,6 +33,7 @@ import com.ethossoftworks.land.common.model.device.DevicePlatform
 import com.ethossoftworks.land.common.resources.Resources
 import com.ethossoftworks.land.common.service.file.FileWriteMode
 import com.ethossoftworks.land.common.service.filetransfer.FileTransferResponseType
+import com.ethossoftworks.land.common.service.filetransfer.FileTransferStopReason
 import com.ethossoftworks.land.common.ui.common.ImageButton
 import com.ethossoftworks.land.common.ui.common.PrimaryButton
 import com.ethossoftworks.land.common.ui.common.TextButton
@@ -256,13 +257,20 @@ private fun BoxScope.TransferInfo(
                 }
                 FileTransferStatus.Stopped -> {
                     Column {
-                        Text(text ="File Transfer Stopped", style = AppTheme.typography.transferMessageText)
+                        Text(
+                            text = when (fileTransfer.stopReason) {
+                                FileTransferStopReason.UnableToOpenFile -> "Transfer stopped. Unable to create file."
+                                FileTransferStopReason.SocketClosed -> "Transfer stopped due to a connection failure."
+                                else -> "Transfer stopped for an unknown reason"
+                            },
+                            style = AppTheme.typography.transferMessageText
+                        )
                         TextButton(label = "Ok", onClick = { interactor.transferMessageQueueItemHandled(fileTransfer) })
                     }
                 }
                 FileTransferStatus.Rejected -> {
                     Column {
-                        Text(text = "File Transfer Rejected", style = AppTheme.typography.transferMessageText)
+                        Text(text = "${fileTransfer.deviceName} rejected your request", style = AppTheme.typography.transferMessageText)
                         TextButton(label = "Ok", onClick = { interactor.transferMessageQueueItemHandled(fileTransfer)})
                     }
                 }
