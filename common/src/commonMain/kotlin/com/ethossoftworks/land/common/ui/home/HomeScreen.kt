@@ -3,10 +3,7 @@
 package com.ethossoftworks.land.common.ui.home
 
 import androidx.compose.animation.*
-import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.LinearEasing
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.*
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
@@ -18,6 +15,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.geometry.center
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -29,7 +27,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.*
 import androidx.compose.ui.zIndex
 import com.ethossoftworks.land.common.interactor.filetransfer.FileTransfer
-import com.ethossoftworks.land.common.interactor.filetransfer.FileTransferDirection
 import com.ethossoftworks.land.common.interactor.filetransfer.FileTransferStatus
 import com.ethossoftworks.land.common.model.device.Device
 import com.ethossoftworks.land.common.model.device.DevicePlatform
@@ -45,12 +42,15 @@ import com.outsidesource.oskitcompose.interactor.collectAsState
 import com.outsidesource.oskitcompose.layout.WrappableRow
 import com.outsidesource.oskitcompose.layout.spaceBetweenPadded
 import com.outsidesource.oskitcompose.lib.ValRef
+import com.outsidesource.oskitcompose.lib.rememberInject
 import com.outsidesource.oskitcompose.lib.rememberInjectForRoute
 import com.outsidesource.oskitcompose.lib.rememberValRef
 import com.outsidesource.oskitcompose.modifier.outerShadow
 import com.outsidesource.oskitcompose.systemui.*
 import com.outsidesource.oskitkmp.lib.Platform
 import com.outsidesource.oskitkmp.lib.current
+import org.koin.core.parameter.parametersOf
+import kotlin.math.roundToInt
 
 
 @OptIn(ExperimentalAnimationApi::class)
@@ -126,7 +126,10 @@ fun HomeScreen(
                                 ),
                                 contentAlignment = Alignment.Center,
                             ) {
-                                DiscoveredDevice(device, onClick = { interactor.onDeviceClicked(device) })
+                                DiscoveredDevice(
+                                    device = device,
+                                    onClick = { interactor.onDeviceClicked(device) }
+                                )
                             }
                         }
                     }
@@ -179,7 +182,7 @@ private fun BoxScope.TransferInfo(
                     Text(
                         modifier = Modifier.fillMaxWidth(),
                         text = "${fileTransfer.deviceName} wants to send you a file:",
-                        style = AppTheme.typography.requestText,
+                        style = AppTheme.typography.transferMessageText,
                         overflow = TextOverflow.Ellipsis,
                         maxLines = 1,
                     )
@@ -187,13 +190,13 @@ private fun BoxScope.TransferInfo(
                         Text(
                             modifier = Modifier.weight(1f),
                             text = fileTransfer.fileName,
-                            style = AppTheme.typography.requestText,
+                            style = AppTheme.typography.transferMessageText,
                             overflow = TextOverflow.Ellipsis,
                             maxLines = 1,
                         )
                         Text(
                             text = fileTransfer.sizeString(),
-                            style = AppTheme.typography.requestText,
+                            style = AppTheme.typography.transferMessageText,
                         )
                     }
                     Row(
@@ -208,7 +211,7 @@ private fun BoxScope.TransferInfo(
                                         FileWriteMode.Overwrite
                                     )
                                 },
-                                style = AppTheme.typography.requestText,
+                                style = AppTheme.typography.transferMessageText,
                                 text = "Accept Overwrite"
                             )
                             Text(
@@ -219,14 +222,14 @@ private fun BoxScope.TransferInfo(
                                         FileWriteMode.Append
                                     )
                                 },
-                                style = AppTheme.typography.requestText,
+                                style = AppTheme.typography.transferMessageText,
                                 text = "Accept Continue"
                             )
                             Text(
                                 modifier = Modifier.clickable {
                                     interactor.respondToRequest(fileTransfer, FileTransferResponseType.Rejected)
                                 },
-                                style = AppTheme.typography.requestText,
+                                style = AppTheme.typography.transferMessageText,
                                 text = "Reject"
                             )
                         } else {
@@ -238,14 +241,14 @@ private fun BoxScope.TransferInfo(
                                         FileWriteMode.Overwrite
                                     )
                                 },
-                                style = AppTheme.typography.requestText,
+                                style = AppTheme.typography.transferMessageText,
                                 text = "Accept"
                             )
                             Text(
                                 modifier = Modifier.clickable {
                                     interactor.respondToRequest(fileTransfer, FileTransferResponseType.Rejected)
                                 },
-                                style = AppTheme.typography.requestText,
+                                style = AppTheme.typography.transferMessageText,
                                 text = "Reject"
                             )
                         }
@@ -253,13 +256,13 @@ private fun BoxScope.TransferInfo(
                 }
                 FileTransferStatus.Stopped -> {
                     Column {
-                        Text(text ="File Transfer Stopped", style = AppTheme.typography.requestText)
+                        Text(text ="File Transfer Stopped", style = AppTheme.typography.transferMessageText)
                         TextButton(label = "Ok", onClick = { interactor.transferMessageQueueItemHandled(fileTransfer) })
                     }
                 }
                 FileTransferStatus.Rejected -> {
                     Column {
-                        Text(text = "File Transfer Rejected", style = AppTheme.typography.requestText)
+                        Text(text = "File Transfer Rejected", style = AppTheme.typography.transferMessageText)
                         TextButton(label = "Ok", onClick = { interactor.transferMessageQueueItemHandled(fileTransfer)})
                     }
                 }
@@ -314,18 +317,40 @@ private fun RadiatingLogo(ringSpacing: Dp) {
 
 @Composable
 private fun DiscoveredDevice(
-    discoveredDevice: Device,
+    device: Device,
     onClick: () -> Unit,
+    interactor: DiscoveredDeviceViewInteractor = rememberInject { parametersOf(device.name) },
 ) {
+    val state by interactor.collectAsState()
+
+    val colors = AppTheme.colors
+
     Column(
         modifier = Modifier
-            .width(80.dp),
+            .width(90.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(8.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
+        val progressTransition = updateTransition(if (state.sendingProgress > 0.0f) state.sendingProgress else state.receivingProgress)
+        val progressAnim by progressTransition.animateFloat { it }
+        val progressArcSpacing = 4.dp
+
         Box(
             modifier = Modifier
                 .size(64.dp)
+                .drawBehind {
+                    if (progressTransition.targetState == 0f) return@drawBehind
+
+                    drawArc(
+                        color = colors.accentColor,
+                        style = Stroke(width = 2.5.dp.toPx()),
+                        useCenter = false,
+                        topLeft = Offset(-(progressArcSpacing).toPx(), -(progressArcSpacing).toPx()),
+                        size = Size(size.width + (progressArcSpacing * 2).toPx(), size.height + (progressArcSpacing * 2).toPx()),
+                        startAngle = -90f,
+                        sweepAngle = 360f * progressAnim,
+                    )
+                }
                 .outerShadow(
                     blur = 2.dp,
                     color = Color.Black.copy(alpha = .25f),
@@ -338,8 +363,6 @@ private fun DiscoveredDevice(
                 .background(
                     Brush.linearGradient(
                         colors = listOf(
-//                            Color(0xFFEEEEEE),
-//                            Color(0x22155fd4),
                             Color(0xCC155fd4),
                             Color(0xCC6198ef),
                         )
@@ -350,7 +373,7 @@ private fun DiscoveredDevice(
             Image(
                 modifier = Modifier.width(48.dp),
                 painter = rememberKmpPainterResource(
-                    when (discoveredDevice.platform) {
+                    when (device.platform) {
                         DevicePlatform.iOS -> Resources.DeviceMobileIOS
                         DevicePlatform.Android -> Resources.DeviceMobileAndroid
                         DevicePlatform.MacOS -> Resources.DeviceDesktopMacOS
@@ -363,8 +386,22 @@ private fun DiscoveredDevice(
             )
         }
         Text(
-            text = discoveredDevice.name,
+            modifier = Modifier.padding(top = 4.dp),
+            text = device.name,
             fontSize = 12.sp,
+            overflow = TextOverflow.Ellipsis,
+            textAlign = TextAlign.Center,
+            maxLines = 2,
+            lineHeight = 1.2.em,
+        )
+        Text(
+            text = when {
+                state.isWaiting -> "Waiting..."
+                state.sendingProgress > 0.0f -> "Sending ${(state.sendingProgress * 100).roundToInt()}%"
+                state.receivingProgress > 0.0f -> "Receiving ${(state.receivingProgress * 100).roundToInt()}%"
+                else -> ""
+            },
+            style = AppTheme.typography.deviceTransferStatus,
             overflow = TextOverflow.Ellipsis,
             textAlign = TextAlign.Center,
             maxLines = 2,

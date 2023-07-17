@@ -85,7 +85,11 @@ data class AppDimensions internal constructor(
 data class AppTypography internal constructor(
     val default: TextStyle = TextStyle(fontSize = 14.sp),
     val textButton: TextStyle = TextStyle(fontSize = 14.sp),
-    val requestText: TextStyle = TextStyle(
+    val deviceTransferStatus: TextStyle = TextStyle(
+        fontSize = 11.sp,
+        color = Color(0xFF777777),
+    ),
+    val transferMessageText: TextStyle = TextStyle(
         color = Color.White,
         fontSize = 12.sp,
     ),

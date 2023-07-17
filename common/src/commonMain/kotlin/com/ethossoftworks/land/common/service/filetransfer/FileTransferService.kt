@@ -117,6 +117,8 @@ class FileTransferService: IFileTransferService {
             socket.close()
             send(FileTransferClientEvent.TransferComplete(requestId))
         } catch (e: Exception) {
+            // TODO: Remove this logging
+            e.printStackTrace()
             send(FileTransferClientEvent.TransferStopped(requestId, FileTransferStopReason.Unknown))
         }
     }.flowOn(Dispatchers.IO)
@@ -197,7 +199,7 @@ class FileTransferService: IFileTransferService {
                     if (totalWritten == payloadLength) {
                         eventChannel.send(FileTransferServerEvent.TransferComplete(requestId))
                     } else {
-                        eventChannel.send(FileTransferServerEvent.TransferStopped(requestId, FileTransferStopReason.Unknown))
+                        eventChannel.send(FileTransferServerEvent.TransferStopped(requestId, FileTransferStopReason.SocketClosed))
                     }
                     break
                 }
@@ -207,6 +209,8 @@ class FileTransferService: IFileTransferService {
                 eventChannel.send(FileTransferServerEvent.TransferProgress(requestId, totalWritten, payloadLength))
             }
         } catch (e: Exception) {
+            // TODO: Remove this logging
+            e.printStackTrace()
             socket.close()
             eventChannel.send(FileTransferServerEvent.TransferStopped(requestId, FileTransferStopReason.Unknown))
         }

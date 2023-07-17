@@ -68,6 +68,7 @@ sealed class FileTransferServerEvent {
 enum class FileTransferStopReason {
     AuthorizationChallengeFail,
     UnableToOpenFile,
+    SocketClosed,
     Unknown,
 }
 
