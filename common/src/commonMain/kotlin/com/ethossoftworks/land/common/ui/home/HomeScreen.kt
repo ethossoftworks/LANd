@@ -207,7 +207,7 @@ private fun BoxScope.TransferMessage(
                                 }
                             )
                             TransferMessageButton(
-                                label = "Accept Overwrite",
+                                label = "Overwrite",
                                 onClick = {
                                     interactor.respondToRequest(
                                         fileTransfer,
@@ -217,7 +217,7 @@ private fun BoxScope.TransferMessage(
                                 }
                             )
                             TransferMessageButton(
-                                label = "Accept",
+                                label = "Continue",
                                 onClick = {
                                     interactor.respondToRequest(
                                         fileTransfer,
