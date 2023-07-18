@@ -4,12 +4,17 @@ package com.ethossoftworks.land.common.ui.home
 
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
-import androidx.compose.foundation.*
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.Text
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -41,7 +46,6 @@ import com.ethossoftworks.land.common.ui.common.theme.AppTheme
 import com.outsidesource.oskitcompose.canvas.rememberKmpPainterResource
 import com.outsidesource.oskitcompose.interactor.collectAsState
 import com.outsidesource.oskitcompose.layout.WrappableRow
-import com.outsidesource.oskitcompose.layout.spaceBetweenPadded
 import com.outsidesource.oskitcompose.lib.ValRef
 import com.outsidesource.oskitcompose.lib.rememberInject
 import com.outsidesource.oskitcompose.lib.rememberInjectForRoute
@@ -148,7 +152,7 @@ fun HomeScreen(
             }
         }
 
-        TransferInfo(
+        TransferMessage(
             state.transferMessageQueue.firstOrNull(),
             rememberValRef(interactor)
         )
@@ -156,7 +160,7 @@ fun HomeScreen(
 }
 
 @Composable
-private fun BoxScope.TransferInfo(
+private fun BoxScope.TransferMessage(
     fileTransfer: FileTransfer?,
     interactorRef: ValRef<HomeScreenViewInteractor>,
 ) {
@@ -168,116 +172,138 @@ private fun BoxScope.TransferInfo(
         if (fileTransfer == null) return@Box
         Column(
             modifier = Modifier
-                .widthIn(max = 350.dp)
+                .width(350.dp)
                 .padding(AppTheme.dimensions.screenHPadding, AppTheme.dimensions.screenVPadding)
                 .windowInsetsPadding(KMPWindowInsets.bottomInsets)
-                .outerShadow(blur = 8.dp, shape = RoundedCornerShape(8.dp), offset = DpOffset(0.dp, 2.dp), color = Color.Black.copy(alpha = .4f))
+                .outerShadow(
+                    blur = 8.dp,
+                    shape = RoundedCornerShape(8.dp),
+                    offset = DpOffset(0.dp, 2.dp),
+                    color = Color.Black.copy(alpha = .2f)
+                )
                 .clip(RoundedCornerShape(8.dp))
-                .background(Color(0xFF444444))
+//                .border(width = 1.dp, color = Color(0xFFD0D0D0), RoundedCornerShape(8.dp))
+//                .background(Color(0xFFF6F6F6))
+//                .border(width = 1.dp, color = Color(0xFF393a41), RoundedCornerShape(8.dp))
+                .background(Color(0xFF494C50))
                 .padding(12.dp),
-            verticalArrangement = Arrangement.spacedBy(4.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
             horizontalAlignment = Alignment.End,
         ) {
             when (fileTransfer.status) {
                 FileTransferStatus.AwaitingAcceptance -> {
-                    Text(
-                        modifier = Modifier.fillMaxWidth(),
-                        text = "${fileTransfer.deviceName} wants to send you a file:",
-                        style = AppTheme.typography.transferMessageText,
-                        overflow = TextOverflow.Ellipsis,
-                        maxLines = 1,
+                    TransferMessageText(
+                        text = "\"${fileTransfer.deviceName}\" wants to send you \"${fileTransfer.fileName}\" (${fileTransfer.sizeString()})."
                     )
-                    Row(horizontalArrangement = Arrangement.spaceBetweenPadded(8.dp)) {
-                        Text(
-                            modifier = Modifier.weight(1f),
-                            text = fileTransfer.fileName,
-                            style = AppTheme.typography.transferMessageText,
-                            overflow = TextOverflow.Ellipsis,
-                            maxLines = 1,
-                        )
-                        Text(
-                            text = fileTransfer.sizeString(),
-                            style = AppTheme.typography.transferMessageText,
-                        )
-                    }
                     Row(
-                        horizontalArrangement = Arrangement.spacedBy(16.dp)
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         if (fileTransfer.bytesExisting > 0 && fileTransfer.bytesExisting != fileTransfer.bytesTotal) {
-                            Text(
-                                modifier = Modifier.clickable {
-                                    interactor.respondToRequest(
-                                        fileTransfer,
-                                        FileTransferResponseType.Accepted,
-                                        FileWriteMode.Overwrite
-                                    )
-                                },
-                                style = AppTheme.typography.transferMessageText,
-                                text = "Accept Overwrite"
-                            )
-                            Text(
-                                modifier = Modifier.clickable {
-                                    interactor.respondToRequest(
-                                        fileTransfer,
-                                        FileTransferResponseType.Accepted,
-                                        FileWriteMode.Append
-                                    )
-                                },
-                                style = AppTheme.typography.transferMessageText,
-                                text = "Accept Continue"
-                            )
-                            Text(
-                                modifier = Modifier.clickable {
+                            TransferMessageButton(
+                                label = "Reject",
+                                isPrimary = false,
+                                onClick = {
                                     interactor.respondToRequest(fileTransfer, FileTransferResponseType.Rejected)
-                                },
-                                style = AppTheme.typography.transferMessageText,
-                                text = "Reject"
+                                }
+                            )
+                            TransferMessageButton(
+                                label = "Accept Overwrite",
+                                onClick = {
+                                    interactor.respondToRequest(
+                                        fileTransfer,
+                                        FileTransferResponseType.Accepted,
+                                        FileWriteMode.Overwrite,
+                                    )
+                                }
+                            )
+                            TransferMessageButton(
+                                label = "Accept",
+                                onClick = {
+                                    interactor.respondToRequest(
+                                        fileTransfer,
+                                        FileTransferResponseType.Accepted,
+                                        FileWriteMode.Append,
+                                    )
+                                }
                             )
                         } else {
-                            Text(
-                                modifier = Modifier.clickable {
+                            TransferMessageButton(
+                                label = "Reject",
+                                isPrimary = false,
+                                onClick = {
+                                    interactor.respondToRequest(fileTransfer, FileTransferResponseType.Rejected)
+                                }
+                            )
+                            TransferMessageButton(
+                                label = "Accept",
+                                onClick = {
                                     interactor.respondToRequest(
                                         fileTransfer,
                                         FileTransferResponseType.Accepted,
                                         FileWriteMode.Overwrite
                                     )
-                                },
-                                style = AppTheme.typography.transferMessageText,
-                                text = "Accept"
-                            )
-                            Text(
-                                modifier = Modifier.clickable {
-                                    interactor.respondToRequest(fileTransfer, FileTransferResponseType.Rejected)
-                                },
-                                style = AppTheme.typography.transferMessageText,
-                                text = "Reject"
+                                }
                             )
                         }
                     }
                 }
+
                 FileTransferStatus.Stopped -> {
-                    Column {
-                        Text(
-                            text = when (fileTransfer.stopReason) {
-                                FileTransferStopReason.UnableToOpenFile -> "Transfer stopped. Unable to create file."
-                                FileTransferStopReason.SocketClosed -> "Transfer stopped due to a connection failure."
-                                else -> "Transfer stopped for an unknown reason"
-                            },
-                            style = AppTheme.typography.transferMessageText
-                        )
-                        TextButton(label = "Ok", onClick = { interactor.transferMessageQueueItemHandled(fileTransfer) })
-                    }
+                    TransferMessageText(
+                        text = when (fileTransfer.stopReason) {
+                            FileTransferStopReason.UnableToOpenFile -> "Transfer stopped. Unable to create file."
+                            FileTransferStopReason.SocketClosed -> "Transfer stopped due to a connection failure."
+                            else -> "Transfer stopped for an unknown reason"
+                        }
+                    )
+                    TransferMessageButton(
+                        label = "Ok",
+                        onClick = { interactor.transferMessageQueueItemHandled(fileTransfer) },
+                    )
                 }
+
                 FileTransferStatus.Rejected -> {
-                    Column {
-                        Text(text = "${fileTransfer.deviceName} rejected your request", style = AppTheme.typography.transferMessageText)
-                        TextButton(label = "Ok", onClick = { interactor.transferMessageQueueItemHandled(fileTransfer)})
-                    }
+                    TransferMessageText("\"${fileTransfer.deviceName}\" rejected your request to send \"${fileTransfer.fileName}\"")
+                    TransferMessageButton(
+                        label = "Ok",
+                        onClick = { interactor.transferMessageQueueItemHandled(fileTransfer) },
+                    )
                 }
+
                 else -> {}
             }
         }
     }
+}
+
+@Composable
+private fun TransferMessageText(
+    text: String
+) {
+    Text(
+        modifier = Modifier.fillMaxWidth(),
+        text = text,
+        style = AppTheme.typography.transferMessageText,
+        overflow = TextOverflow.Ellipsis,
+        maxLines = 3,
+    )
+}
+
+@Composable
+private fun TransferMessageButton(
+    label: String,
+    isPrimary: Boolean = true,
+    onClick: () -> Unit,
+) {
+    Text(
+        modifier = Modifier
+            .clip(RoundedCornerShape(4.dp))
+            .clickable { onClick() }
+            .background(Color.Black.copy(alpha = .15f))
+            .padding(horizontal = 12.dp, vertical = 4.dp),
+        style = if (isPrimary) AppTheme.typography.transferMessageButtonPrimary else AppTheme.typography.transferMessageButtonSecondary,
+        text = label,
+    )
 }
 
 @Composable

@@ -90,8 +90,17 @@ data class AppTypography internal constructor(
         color = Color(0xFF777777),
     ),
     val transferMessageText: TextStyle = TextStyle(
-        color = Color.White,
+        color = Color(0xFFE6E6E6),
         fontSize = 12.sp,
+    ),
+    val transferMessageButtonPrimary: TextStyle = TextStyle(
+//        color = Color(0xFF155fd4),
+        color = Color(0xFF74A4F1),
+        fontSize = 14.sp,
+    ),
+    val transferMessageButtonSecondary: TextStyle = transferMessageButtonPrimary.copy(
+//        color = Color(0xFFCA2525)
+        color = Color(0xFFEB9393),
     ),
     val primaryButton: TextStyle = TextStyle(
         color = Color.White,
