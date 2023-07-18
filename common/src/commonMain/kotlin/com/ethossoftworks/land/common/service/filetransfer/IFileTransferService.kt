@@ -9,7 +9,7 @@ interface IFileTransferService: IFileTransferServer, IFileTransferClient
 interface IFileTransferServer {
     suspend fun startServer(): Flow<FileTransferServerEvent>
     suspend fun respondToTransferRequest(
-        requestId: Short,
+        transferId: Short,
         existingFileLength: Long,
         response: FileTransferResponseType,
         sink: Sink?,
@@ -28,7 +28,7 @@ data class FileTransferRequest(
 )
 
 data class FileTransferResponse(
-    val requestId: Short,
+    val transferId: Short,
     val responseType: FileTransferResponseType,
     val existingFileLength: Long,
     val sink: Sink?,
@@ -45,24 +45,24 @@ sealed class FileTransferServerEvent {
     data class ServerStopped(val error: Any?): FileTransferServerEvent()
 
     data class TransferRequested(
-        val requestId: Short,
+        val transferId: Short,
         val senderName: String,
         val fileName: String,
         val length: Long,
     ): FileTransferServerEvent()
 
     data class TransferProgress(
-        val requestId: Short,
+        val transferId: Short,
         val bytesReceived: Long,
         val bytesTotal: Long,
     ): FileTransferServerEvent()
 
     data class TransferStopped(
-        val requestId: Short,
+        val transerId: Short,
         val reason: FileTransferStopReason
     ): FileTransferServerEvent()
 
-    data class TransferComplete(val requestId: Short): FileTransferServerEvent()
+    data class TransferComplete(val transferId: Short): FileTransferServerEvent()
 }
 
 enum class FileTransferStopReason {
@@ -73,23 +73,24 @@ enum class FileTransferStopReason {
 }
 
 sealed class FileTransferClientEvent {
-    data class AwaitingAcceptance(val requestId: Short): FileTransferClientEvent()
+    data class Connecting(val transferId: Short): FileTransferClientEvent()
+    data class AwaitingAcceptance(val transferId: Short): FileTransferClientEvent()
 
     data class TransferResponseReceived(
-        val requestId: Short,
+        val transferId: Short,
         val response: FileTransferResponseType,
     ): FileTransferClientEvent()
 
     data class TransferProgress(
-        val requestId: Short,
+        val transferId: Short,
         val bytesSent: Long,
         val bytesTotal: Long,
     ): FileTransferClientEvent()
 
     data class TransferStopped(
-        val requestId: Short,
+        val transferId: Short,
         val reason: FileTransferStopReason
     ): FileTransferClientEvent()
 
-    data class TransferComplete(val requestId: Short): FileTransferClientEvent()
+    data class TransferComplete(val transferId: Short): FileTransferClientEvent()
 }

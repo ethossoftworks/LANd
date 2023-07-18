@@ -46,21 +46,22 @@ class FileTransferService: IFileTransferService {
     }.flowOn(Dispatchers.IO)
 
     override suspend fun respondToTransferRequest(
-        requestId: Short,
+        transferId: Short,
         existingFileLength: Long,
         response: FileTransferResponseType,
         sink: Sink?,
     ) {
-        transferResponseFlow.emit(FileTransferResponse(requestId, response, existingFileLength, sink))
+        transferResponseFlow.emit(FileTransferResponse(transferId, response, existingFileLength, sink))
     }
 
     override suspend fun sendFile(
         file: FileTransferRequest,
         destinationIp: String
     ): Flow<FileTransferClientEvent> = channelFlow {
-        val requestId = generateConnectionId()
+        val transferId = generateConnectionId()
 
         try {
+            send(FileTransferClientEvent.Connecting(transferId))
             val socket = aSocket(selectorManager).tcp().connect(destinationIp, FILE_TRANSFER_PORT)
             val readBuffer = ByteArray(bufferSize)
             val socketReadChannel = socket.openReadChannel()
@@ -87,20 +88,20 @@ class FileTransferService: IFileTransferService {
             socketWriteChannel.flush()
 
             // Await Response
-            send(FileTransferClientEvent.AwaitingAcceptance(requestId))
+            send(FileTransferClientEvent.AwaitingAcceptance(transferId))
             val response = socketReadChannel.readByte().toInt()
             val existingFileLength = socketReadChannel.readLong()
 
             if (response == 0x01) {
-                send(FileTransferClientEvent.TransferResponseReceived(requestId, FileTransferResponseType.Accepted))
+                send(FileTransferClientEvent.TransferResponseReceived(transferId, FileTransferResponseType.Accepted))
             } else if (response == 0x00) {
-                send(FileTransferClientEvent.TransferResponseReceived(requestId, FileTransferResponseType.Rejected))
+                send(FileTransferClientEvent.TransferResponseReceived(transferId, FileTransferResponseType.Rejected))
                 socket.close()
                 return@channelFlow
             }
 
             // Send File
-            send(FileTransferClientEvent.TransferProgress(requestId, 0, file.length))
+            send(FileTransferClientEvent.TransferProgress(transferId, 0, file.length))
             val reader = file.source.buffer()
             reader.skip(existingFileLength)
             var totalRead = existingFileLength
@@ -110,16 +111,18 @@ class FileTransferService: IFileTransferService {
                 if (read == -1) break
                 socketWriteChannel.writeFully(readBuffer, 0, read)
                 totalRead += read
-                send(FileTransferClientEvent.TransferProgress(requestId, totalRead, file.length))
+                send(FileTransferClientEvent.TransferProgress(transferId, totalRead, file.length))
             }
 
             socketWriteChannel.flush()
             socket.close()
-            send(FileTransferClientEvent.TransferComplete(requestId))
+            send(FileTransferClientEvent.TransferComplete(transferId))
         } catch (e: Exception) {
-            // TODO: Remove this logging
-            e.printStackTrace()
-            send(FileTransferClientEvent.TransferStopped(requestId, FileTransferStopReason.Unknown))
+            if (isClosedConnectionException(e)) {
+                send(FileTransferClientEvent.TransferStopped(transferId, FileTransferStopReason.SocketClosed))
+            } else {
+                send(FileTransferClientEvent.TransferStopped(transferId, FileTransferStopReason.Unknown))
+            }
         }
     }.flowOn(Dispatchers.IO)
 
@@ -127,7 +130,7 @@ class FileTransferService: IFileTransferService {
         socket: Socket,
         eventChannel: SendChannel<FileTransferServerEvent>
     ) {
-        val requestId = generateConnectionId()
+        val transferId = generateConnectionId()
 
         try {
             val readBuffer = ByteArray(bufferSize)
@@ -145,7 +148,7 @@ class FileTransferService: IFileTransferService {
             if (!authResponse.contentEquals(calculateAuthResponse(random))) {
                 eventChannel.send(
                     FileTransferServerEvent.TransferStopped(
-                        requestId = requestId,
+                        transerId = transferId,
                         reason = FileTransferStopReason.AuthorizationChallengeFail,
                     )
                 )
@@ -166,8 +169,8 @@ class FileTransferService: IFileTransferService {
             val fileName = ByteArray(fileNameLength).apply { socketReadChannel.readFully(this) }.decodeToString()
 
             // Wait for user response and send response to client
-            eventChannel.send(FileTransferServerEvent.TransferRequested(requestId, senderName, fileName, payloadLength))
-            val response = transferResponseFlow.first { it.requestId == requestId }
+            eventChannel.send(FileTransferServerEvent.TransferRequested(transferId, senderName, fileName, payloadLength))
+            val response = transferResponseFlow.first { it.transferId == transferId }
             val responseByte = if (response.responseType == FileTransferResponseType.Accepted) 0x01 else 0x00
             socketWriteChannel.writeByte(responseByte)
             socketWriteChannel.writeLong(response.existingFileLength)
@@ -180,12 +183,12 @@ class FileTransferService: IFileTransferService {
 
             val sink = response.sink
             if (sink == null) {
-                eventChannel.send(FileTransferServerEvent.TransferStopped(requestId, FileTransferStopReason.UnableToOpenFile))
+                eventChannel.send(FileTransferServerEvent.TransferStopped(transferId, FileTransferStopReason.UnableToOpenFile))
                 socket.close()
                 return
             }
 
-            eventChannel.send(FileTransferServerEvent.TransferProgress(requestId, 0, payloadLength))
+            eventChannel.send(FileTransferServerEvent.TransferProgress(transferId, 0, payloadLength))
             val writer = sink.buffer()
             var totalWritten = response.existingFileLength
 
@@ -197,22 +200,24 @@ class FileTransferService: IFileTransferService {
                     writer.close()
                     socket.close()
                     if (totalWritten == payloadLength) {
-                        eventChannel.send(FileTransferServerEvent.TransferComplete(requestId))
+                        eventChannel.send(FileTransferServerEvent.TransferComplete(transferId))
                     } else {
-                        eventChannel.send(FileTransferServerEvent.TransferStopped(requestId, FileTransferStopReason.SocketClosed))
+                        eventChannel.send(FileTransferServerEvent.TransferStopped(transferId, FileTransferStopReason.SocketClosed))
                     }
                     break
                 }
 
                 writer.write(readBuffer, 0, read)
                 totalWritten += read
-                eventChannel.send(FileTransferServerEvent.TransferProgress(requestId, totalWritten, payloadLength))
+                eventChannel.send(FileTransferServerEvent.TransferProgress(transferId, totalWritten, payloadLength))
             }
         } catch (e: Exception) {
-            // TODO: Remove this logging
-            e.printStackTrace()
             socket.close()
-            eventChannel.send(FileTransferServerEvent.TransferStopped(requestId, FileTransferStopReason.Unknown))
+            if (isClosedConnectionException(e)) {
+                eventChannel.send(FileTransferServerEvent.TransferStopped(transferId, FileTransferStopReason.SocketClosed))
+            } else {
+                eventChannel.send(FileTransferServerEvent.TransferStopped(transferId, FileTransferStopReason.Unknown))
+            }
         }
     }
 
@@ -224,3 +229,5 @@ class FileTransferService: IFileTransferService {
         return hashedBytes
     }
 }
+
+expect fun FileTransferService.isClosedConnectionException(exception: Exception): Boolean

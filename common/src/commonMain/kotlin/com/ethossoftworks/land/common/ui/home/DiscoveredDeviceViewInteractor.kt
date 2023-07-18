@@ -19,7 +19,7 @@ class DiscoveredDeviceViewInteractor(
     dependencies = listOf(fileTransferInteractor)
 ) {
     override fun computed(state: DiscoveredDeviceState): DiscoveredDeviceState {
-        val transferIds = fileTransferInteractor.state.deviceNameRequestIdMap[deviceName] ?: emptyList()
+        val transferIds = fileTransferInteractor.state.deviceNameTransferIdMap[deviceName] ?: emptyList()
         var isWaiting = false
         var sendingBytesTotal = 0L
         var sendingBytesTransferred = 0L
@@ -27,7 +27,7 @@ class DiscoveredDeviceViewInteractor(
         var receivingBytesTransferred = 0L
 
         transferIds.forEach { id ->
-            val transfer = fileTransferInteractor.state.activeRequests[id] ?: return@forEach
+            val transfer = fileTransferInteractor.state.activeTransfers[id] ?: return@forEach
 
             if (transfer.direction == FileTransferDirection.Sending) {
                 sendingBytesTotal += transfer.bytesTotal

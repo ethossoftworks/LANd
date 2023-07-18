@@ -37,7 +37,7 @@ class HomeScreenViewInteractor(
             discoveredDevices = discoveryInteractor.state.discoveredDevices,
             hasSaveFolder = appPreferencesInteractor.state.saveFolder != null,
             displayName = appPreferencesInteractor.state.displayName,
-            activeRequests = fileTransferInteractor.state.activeRequests,
+            activeRequests = fileTransferInteractor.state.activeTransfers,
             transferMessageQueue = fileTransferInteractor.state.transferMessageQueue,
         )
     }
@@ -100,7 +100,7 @@ class HomeScreenViewInteractor(
         mode: FileWriteMode = FileWriteMode.Overwrite,
     ) {
         interactorScope.launch {
-            fileTransferInteractor.respondToRequest(request, response, mode)
+            fileTransferInteractor.respondToTransferRequest(request, response, mode)
         }
     }
 
