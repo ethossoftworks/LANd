@@ -33,7 +33,7 @@ fun commonModule() = module {
     single { AppCoordinator() }
 
     factory { HomeScreenViewInteractor(get(), get(), get(), get(), get()) }
-    factory { params -> DiscoveredDeviceViewInteractor(params[0], get()) }
+    factory { params -> DiscoveredDeviceViewInteractor(params[0], get(), get(), get()) }
 
     single { DiscoveryInteractor(get()) }
     single { AppPreferencesInteractor(get(), get()) }

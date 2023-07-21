@@ -14,9 +14,9 @@ import androidx.compose.material.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.geometry.center
@@ -49,10 +49,14 @@ import com.outsidesource.oskitcompose.lib.ValRef
 import com.outsidesource.oskitcompose.lib.rememberInject
 import com.outsidesource.oskitcompose.lib.rememberInjectForRoute
 import com.outsidesource.oskitcompose.lib.rememberValRef
+import com.outsidesource.oskitcompose.modifier.KMPDragData
+import com.outsidesource.oskitcompose.modifier.kmpOnExternalDrag
 import com.outsidesource.oskitcompose.modifier.outerShadow
 import com.outsidesource.oskitcompose.systemui.*
 import com.outsidesource.oskitkmp.lib.Platform
 import com.outsidesource.oskitkmp.lib.current
+import io.ktor.http.*
+import okio.Path.Companion.toPath
 import org.koin.core.parameter.parametersOf
 import kotlin.math.roundToInt
 
@@ -165,11 +169,11 @@ private fun BoxScope.TransferMessage(
 ) {
     val interactor = interactorRef.value
 
-    KeyedAnimatedContent(
+    TransitionAnimatedContent(
         targetState = transfer,
         modifier = Modifier.align(if (Platform.current.isDesktop) Alignment.BottomEnd else Alignment.BottomCenter),
     ) { fileTransfer, transition ->
-        if (fileTransfer == null) return@KeyedAnimatedContent
+        if (fileTransfer == null) return@TransitionAnimatedContent
         val alphaAnim by transition.animateFloat(transitionSpec = { tween(250) }) { if (it == fileTransfer) 1f else 0f }
         val positionAnim by transition.animateFloat(transitionSpec = { tween(250) }) { if (it == fileTransfer) 0f else 10f }
 
@@ -363,7 +367,8 @@ private fun DiscoveredDevice(
     interactor: DiscoveredDeviceViewInteractor = rememberInject { parametersOf(device.name) },
 ) {
     val state by interactor.collectAsState()
-
+    var isDropping by remember { mutableStateOf(false) }
+    val dropAnim by animateFloatAsState(if (isDropping) 1.2f else 1f)
     val colors = AppTheme.colors
 
     Column(
@@ -379,6 +384,16 @@ private fun DiscoveredDevice(
         Box(
             modifier = Modifier
                 .size(64.dp)
+                .scale(dropAnim)
+                .kmpOnExternalDrag(
+                    onDragStart = { isDropping = true },
+                    onDragExit = { isDropping = false },
+                    onDrop = {
+                        isDropping = false
+                        val data = it.dragData
+                        if (data is KMPDragData.FilesList) interactor.onFilesDropped(device, data)
+                    }
+                )
                 .drawBehind {
                     if (progressTransition.targetState == 0f) return@drawBehind
 
@@ -452,7 +467,8 @@ private fun DiscoveredDevice(
 }
 
 @Composable
-private fun <T> KeyedAnimatedContent(
+// Adapted from CrossFade
+private fun <T> TransitionAnimatedContent(
     targetState: T,
     modifier: Modifier = Modifier,
     contentKey: (targetState: T) -> Any? = { it },

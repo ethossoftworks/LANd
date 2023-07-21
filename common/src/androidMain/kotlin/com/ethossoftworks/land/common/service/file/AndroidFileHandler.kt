@@ -3,7 +3,6 @@ package com.ethossoftworks.land.common.service.file
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
-import android.os.Environment
 import android.provider.OpenableColumns
 import androidx.activity.ComponentActivity
 import androidx.activity.result.ActivityResultLauncher
@@ -160,7 +159,9 @@ class AndroidFileHandler: IFileHandler {
                 name = it.getString(nameIndex)
             }
 
-            Outcome.Ok(FileMetadata(length = size, name = name))
+            val file = DocumentFile.fromSingleUri(context, path.toUri())
+
+            Outcome.Ok(FileMetadata(length = size, name = name, isDirectory = file?.isDirectory == true))
         } catch (e: Exception) {
             Outcome.Error(e)
         }

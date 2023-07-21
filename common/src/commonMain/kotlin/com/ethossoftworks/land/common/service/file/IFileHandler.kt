@@ -33,4 +33,5 @@ expect sealed class FileHandlerContext
 data class FileMetadata(
     val length: Long,
     val name: String,
+    val isDirectory: Boolean,
 )

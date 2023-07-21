@@ -76,7 +76,7 @@ class DesktopFileHandler : IFileHandler {
             val okioPath = path.toPath()
             val metadata = FileSystem.SYSTEM.metadata(okioPath)
             val length = metadata.size ?: return Outcome.Error(FileHandlerError.NoMetaData)
-            Outcome.Ok(FileMetadata(name = okioPath.name, length = length))
+            Outcome.Ok(FileMetadata(name = okioPath.name, length = length, isDirectory = metadata.isDirectory))
         } catch (e: Exception) {
             Outcome.Error(e)
         }
