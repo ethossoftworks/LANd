@@ -2,6 +2,7 @@
 
 package com.ethossoftworks.land.common.ui.home
 
+import TransferMessage
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.Image
@@ -88,7 +89,7 @@ fun HomeScreen(
                 .zIndex(1f)
                 .padding(top = 16.dp, end = 16.dp),
             resource = Resources.Settings,
-            onClick = {},
+            onClick = interactor::onSettingsButtonClicked,
         )
 
         Column(
@@ -155,166 +156,16 @@ fun HomeScreen(
             }
         }
 
+        SettingsBottomSheet(
+            isVisible = state.isSettingsBottomSheetVisible,
+            onDismissRequest = interactor::onSettingsBottomSheetDismissed,
+        )
+
         TransferMessage(
             state.transferMessageQueue.firstOrNull(),
             rememberValRef(interactor)
         )
     }
-}
-
-@Composable
-private fun BoxScope.TransferMessage(
-    transfer: FileTransfer?,
-    interactorRef: ValRef<HomeScreenViewInteractor>,
-) {
-    val interactor = interactorRef.value
-
-    TransitionAnimatedContent(
-        targetState = transfer,
-        modifier = Modifier.align(if (Platform.current.isDesktop) Alignment.BottomEnd else Alignment.BottomCenter),
-    ) { fileTransfer, transition ->
-        if (fileTransfer == null) return@TransitionAnimatedContent
-        val alphaAnim by transition.animateFloat(transitionSpec = { tween(250) }) { if (it == fileTransfer) 1f else 0f }
-        val positionAnim by transition.animateFloat(transitionSpec = { tween(250) }) { if (it == fileTransfer) 0f else 10f }
-
-        Column(
-            modifier = Modifier
-                .graphicsLayer {
-                    alpha = alphaAnim
-                    translationY = positionAnim
-                }
-                .width(350.dp)
-                .padding(AppTheme.dimensions.screenHPadding, AppTheme.dimensions.screenVPadding)
-                .windowInsetsPadding(KMPWindowInsets.bottomInsets)
-                .outerShadow(
-                    blur = 8.dp,
-                    shape = RoundedCornerShape(8.dp),
-                    offset = DpOffset(0.dp, 2.dp),
-                    color = Color.Black.copy(alpha = .2f)
-                )
-                .clip(RoundedCornerShape(8.dp))
-//                .border(width = 1.dp, color = Color(0xFFD0D0D0), RoundedCornerShape(8.dp))
-//                .background(Color(0xFFF6F6F6))
-//                .border(width = 1.dp, color = Color(0xFF393a41), RoundedCornerShape(8.dp))
-                .background(Color(0xFF494C50))
-                .padding(12.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
-            horizontalAlignment = Alignment.End,
-        ) {
-            when (fileTransfer.status) {
-                FileTransferStatus.AwaitingAcceptance -> {
-                    TransferMessageText(
-                        text = "\"${fileTransfer.deviceName}\" wants to send you \"${fileTransfer.fileName}\" (${fileTransfer.sizeString()})."
-                    )
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        if (fileTransfer.bytesExisting > 0 && fileTransfer.bytesExisting != fileTransfer.bytesTotal) {
-                            TransferMessageButton(
-                                label = "Reject",
-                                isPrimary = false,
-                                onClick = {
-                                    interactor.respondToRequest(fileTransfer, FileTransferResponseType.Rejected)
-                                }
-                            )
-                            TransferMessageButton(
-                                label = "Overwrite",
-                                onClick = {
-                                    interactor.respondToRequest(
-                                        fileTransfer,
-                                        FileTransferResponseType.Accepted,
-                                        FileWriteMode.Overwrite,
-                                    )
-                                }
-                            )
-                            TransferMessageButton(
-                                label = "Continue",
-                                onClick = {
-                                    interactor.respondToRequest(
-                                        fileTransfer,
-                                        FileTransferResponseType.Accepted,
-                                        FileWriteMode.Append,
-                                    )
-                                }
-                            )
-                        } else {
-                            TransferMessageButton(
-                                label = "Reject",
-                                isPrimary = false,
-                                onClick = {
-                                    interactor.respondToRequest(fileTransfer, FileTransferResponseType.Rejected)
-                                }
-                            )
-                            TransferMessageButton(
-                                label = "Accept",
-                                onClick = {
-                                    interactor.respondToRequest(
-                                        fileTransfer,
-                                        FileTransferResponseType.Accepted,
-                                        FileWriteMode.Overwrite
-                                    )
-                                }
-                            )
-                        }
-                    }
-                }
-
-                FileTransferStatus.Stopped -> {
-                    TransferMessageText(
-                        text = when (fileTransfer.stopReason) {
-                            FileTransferStopReason.UnableToOpenFile -> "Transfer stopped. Unable to create file."
-                            FileTransferStopReason.SocketClosed -> "Transfer stopped due to a connection failure."
-                            else -> "Transfer stopped for an unknown reason"
-                        }
-                    )
-                    TransferMessageButton(
-                        label = "Ok",
-                        onClick = { interactor.transferMessageQueueItemHandled(fileTransfer) },
-                    )
-                }
-
-                FileTransferStatus.Rejected -> {
-                    TransferMessageText("\"${fileTransfer.deviceName}\" rejected your request to send \"${fileTransfer.fileName}\"")
-                    TransferMessageButton(
-                        label = "Ok",
-                        onClick = { interactor.transferMessageQueueItemHandled(fileTransfer) },
-                    )
-                }
-
-                else -> {}
-            }
-        }
-    }
-}
-
-@Composable
-private fun TransferMessageText(
-    text: String
-) {
-    Text(
-        modifier = Modifier.fillMaxWidth(),
-        text = text,
-        style = AppTheme.typography.transferMessageText,
-        overflow = TextOverflow.Ellipsis,
-        maxLines = 3,
-    )
-}
-
-@Composable
-private fun TransferMessageButton(
-    label: String,
-    isPrimary: Boolean = true,
-    onClick: () -> Unit,
-) {
-    Text(
-        modifier = Modifier
-            .clip(RoundedCornerShape(4.dp))
-            .clickable { onClick() }
-            .background(Color.Black.copy(alpha = .15f))
-            .padding(horizontal = 12.dp, vertical = 4.dp),
-        style = if (isPrimary) AppTheme.typography.transferMessageButtonPrimary else AppTheme.typography.transferMessageButtonSecondary,
-        text = label,
-    )
 }
 
 @Composable
@@ -358,160 +209,4 @@ private fun RadiatingLogo(ringSpacing: Dp) {
         colorFilter = ColorFilter.tint(AppTheme.colors.accentColor),
         contentDescription = ""
     )
-}
-
-@Composable
-private fun DiscoveredDevice(
-    device: Device,
-    onClick: () -> Unit,
-    interactor: DiscoveredDeviceViewInteractor = rememberInject { parametersOf(device.name) },
-) {
-    val state by interactor.collectAsState()
-    var isDropping by remember { mutableStateOf(false) }
-    val dropAnim by animateFloatAsState(if (isDropping) 1.2f else 1f)
-    val colors = AppTheme.colors
-
-    Column(
-        modifier = Modifier
-            .width(90.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(4.dp),
-    ) {
-        val progressTransition = updateTransition(if (state.sendingProgress > 0.0f) state.sendingProgress else state.receivingProgress)
-        val progressAnim by progressTransition.animateFloat { it }
-        val progressArcSpacing = 4.dp
-
-        Box(
-            modifier = Modifier
-                .size(64.dp)
-                .scale(dropAnim)
-                .kmpOnExternalDrag(
-                    onDragStart = { isDropping = true },
-                    onDragExit = { isDropping = false },
-                    onDrop = {
-                        isDropping = false
-                        val data = it.dragData
-                        if (data is KMPDragData.FilesList) interactor.onFilesDropped(device, data)
-                    }
-                )
-                .drawBehind {
-                    if (progressTransition.targetState == 0f) return@drawBehind
-
-                    drawArc(
-                        color = colors.accentColor,
-                        style = Stroke(width = 2.5.dp.toPx()),
-                        useCenter = false,
-                        topLeft = Offset(-(progressArcSpacing).toPx(), -(progressArcSpacing).toPx()),
-                        size = Size(size.width + (progressArcSpacing * 2).toPx(), size.height + (progressArcSpacing * 2).toPx()),
-                        startAngle = -90f,
-                        sweepAngle = 360f * progressAnim,
-                    )
-                }
-                .outerShadow(
-                    blur = 2.dp,
-                    color = Color.Black.copy(alpha = .25f),
-                    shape = CircleShape,
-                    offset = DpOffset(0.dp, 2.dp)
-                )
-                .clip(CircleShape)
-                .clickable { onClick() }
-                .background(Color(0xFFEEEEEE))
-                .background(
-                    Brush.linearGradient(
-                        colors = listOf(
-                            Color(0xCC155fd4),
-                            Color(0xCC6198ef),
-                        )
-                    )
-                ),
-            contentAlignment = Alignment.Center,
-        ) {
-            Image(
-                modifier = Modifier.width(48.dp),
-                painter = rememberKmpPainterResource(
-                    when (device.platform) {
-                        DevicePlatform.iOS -> Resources.DeviceMobileIOS
-                        DevicePlatform.Android -> Resources.DeviceMobileAndroid
-                        DevicePlatform.MacOS -> Resources.DeviceDesktopMacOS
-                        DevicePlatform.Windows -> Resources.DeviceDesktopWindows
-                        DevicePlatform.Linux -> Resources.DeviceDesktopLinux
-                        DevicePlatform.Unknown -> Resources.DeviceUnknown
-                    }
-                ),
-                contentDescription = null,
-            )
-        }
-        Text(
-            modifier = Modifier.padding(top = 4.dp),
-            text = device.name,
-            fontSize = 12.sp,
-            overflow = TextOverflow.Ellipsis,
-            textAlign = TextAlign.Center,
-            maxLines = 2,
-            lineHeight = 1.2.em,
-        )
-        Text(
-            text = when {
-                state.isWaiting -> "Waiting..."
-                state.sendingProgress > 0.0f -> "Sending ${(state.sendingProgress * 100).roundToInt()}%"
-                state.receivingProgress > 0.0f -> "Receiving ${(state.receivingProgress * 100).roundToInt()}%"
-                else -> ""
-            },
-            style = AppTheme.typography.deviceTransferStatus,
-            overflow = TextOverflow.Ellipsis,
-            textAlign = TextAlign.Center,
-            maxLines = 2,
-            lineHeight = 1.2.em,
-        )
-    }
-}
-
-@Composable
-// Adapted from CrossFade
-private fun <T> TransitionAnimatedContent(
-    targetState: T,
-    modifier: Modifier = Modifier,
-    contentKey: (targetState: T) -> Any? = { it },
-    content: @Composable (targetState: T, transition: Transition<T>) -> Unit,
-) {
-    val transition = updateTransition(targetState)
-    val currentlyVisible = remember { mutableStateListOf<T>().apply { add(transition.currentState) } }
-    val contentMap = remember { mutableMapOf<T, @Composable () -> Unit>() }
-
-    if (transition.currentState == transition.targetState) {
-        // If not animating, just display the current state
-        if (currentlyVisible.size != 1 || currentlyVisible[0] != transition.targetState) {
-            // Remove all the intermediate items from the list once the animation is finished.
-            currentlyVisible.removeAll { it != transition.targetState }
-            contentMap.clear()
-        }
-    }
-
-    if (!contentMap.contains(transition.targetState)) {
-        // Replace target with the same key if any
-        val replacementId = currentlyVisible.indexOfFirst {
-            contentKey(it) == contentKey(transition.targetState)
-        }
-
-        if (replacementId == -1) {
-            currentlyVisible.add(transition.targetState)
-        } else {
-            currentlyVisible[replacementId] = transition.targetState
-        }
-
-        contentMap.clear()
-        currentlyVisible.forEach { stateForContent ->
-            contentMap[stateForContent] = {
-                content(stateForContent, transition)
-            }
-        }
-    }
-
-    Box(modifier) {
-        currentlyVisible.forEach {
-            key(contentKey(it)) {
-                contentMap[it]?.invoke()
-            }
-        }
-    }
 }

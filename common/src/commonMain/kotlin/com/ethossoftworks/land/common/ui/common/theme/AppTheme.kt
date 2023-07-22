@@ -14,8 +14,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontStyle
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
 
 private val LocalTypography = staticCompositionLocalOf { AppTypography() }
@@ -94,16 +97,23 @@ data class AppTypography internal constructor(
         fontSize = 12.sp,
     ),
     val transferMessageButtonPrimary: TextStyle = TextStyle(
-//        color = Color(0xFF155fd4),
         color = Color(0xFF74A4F1),
         fontSize = 14.sp,
     ),
     val transferMessageButtonSecondary: TextStyle = transferMessageButtonPrimary.copy(
-//        color = Color(0xFFCA2525)
         color = Color(0xFFEB9393),
     ),
     val primaryButton: TextStyle = TextStyle(
         color = Color.White,
-        fontSize = 16.sp,
-    )
+        fontSize = 14.sp,
+        fontWeight = FontWeight.SemiBold,
+    ),
+    val settingsSectionHeader: TextStyle = TextStyle(
+        fontWeight = FontWeight.Bold,
+        fontSize = 12.sp,
+        letterSpacing = 1.sp,
+    ),
+    val settingsFieldLabel: TextStyle = TextStyle(
+        fontSize = 14.sp,
+    ),
 )

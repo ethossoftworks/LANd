@@ -2,6 +2,7 @@ package com.ethossoftworks.land.common.service.preferences
 
 import android.content.Context
 import android.content.Context.MODE_PRIVATE
+import com.ethossoftworks.land.common.model.Contact
 import com.outsidesource.oskitkmp.outcome.Outcome
 
 private const val SAVE_FOLDER_KEY = "saveFolder"
@@ -51,5 +52,13 @@ class AndroidPreferencesService(
         } catch (e: Exception) {
             Outcome.Error(e)
         }
+    }
+
+    override suspend fun setContacts(contacts: Map<String, Contact>): Outcome<Unit, Any> {
+        TODO("Not yet implemented")
+    }
+
+    override suspend fun getContacts(): Map<String, Contact> {
+        TODO("Not yet implemented")
     }
 }

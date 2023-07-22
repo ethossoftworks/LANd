@@ -4,10 +4,7 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.offset
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.Text
@@ -31,8 +28,9 @@ fun PrimaryButton(
     modifier: Modifier = Modifier,
     onClick: () -> Unit,
 ) {
-    Text(
+    Box(
         modifier = modifier
+            .height(40.dp)
             .clip(RoundedCornerShape(4.dp))
             .background(AppTheme.colors.primaryButtonBg)
             .clickable(
@@ -40,10 +38,14 @@ fun PrimaryButton(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = rememberRipple(),
             )
-            .padding(horizontal = 12.dp, vertical = 8.dp),
-        text = label,
-        style = AppTheme.typography.primaryButton,
-    )
+            .padding(horizontal = 12.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            text = label,
+            style = AppTheme.typography.primaryButton,
+        )
+    }
 }
 
 @Composable

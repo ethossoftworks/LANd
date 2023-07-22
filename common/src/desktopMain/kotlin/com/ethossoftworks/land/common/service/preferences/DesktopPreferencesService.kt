@@ -1,5 +1,6 @@
 package com.ethossoftworks.land.common.service.preferences
 
+import com.ethossoftworks.land.common.model.Contact
 import com.outsidesource.oskitkmp.outcome.Outcome
 import java.util.prefs.Preferences
 
@@ -45,5 +46,13 @@ class DesktopPreferencesService: IPreferencesService {
         } catch (e: Exception) {
             Outcome.Error(e)
         }
+    }
+
+    override suspend fun setContacts(contacts: Map<String, Contact>): Outcome<Unit, Any> {
+        TODO("Not yet implemented")
+    }
+
+    override suspend fun getContacts(): Map<String, Contact> {
+        TODO("Not yet implemented")
     }
 }

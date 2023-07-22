@@ -15,6 +15,7 @@ import com.outsidesource.oskitkmp.outcome.Outcome
 import kotlinx.coroutines.launch
 
 data class HomeViewState(
+    val isSettingsBottomSheetVisible: Boolean = false,
     val discoveredDevices: Map<String, Device> = emptyMap(),
     val hasSaveFolder: Boolean = false,
     val displayName: String = "",
@@ -106,5 +107,13 @@ class HomeScreenViewInteractor(
 
     fun transferMessageQueueItemHandled(item: FileTransfer) {
         fileTransferInteractor.transferMessageQueueItemHandled(item)
+    }
+
+    fun onSettingsButtonClicked() {
+        update { state -> state.copy(isSettingsBottomSheetVisible = true) }
+    }
+
+    fun onSettingsBottomSheetDismissed() {
+        update { state -> state.copy(isSettingsBottomSheetVisible = false) }
     }
 }
