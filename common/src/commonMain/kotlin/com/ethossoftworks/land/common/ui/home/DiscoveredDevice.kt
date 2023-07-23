@@ -80,7 +80,7 @@ fun DiscoveredDevice(
                     if (progressTransition.targetState == 0f) return@drawBehind
 
                     drawArc(
-                        color = colors.accentColor,
+                        color = colors.primary,
                         style = Stroke(width = 2.5.dp.toPx()),
                         useCenter = false,
                         topLeft = Offset(-(progressArcSpacing).toPx(), -(progressArcSpacing).toPx()),

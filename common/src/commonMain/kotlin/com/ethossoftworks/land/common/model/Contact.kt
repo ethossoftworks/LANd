@@ -5,5 +5,5 @@ import kotlinx.serialization.Serializable
 @Serializable
 data class Contact(
     val name: String,
-    val ipAddress: String,
+    val ipAddress: String?,
 )

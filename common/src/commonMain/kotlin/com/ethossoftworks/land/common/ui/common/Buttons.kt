@@ -15,6 +15,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.ethossoftworks.land.common.ui.common.theme.AppTheme
@@ -28,11 +29,43 @@ fun PrimaryButton(
     modifier: Modifier = Modifier,
     onClick: () -> Unit,
 ) {
+    BaseButton(
+        label,
+        modifier,
+        AppTheme.colors.primaryButtonBg,
+        AppTheme.typography.primaryButton,
+        onClick
+    )
+}
+
+@Composable
+fun SecondaryButton(
+    label: String,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit,
+) {
+    BaseButton(
+        label,
+        modifier,
+        AppTheme.colors.secondaryButtonBg,
+        AppTheme.typography.secondaryButton,
+        onClick
+    )
+}
+
+@Composable
+private fun BaseButton(
+    label: String,
+    modifier: Modifier = Modifier,
+    buttonColor: Color,
+    textStyle: TextStyle,
+    onClick: () -> Unit,
+) {
     Box(
         modifier = modifier
             .height(40.dp)
             .clip(RoundedCornerShape(4.dp))
-            .background(AppTheme.colors.primaryButtonBg)
+            .background(buttonColor)
             .clickable(
                 onClick = onClick,
                 interactionSource = remember { MutableInteractionSource() },
@@ -43,10 +76,12 @@ fun PrimaryButton(
     ) {
         Text(
             text = label,
-            style = AppTheme.typography.primaryButton,
+            style = textStyle,
         )
     }
 }
+
+
 
 @Composable
 fun ImageButton(

@@ -7,6 +7,10 @@ import com.ethossoftworks.land.common.service.file.IFileHandler
 import com.ethossoftworks.land.common.service.filetransfer.*
 import com.outsidesource.oskitkmp.interactor.Interactor
 import com.outsidesource.oskitkmp.outcome.Outcome
+import kotlinx.atomicfu.atomic
+import kotlinx.atomicfu.update
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.launch
 import kotlin.math.round
 import kotlin.math.roundToInt
@@ -60,7 +64,10 @@ class FileTransferInteractor(
     initialState = FileTransferState(),
 ) {
 
+    private val serverJob = atomic<Job?>(null)
+
     suspend fun startServer() {
+        stopServer()
         interactorScope.launch {
             fileTransferService.startServer().collect {
                 when (it) {
@@ -123,7 +130,14 @@ class FileTransferInteractor(
                     }
                 }
             }
+        }.apply {
+            serverJob.update { this }
         }
+    }
+
+    suspend fun stopServer() {
+        serverJob.value?.cancelAndJoin()
+        update { state -> state.copy(isServerRunning = false) }
     }
 
     suspend fun sendFile(device: Device, file: FileTransferRequest) {

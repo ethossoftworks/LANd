@@ -4,6 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material.Colors
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Typography
 import androidx.compose.runtime.Composable
@@ -14,11 +15,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
-import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
 
 private val LocalTypography = staticCompositionLocalOf { AppTypography() }
@@ -52,6 +51,9 @@ fun AppTheme(
         LocalDimensions provides AppTheme.dimensions,
     ) {
         MaterialTheme(
+            colors = MaterialTheme.colors.copy(
+                primary = AppTheme.colors.primary,
+            ),
             typography = Typography(
                 defaultFontFamily = AppTheme.typography.default.fontFamily ?: FontFamily.Default,
                 body1 = AppTheme.typography.default,
@@ -69,14 +71,18 @@ fun AppTheme(
 
 interface AppColors {
     val screenBackground: Color
-    val accentColor: Color
+    val primary: Color
+    val secondary: Color
     val primaryButtonBg: Color
+    val secondaryButtonBg: Color
 }
 
 object AppLightTheme : AppColors {
     override val screenBackground = Color.White
-    override val accentColor = Color(0xFF155fd4)
-    override val primaryButtonBg = accentColor
+    override val primary = Color(0xFF155fd4)
+    override val secondary = Color(0xFFCCCCCC)
+    override val primaryButtonBg = primary
+    override val secondaryButtonBg = Color.Black.copy(alpha = .07f)
 }
 
 data class AppDimensions internal constructor(
@@ -108,12 +114,19 @@ data class AppTypography internal constructor(
         fontSize = 14.sp,
         fontWeight = FontWeight.SemiBold,
     ),
+    val secondaryButton: TextStyle = TextStyle(
+        color = Color.Black,
+        fontSize = 14.sp,
+        fontWeight = FontWeight.SemiBold,
+    ),
     val settingsSectionHeader: TextStyle = TextStyle(
         fontWeight = FontWeight.Bold,
         fontSize = 12.sp,
         letterSpacing = 1.sp,
     ),
     val settingsFieldLabel: TextStyle = TextStyle(
-        fontSize = 14.sp,
+        fontSize = 12.sp,
+        letterSpacing = .5.sp,
+        color = Color(0xFF333333),
     ),
 )

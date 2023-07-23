@@ -1,8 +1,12 @@
 package com.ethossoftworks.land.common.ui.home
 
+import com.ethossoftworks.land.common.interactor.discovery.DiscoveryInteractor
+import com.ethossoftworks.land.common.interactor.filetransfer.FileTransferInteractor
 import com.ethossoftworks.land.common.interactor.preferences.AppPreferencesInteractor
 import com.ethossoftworks.land.common.model.Contact
 import com.ethossoftworks.land.common.service.file.IFileHandler
+import com.ethossoftworks.land.common.service.preferences.DeviceVisibility
+import com.ethossoftworks.land.common.service.preferences.TransferRequestPermissionType
 import com.outsidesource.oskitkmp.interactor.Interactor
 import com.outsidesource.oskitkmp.outcome.Outcome
 import kotlinx.coroutines.launch
@@ -12,10 +16,17 @@ data class SettingsBottomSheetState(
     val saveFolderExists: Boolean = false,
     val displayName: String = "",
     val contacts: Map<String, Contact> = emptyMap(),
+    val transferRequestPermissionType: TransferRequestPermissionType = TransferRequestPermissionType.AskAll,
+    val deviceVisibility: DeviceVisibility = DeviceVisibility.Visible,
+    val contactToAdd: String = "",
+    val editableDisplayName: String = "",
+    val isEditingDisplayName: Boolean = false,
 )
 
 class SettingsBottomSheetViewInteractor(
     private val preferencesInteractor: AppPreferencesInteractor,
+    private val discoveryInteractor: DiscoveryInteractor,
+    private val fileTransferInteractor: FileTransferInteractor,
     private val fileHandler: IFileHandler,
 ) : Interactor<SettingsBottomSheetState>(
     initialState = SettingsBottomSheetState(),
@@ -25,6 +36,9 @@ class SettingsBottomSheetViewInteractor(
         return state.copy(
             saveFolder = preferencesInteractor.state.saveFolder,
             displayName = preferencesInteractor.state.displayName,
+            contacts = preferencesInteractor.state.contacts,
+            transferRequestPermissionType = preferencesInteractor.state.transferRequestPermissionType,
+            deviceVisibility = preferencesInteractor.state.deviceVisibility,
         )
     }
 
@@ -36,5 +50,99 @@ class SettingsBottomSheetViewInteractor(
             val folder = folderOutcome.value ?: return@launch
             preferencesInteractor.setSaveFolder(folder)
         }
+    }
+
+    fun onDeviceVisibilityChanged(value: DeviceVisibility) {
+        interactorScope.launch {
+            val visibilityOutcome = preferencesInteractor.setDeviceVisibility(value)
+            if (visibilityOutcome !is Outcome.Ok) return@launch
+
+            when (value) {
+                DeviceVisibility.Visible -> {
+                    if (!discoveryInteractor.state.isBroadcasting) {
+                        discoveryInteractor.startServiceBroadcasting(state.displayName)
+                    }
+
+                    if (!fileTransferInteractor.state.isServerRunning) {
+                        fileTransferInteractor.startServer()
+                    }
+                }
+                DeviceVisibility.Hidden -> {
+                    if (discoveryInteractor.state.isBroadcasting) {
+                        discoveryInteractor.stopServiceBroadcasting()
+                    }
+
+                    if (!fileTransferInteractor.state.isServerRunning) {
+                        fileTransferInteractor.startServer()
+                    }
+                }
+                DeviceVisibility.SendOnly -> {
+                    if (discoveryInteractor.state.isBroadcasting) {
+                        discoveryInteractor.stopServiceBroadcasting()
+                    }
+
+                    if (fileTransferInteractor.state.isServerRunning) {
+                        fileTransferInteractor.stopServer()
+                    }
+                }
+            }
+        }
+    }
+
+    fun onTransferRequestPermissionTypeChanged(value: TransferRequestPermissionType) {
+        interactorScope.launch {
+            preferencesInteractor.setTransferRequestPermission(value)
+        }
+    }
+
+    fun onContactToAddChanged(value: String) {
+        update { state -> state.copy(contactToAdd = value) }
+    }
+
+    fun onAddContactClicked() {
+        interactorScope.launch {
+            val contactOutcome = preferencesInteractor.addContact(Contact(state.contactToAdd, null))
+            if (contactOutcome !is Outcome.Ok) return@launch
+
+            update { state -> state.copy(contactToAdd = "") }
+        }
+    }
+
+    fun onDeleteContactClicked(contact: Contact) {
+        interactorScope.launch {
+            val contactOutcome = preferencesInteractor.removeContact(contact)
+            if (contactOutcome !is Outcome.Ok) return@launch
+        }
+    }
+
+    fun onChangeDisplayNameClicked() {
+        interactorScope.launch {
+            if (state.isEditingDisplayName) {
+                val displayNameOutcome = preferencesInteractor.setDisplayName(state.editableDisplayName)
+                if (displayNameOutcome !is Outcome.Ok) return@launch
+
+                update { state ->
+                    state.copy(
+                        isEditingDisplayName = false,
+                        editableDisplayName = "",
+                    )
+                }
+            } else {
+                update { state -> state.copy(isEditingDisplayName = true) }
+            }
+        }
+    }
+
+    fun onCancelDisplayNameClicked() {
+        update { state ->
+            state.copy(
+                editableDisplayName = "",
+                isEditingDisplayName = false,
+            )
+        }
+    }
+
+    fun onEditableDisplayNameChanged(value: String) {
+        update { state -> state.copy(editableDisplayName = value) }
     }
 }
