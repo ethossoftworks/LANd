@@ -29,7 +29,9 @@ class SettingsBottomSheetViewInteractor(
     private val fileTransferInteractor: FileTransferInteractor,
     private val fileHandler: IFileHandler,
 ) : Interactor<SettingsBottomSheetState>(
-    initialState = SettingsBottomSheetState(),
+    initialState = SettingsBottomSheetState(
+        editableDisplayName = preferencesInteractor.state.displayName
+    ),
     dependencies = listOf(preferencesInteractor),
 ) {
     override fun computed(state: SettingsBottomSheetState): SettingsBottomSheetState {
@@ -121,12 +123,10 @@ class SettingsBottomSheetViewInteractor(
                 val displayNameOutcome = preferencesInteractor.setDisplayName(state.editableDisplayName)
                 if (displayNameOutcome !is Outcome.Ok) return@launch
 
-                update { state ->
-                    state.copy(
-                        isEditingDisplayName = false,
-                        editableDisplayName = "",
-                    )
-                }
+                update { state -> state.copy(isEditingDisplayName = false) }
+
+                discoveryInteractor.stopServiceBroadcasting()
+                discoveryInteractor.startServiceBroadcasting(state.displayName)
             } else {
                 update { state -> state.copy(isEditingDisplayName = true) }
             }
@@ -136,7 +136,7 @@ class SettingsBottomSheetViewInteractor(
     fun onCancelDisplayNameClicked() {
         update { state ->
             state.copy(
-                editableDisplayName = "",
+                editableDisplayName = state.displayName,
                 isEditingDisplayName = false,
             )
         }

@@ -6,6 +6,7 @@ import io.ktor.utils.io.*
 import korlibs.crypto.SecureRandom
 import korlibs.crypto.sha256
 import kotlinx.atomicfu.atomic
+import kotlinx.atomicfu.update
 import kotlinx.atomicfu.updateAndGet
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.SendChannel
@@ -23,27 +24,36 @@ class FileTransferService: IFileTransferService {
     private val bufferSize = 65_536
     private val connectionId = atomic<Short>(0)
     private val transferResponseFlow = MutableSharedFlow<FileTransferResponse>()
+    private val serverSocket = atomic<ServerSocket?>(null)
 
     private fun generateConnectionId(): Short {
         if (connectionId.value == Short.MAX_VALUE) return connectionId.updateAndGet { 0 }
         return connectionId.updateAndGet { (it + 1).toShort() }
     }
 
-    override suspend fun startServer(): Flow<FileTransferServerEvent> = channelFlow {
-        try {
-            val serverSocket = aSocket(selectorManager).tcp().bind("0.0.0.0", FILE_TRANSFER_PORT)
-            send(FileTransferServerEvent.ServerStarted)
+    override suspend fun startServer(): Flow<FileTransferServerEvent> {
+        return channelFlow {
+            try {
+                serverSocket.update { aSocket(selectorManager).tcp().bind("0.0.0.0", FILE_TRANSFER_PORT) }
+                send(FileTransferServerEvent.ServerStarted)
 
-            supervisorScope {
-                while (isActive) {
-                    val socket = serverSocket.accept()
-                    launch { receiveConnection(socket, channel) }
+                supervisorScope {
+                    while (isActive) {
+                        val socket = serverSocket.value?.accept() ?: continue
+                        launch { receiveConnection(socket, channel) }
+                    }
                 }
+            } catch (e: Exception) {
+                send(FileTransferServerEvent.ServerStopped(e))
             }
-        } catch (e: Exception) {
-            send(FileTransferServerEvent.ServerStopped(e))
-        }
-    }.flowOn(Dispatchers.IO)
+        }.onCompletion {
+            try {
+                serverSocket.value?.close()
+            } catch (e: Exception) {
+                emit(FileTransferServerEvent.ServerStopped(e))
+            }
+        }.flowOn(Dispatchers.IO)
+    }
 
     override suspend fun respondToTransferRequest(
         transferId: Short,
