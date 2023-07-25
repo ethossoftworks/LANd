@@ -14,6 +14,7 @@ interface INSDService {
     suspend fun unregisterService(type: String, name: String, port: Int): Outcome<Unit, Any>
     suspend fun observeServiceTypes(): Flow<NSDServiceType>
     suspend fun observeServices(type: String): Flow<NSDServiceEvent>
+    suspend fun getLocalIpAddress(): String
 }
 
 sealed class NSDServiceEvent {

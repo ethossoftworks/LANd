@@ -22,7 +22,7 @@ class DesktopNSDService : INSDService {
     private val isInitialized = CompletableDeferred<Unit>()
 
     override suspend fun init() {
-        jmDNS = JmDNS.create(getLocalIPAddress())
+        jmDNS = JmDNS.create(getLocalInetAddress())
         isInitialized.complete(Unit)
     }
 
@@ -108,7 +108,11 @@ class DesktopNSDService : INSDService {
         }
     }
 
-    private suspend fun getLocalIPAddress(): InetAddress {
+    override suspend fun getLocalIpAddress(): String {
+        return getLocalInetAddress().hostAddress
+    }
+
+    private suspend fun getLocalInetAddress(): InetAddress {
         return try {
             DatagramSocket().use { socket ->
                 socket.connect(InetAddress.getByName("8.8.8.8"), 10002)

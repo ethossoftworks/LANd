@@ -50,13 +50,13 @@ class AppPreferencesInteractor(
             }
 
             val saveFolder = preferencesService.getSaveFolder().getOrElse(fileHandler.defaultSaveFolder())
-            val contacts = preferencesService.getContacts().getOrElse(emptyMap())
+//            val contacts = preferencesService.getContacts().getOrElse(emptyMap())
             val deviceVisibility = preferencesService.getVisibility().getOrElse(DeviceVisibility.Visible)
             val requestPermissionType = preferencesService.getTransferRequestPermission().getOrElse(TransferRequestPermissionType.AskAll)
 
             update { state ->
                 state.copy(
-                    contacts = contacts,
+//                    contacts = contacts,
                     saveFolder = saveFolder,
                     deviceVisibility = deviceVisibility,
                     transferRequestPermissionType = requestPermissionType,

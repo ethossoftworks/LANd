@@ -10,11 +10,14 @@ import com.outsidesource.oskitkmp.interactor.Interactor
 import com.outsidesource.oskitkmp.lib.Platform
 import com.outsidesource.oskitkmp.lib.current
 import com.outsidesource.oskitkmp.outcome.Outcome
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 
 data class DiscoveryState(
     val discoveredDevices: Map<String, Device> = emptyMap(),
     val broadcastingDeviceName: String? = null,
+    val broadcastIp: String = "",
     val isBroadcasting: Boolean = false,
 )
 
@@ -29,6 +32,17 @@ class DiscoveryInteractor(
     init {
         interactorScope.launch {
             discoveryService.init()
+        }
+        startIpCheck()
+    }
+
+    private fun startIpCheck() {
+        interactorScope.launch {
+            while(isActive) {
+                val ip = getLocalIpAddress()
+                update { state -> state.copy(broadcastIp = ip) }
+                delay(30_000)
+            }
         }
     }
 
@@ -94,6 +108,10 @@ class DiscoveryInteractor(
             name = broadcastingDeviceName,
             port = FILE_TRANSFER_PORT,
         )
+    }
+
+    private suspend fun getLocalIpAddress(): String {
+        return discoveryService.getLocalIpAddress()
     }
 }
 

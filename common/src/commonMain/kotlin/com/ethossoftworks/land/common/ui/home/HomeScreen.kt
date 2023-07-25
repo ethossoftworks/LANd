@@ -72,7 +72,9 @@ fun HomeScreen(
                 .padding(16.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            if (!state.hasSaveFolder) {
+            if (!state.hasInitialized) {
+                Spacer(modifier = Modifier.weight(1f))
+            } else if (!state.hasSaveFolder) {
                 Column(
                     modifier = Modifier
                         .weight(1f)
@@ -122,9 +124,11 @@ fun HomeScreen(
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 RadiatingLogo(ringSpacing)
-                TextButton(
-                    label = "Visible as ${state.displayName}",
-                    onClick = {}
+                Text("Visible as \"${state.displayName}\"")
+                Text(
+                    modifier = Modifier.padding(top = 4.dp ),
+                    text = state.broadcastIp,
+                    style = AppTheme.typography.ipAddress,
                 )
             }
         }

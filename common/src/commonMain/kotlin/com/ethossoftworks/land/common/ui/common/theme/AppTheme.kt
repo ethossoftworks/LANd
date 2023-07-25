@@ -129,4 +129,8 @@ data class AppTypography internal constructor(
         letterSpacing = .5.sp,
         color = Color(0xFF333333),
     ),
+    val ipAddress: TextStyle = TextStyle(
+        fontSize = 11.sp,
+        color = Color.Black.copy(alpha = .5f)
+    )
 )

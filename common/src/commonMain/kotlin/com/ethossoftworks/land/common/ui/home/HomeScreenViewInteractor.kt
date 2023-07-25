@@ -17,8 +17,10 @@ import kotlinx.coroutines.launch
 data class HomeViewState(
     val isSettingsBottomSheetVisible: Boolean = false,
     val discoveredDevices: Map<String, Device> = emptyMap(),
+    val hasInitialized: Boolean = false,
     val hasSaveFolder: Boolean = false,
     val displayName: String = "",
+    val broadcastIp: String = "",
     val activeRequests: Map<Short, FileTransfer> = emptyMap(),
     val transferMessageQueue: List<FileTransfer> = emptyList(),
 )
@@ -40,6 +42,7 @@ class HomeScreenViewInteractor(
             displayName = appPreferencesInteractor.state.displayName,
             activeRequests = fileTransferInteractor.state.activeTransfers,
             transferMessageQueue = fileTransferInteractor.state.transferMessageQueue,
+            broadcastIp = discoveryInteractor.state.broadcastIp
         )
     }
 
@@ -53,6 +56,7 @@ class HomeScreenViewInteractor(
                 discoveryInteractor.startServiceBroadcasting(appPreferencesInteractor.state.displayName)
             }
 
+            update { state -> state.copy(hasInitialized = true) }
             // TODO: Need to stop broadcasting if the file transfer server has stopped
         }
     }
