@@ -89,29 +89,29 @@ fun SettingsBottomSheet(
                         PrimaryButton(label = "Change", onClick = interactor::onSaveFolderChangeClicked)
                     }
                 }
-                SettingsField("Transfer Requests") {
-                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                        for (type in TransferRequestPermissionType.values()) {
-                            Radio(
-                                label = type.toViewString(),
-                                isSelected = state.transferRequestPermissionType == type,
-                                onClick = { interactor.onTransferRequestPermissionTypeChanged(type) },
-                            )
-                        }
-                    }
-                }
+//                SettingsField("Transfer Requests") {
+//                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+//                        for (type in TransferRequestPermissionType.values()) {
+//                            Radio(
+//                                label = type.toViewString(),
+//                                isSelected = state.transferRequestPermissionType == type,
+//                                onClick = { interactor.onTransferRequestPermissionTypeChanged(type) },
+//                            )
+//                        }
+//                    }
+//                }
             }
-            SettingsSection("Contacts") {
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    AppTextField(
-                        modifier = Modifier.weight(1f),
-                        value = state.contactToAdd,
-                        singleLine = true,
-                        onValueChange = interactor::onContactToAddChanged
-                    )
-                    PrimaryButton(label = "Add", onClick = interactor::onAddContactClicked)
-                }
-            }
+//            SettingsSection("Contacts") {
+//                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+//                    AppTextField(
+//                        modifier = Modifier.weight(1f),
+//                        value = state.contactToAdd,
+//                        singleLine = true,
+//                        onValueChange = interactor::onContactToAddChanged
+//                    )
+//                    PrimaryButton(label = "Add", onClick = interactor::onAddContactClicked)
+//                }
+//            }
         }
     }
 }
