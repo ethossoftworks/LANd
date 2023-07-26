@@ -1,5 +1,10 @@
 package com.ethossoftworks.land.common.service.filetransfer
 
+import com.ethossoftworks.land.common.model.device.Device
+import com.ethossoftworks.land.common.model.device.DevicePlatform
+import com.ethossoftworks.land.common.model.device.toDevicePlatform
+import com.outsidesource.oskitkmp.lib.Platform
+import com.outsidesource.oskitkmp.lib.current
 import com.outsidesource.oskitkmp.outcome.Outcome
 import io.ktor.network.selector.*
 import io.ktor.network.sockets.*
@@ -20,7 +25,14 @@ const val FILE_TRANSFER_PORT = 7788
 private const val AUTH_CHALLENGE_LENGTH = 32
 private const val PROTOCOL_VERSION = 1
 
-class FileTransferService: IFileTransferService {
+private object ClientCommand {
+    const val Connect = 0x00.toByte()
+    const val FileTransfer = 0x01.toByte()
+}
+
+class FileTransferService(
+    private val getServerDeviceName: () -> String,
+): IFileTransferService {
     private val selectorManager = SelectorManager(Dispatchers.IO)
     private val bufferSize = 65_536
     private val connectionId = atomic<Short>(0)
@@ -87,12 +99,23 @@ class FileTransferService: IFileTransferService {
             }
 
             // Read Fixed Header
-            val headerVersion = socketReadChannel.readByte().toInt()
+            val protocolVersion = socketReadChannel.readByte().toInt()
+            val command = socketReadChannel.readByte()
             val senderNameLength = socketReadChannel.readByte().toInt()
             val fileNameLength = socketReadChannel.readShort().toInt()
             val payloadLength = socketReadChannel.readLong()
-            val isFolder = socketReadChannel.readByte().toInt()
-            val command = socketReadChannel.readByte().toInt()
+            socketReadChannel.readFully(ByteArray(24)) // Future use
+
+            // Handle connect command
+            if (command == ClientCommand.Connect) {
+                val deviceName = getServerDeviceName()
+                socketWriteChannel.writeByte(Platform.current.toDevicePlatform().toByte())
+                socketWriteChannel.writeByte(deviceName.length)
+                socketWriteChannel.writeStringUtf8(deviceName)
+                socketWriteChannel.flush()
+                socket.close()
+                return
+            }
 
             // Read Dynamic Header
             val senderName = ByteArray(senderNameLength).apply { socketReadChannel.readFully(this) }.decodeToString()
@@ -181,11 +204,11 @@ class FileTransferService: IFileTransferService {
 
             // Send Fixed Header
             socketWriteChannel.writeByte(PROTOCOL_VERSION) // Header Version
+            socketWriteChannel.writeByte(ClientCommand.FileTransfer) // Command
             socketWriteChannel.writeByte(file.senderName.length) // Sender Name Length
             socketWriteChannel.writeShort(file.fileName.length.toShort()) // File Name Length
             socketWriteChannel.writeLong(file.length) // Payload Length
-            socketWriteChannel.writeByte(0) // Is Folder
-            socketWriteChannel.writeByte(0) // Command (future use)
+            socketWriteChannel.writeFully(ByteArray(24) { 0x00 }) // Future use
             socketWriteChannel.flush()
 
             // Send Dynamic Header
@@ -232,7 +255,7 @@ class FileTransferService: IFileTransferService {
         }
     }.flowOn(Dispatchers.IO)
 
-    override suspend fun testConnection(destinationIp: String): Outcome<Unit, Exception> {
+    override suspend fun testConnection(destinationIp: String): Outcome<Device, Exception> {
         return try {
             withTimeout(1_000) {
                 val socket = aSocket(selectorManager).tcp().connect(destinationIp, FILE_TRANSFER_PORT)
@@ -240,15 +263,27 @@ class FileTransferService: IFileTransferService {
                 val socketReadChannel = socket.openReadChannel()
                 val socketWriteChannel = socket.openWriteChannel()
 
-                // Read auth challenge
+                // Handle auth challenge
                 socketReadChannel.readFully(readBuffer, 0, AUTH_CHALLENGE_LENGTH)
-                val authChallengeResponse = readBuffer.copyOfRange(0, AUTH_CHALLENGE_LENGTH)
-
-                // Write bad response to kill socket
+                val authChallengeResponse = calculateAuthResponse(readBuffer.copyOfRange(0, AUTH_CHALLENGE_LENGTH))
                 socketWriteChannel.writeFully(authChallengeResponse, 0, AUTH_CHALLENGE_LENGTH)
                 socketWriteChannel.flush()
 
-                Outcome.Ok(Unit)
+                // Send fixed header
+                socketWriteChannel.writeByte(PROTOCOL_VERSION) // Header Version
+                socketWriteChannel.writeByte(ClientCommand.Connect) // Command (future use)
+                socketWriteChannel.writeByte(0) // Sender Name Length
+                socketWriteChannel.writeShort(0) // File Name Length
+                socketWriteChannel.writeLong(0) // Payload Length
+                socketWriteChannel.writeFully(ByteArray(24) { 0x00 }) // Future use
+                socketWriteChannel.flush()
+
+                // Read response
+                val platform = socketReadChannel.readByte().toDevicePlatform()
+                val nameLength = socketReadChannel.readByte().toInt()
+                val name = ByteArray(nameLength).apply { socketReadChannel.readFully(this) }.decodeToString()
+
+                Outcome.Ok(Device(name = name, platform = platform, ipAddress = destinationIp))
             }
         } catch (e: Exception) {
             Outcome.Error(e)
@@ -265,3 +300,21 @@ class FileTransferService: IFileTransferService {
 }
 
 expect fun FileTransferService.isClosedConnectionException(exception: Exception): Boolean
+
+private fun DevicePlatform.toByte() = when(this) {
+    DevicePlatform.MacOS -> 0x00
+    DevicePlatform.Windows -> 0x01
+    DevicePlatform.Linux -> 0x02
+    DevicePlatform.iOS -> 0x03
+    DevicePlatform.Android -> 0x04
+    DevicePlatform.Unknown -> 0xFF
+}
+
+private fun Byte.toDevicePlatform() = when(this) {
+    0x00.toByte() -> DevicePlatform.MacOS
+    0x01.toByte() -> DevicePlatform.Windows
+    0x02.toByte() -> DevicePlatform.Linux
+    0x03.toByte() -> DevicePlatform.iOS
+    0x04.toByte() -> DevicePlatform.Android
+    else -> DevicePlatform.Unknown
+}

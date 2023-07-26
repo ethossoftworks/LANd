@@ -2,6 +2,7 @@ package com.ethossoftworks.land.common.interactor.discovery
 
 import com.ethossoftworks.land.common.model.device.Device
 import com.ethossoftworks.land.common.model.device.DevicePlatform
+import com.ethossoftworks.land.common.model.device.toDevicePlatform
 import com.ethossoftworks.land.common.service.discovery.INSDService
 import com.ethossoftworks.land.common.service.discovery.NSDService
 import com.ethossoftworks.land.common.service.discovery.NSDServiceEvent
@@ -46,11 +47,11 @@ class DiscoveryInteractor(
         }
     }
 
-    fun addManualDevice(ip: String) {
+    fun addManualDevice(device: Device) {
         update { state ->
             state.copy(
                 discoveredDevices = state.discoveredDevices.toMutableMap().apply {
-                    put(ip, Device(ip, DevicePlatform.Unknown, ip))
+                    put(device.ipAddress, device)
                 }
             )
         }
@@ -130,15 +131,6 @@ private fun NSDService.toDevice() = Device(
     platform = props[DISCOVERY_PROP_PLATFORM_KEY]?.decodeToString()?.toPlatform() ?: DevicePlatform.Unknown,
     ipAddress = iPv4Addresses.firstOrNull() ?: ""
 )
-
-private fun Platform.toDevicePlatform() = when(this) {
-    Platform.Windows -> DevicePlatform.Windows
-    Platform.MacOS -> DevicePlatform.MacOS
-    Platform.Linux -> DevicePlatform.Linux
-    Platform.Android -> DevicePlatform.Android
-    Platform.iOS -> DevicePlatform.iOS
-    Platform.Unknown -> DevicePlatform.Unknown
-}
 
 private fun String.toPlatform() = when(this) {
     "windows" -> DevicePlatform.Windows

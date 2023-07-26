@@ -43,5 +43,8 @@ fun commonModule() = module {
     single { AppPreferencesInteractor(get(), get()) }
     single { FileTransferInteractor(get(), get(), get()) }
 
-    single { FileTransferService() } bind IFileTransferService::class
+    single {
+        val appPreferencesInteractor: AppPreferencesInteractor = get()
+        FileTransferService { appPreferencesInteractor.state.displayName }
+    } bind IFileTransferService::class
 }

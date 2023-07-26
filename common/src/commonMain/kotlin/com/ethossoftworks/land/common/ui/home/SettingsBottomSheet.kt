@@ -49,6 +49,8 @@ fun SettingsBottomSheet(
                                 modifier = Modifier.weight(1f),
                                 value = if (state.isEditingDisplayName) state.editableDisplayName else state.displayName,
                                 readOnly = !state.isEditingDisplayName,
+                                maxLength = 255,
+                                singleLine = true,
                                 onValueChange = interactor::onEditableDisplayNameChanged,
                             )
                             if (state.isEditingDisplayName) {

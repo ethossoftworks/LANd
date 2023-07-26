@@ -35,7 +35,7 @@ fun AddDeviceModal(
         isVisible = isVisible,
         onDismissRequest = interactor::onCancelled,
         onPreviewKeyEvent = {
-            if (it.key == Key.Enter) {
+            if (it.key == Key.Enter || it.key == Key.NumPadEnter) {
                 interactor.onAddClicked()
                 return@Modal true
             }

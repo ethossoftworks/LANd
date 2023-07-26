@@ -49,7 +49,7 @@ class AddDeviceModalViewInteractor(
                 return@launch
             }
 
-            discoveryInteractor.addManualDevice(state.ipAddress)
+            discoveryInteractor.addManualDevice(connectionOutcome.value)
             update { state -> state.copy(connectionState = ManualDeviceConnectionState.Idle) }
             onDismissRequest()
         }

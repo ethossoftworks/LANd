@@ -22,15 +22,16 @@ fun AppTextField(
     enabled: Boolean = true,
     readOnly: Boolean = false,
     singleLine: Boolean = false,
+    maxLength: Int = Int.MAX_VALUE,
     modifier: Modifier = Modifier,
 ) {
     BasicTextField(
         modifier = modifier,
-        value = value,
+        value = value.take(maxLength),
         readOnly = readOnly,
         enabled = enabled,
         singleLine = singleLine,
-        onValueChange = onValueChange,
+        onValueChange = { onValueChange(it.take(maxLength)) },
         decorationBox = {
             Box(
                 modifier = Modifier
