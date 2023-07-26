@@ -10,6 +10,7 @@ import com.ethossoftworks.land.common.service.file.FileWriteMode
 import com.ethossoftworks.land.common.service.file.IFileHandler
 import com.ethossoftworks.land.common.service.filetransfer.FileTransferRequest
 import com.ethossoftworks.land.common.service.filetransfer.FileTransferResponseType
+import com.ethossoftworks.land.common.service.preferences.DeviceVisibility
 import com.outsidesource.oskitkmp.interactor.Interactor
 import com.outsidesource.oskitkmp.outcome.Outcome
 import kotlinx.coroutines.launch
@@ -50,10 +51,16 @@ class HomeScreenViewInteractor(
     fun viewMounted() {
         interactorScope.launch {
             appPreferencesInteractor.awaitInitialization()
-            fileTransferInteractor.startServer()
+
             discoveryInteractor.startDeviceDiscovery()
 
-            if (!discoveryInteractor.state.isBroadcasting) {
+            if (appPreferencesInteractor.state.deviceVisibility != DeviceVisibility.SendOnly) {
+                fileTransferInteractor.startServer()
+            }
+
+            if (!discoveryInteractor.state.isBroadcasting &&
+                appPreferencesInteractor.state.deviceVisibility == DeviceVisibility.Visible
+            ) {
                 discoveryInteractor.startServiceBroadcasting(appPreferencesInteractor.state.displayName)
             }
 
