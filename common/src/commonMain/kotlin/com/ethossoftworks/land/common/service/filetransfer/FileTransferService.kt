@@ -185,7 +185,7 @@ class FileTransferService: IFileTransferService {
             socketWriteChannel.writeShort(file.fileName.length.toShort()) // File Name Length
             socketWriteChannel.writeLong(file.length) // Payload Length
             socketWriteChannel.writeByte(0) // Is Folder
-            socketWriteChannel.writeByte(0) // Command Channel (future use)
+            socketWriteChannel.writeByte(0) // Command (future use)
             socketWriteChannel.flush()
 
             // Send Dynamic Header
