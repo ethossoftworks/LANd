@@ -4,11 +4,17 @@ package com.ethossoftworks.land.common.ui.home
 
 import TransferMessage
 import androidx.compose.animation.*
-import androidx.compose.animation.core.*
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.Text
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
@@ -18,19 +24,27 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.unit.*
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import com.ethossoftworks.land.common.resources.Resources
+import com.ethossoftworks.land.common.ui.common.AppTextField
 import com.ethossoftworks.land.common.ui.common.ImageButton
 import com.ethossoftworks.land.common.ui.common.PrimaryButton
-import com.ethossoftworks.land.common.ui.common.TextButton
+import com.ethossoftworks.land.common.ui.common.SecondaryButton
+import com.ethossoftworks.land.common.ui.common.form.FormField
+import com.ethossoftworks.land.common.ui.common.form.FormSection
 import com.ethossoftworks.land.common.ui.common.theme.AppTheme
 import com.outsidesource.oskitcompose.canvas.rememberKmpPainterResource
 import com.outsidesource.oskitcompose.interactor.collectAsState
 import com.outsidesource.oskitcompose.layout.WrappableRow
 import com.outsidesource.oskitcompose.lib.rememberInjectForRoute
 import com.outsidesource.oskitcompose.lib.rememberValRef
-import com.outsidesource.oskitcompose.systemui.*
+import com.outsidesource.oskitcompose.popup.Modal
+import com.outsidesource.oskitcompose.systemui.KMPWindowInsets
+import com.outsidesource.oskitcompose.systemui.StatusBarIconColorEffect
+import com.outsidesource.oskitcompose.systemui.topInsets
+import com.outsidesource.oskitcompose.systemui.verticalInsets
 import com.outsidesource.oskitkmp.lib.Platform
 import com.outsidesource.oskitkmp.lib.current
 
@@ -51,7 +65,7 @@ fun HomeScreen(
     BoxWithConstraints {
         val ringSpacing = maxHeight / 6f
 
-        ImageButton(
+        Row(
             modifier = Modifier
                 .then(if (Platform.current == Platform.Android) {
                     Modifier.windowInsetsPadding(KMPWindowInsets.topInsets)
@@ -61,9 +75,23 @@ fun HomeScreen(
                 .align(Alignment.TopEnd)
                 .zIndex(1f)
                 .padding(top = 16.dp, end = 16.dp),
-            resource = Resources.Settings,
-            onClick = interactor::onSettingsButtonClicked,
-        )
+        ) {
+            ImageButton(
+                resource = Resources.Add,
+                tint = AppTheme.colors.homeScreenButtonTint,
+                onClick = interactor::onAddButtonClicked,
+            )
+            ImageButton(
+                resource = Resources.Info,
+                tint = AppTheme.colors.homeScreenButtonTint,
+                onClick = interactor::onInfoButtonClicked,
+            )
+            ImageButton(
+                resource = Resources.Settings,
+                tint = AppTheme.colors.homeScreenButtonTint,
+                onClick = interactor::onSettingsButtonClicked,
+            )
+        }
 
         Column(
             modifier = Modifier
@@ -87,6 +115,16 @@ fun HomeScreen(
                         label = "Select Folder",
                         onClick = interactor::onSelectSaveFolderClicked
                     )
+                }
+            } else if (state.discoveredDevices.isEmpty()) {
+                Column(
+                    modifier = Modifier
+                        .weight(1f)
+                        .zIndex(1f),
+                    verticalArrangement = Arrangement.spacedBy(12.dp, Alignment.CenterVertically),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                ) {
+                    Text("Searching for devices...")
                 }
             } else {
                 AnimatedContent(
@@ -136,6 +174,11 @@ fun HomeScreen(
         SettingsBottomSheet(
             isVisible = state.isSettingsBottomSheetVisible,
             onDismissRequest = interactor::onSettingsBottomSheetDismissed,
+        )
+
+        AddDeviceModal(
+            isVisible = state.isAddDeviceModalVisible,
+            onDismissRequest = interactor::onAddDeviceModalDismissed,
         )
 
         TransferMessage(

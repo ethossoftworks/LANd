@@ -23,6 +23,7 @@ data class HomeViewState(
     val broadcastIp: String = "",
     val activeRequests: Map<Short, FileTransfer> = emptyMap(),
     val transferMessageQueue: List<FileTransfer> = emptyList(),
+    val isAddDeviceModalVisible: Boolean = false,
 )
 
 class HomeScreenViewInteractor(
@@ -115,6 +116,18 @@ class HomeScreenViewInteractor(
 
     fun onSettingsButtonClicked() {
         update { state -> state.copy(isSettingsBottomSheetVisible = true) }
+    }
+
+    fun onInfoButtonClicked() {
+
+    }
+
+    fun onAddButtonClicked() {
+        update { state -> state.copy(isAddDeviceModalVisible = true) }
+    }
+
+    fun onAddDeviceModalDismissed() {
+        update { state -> state.copy(isAddDeviceModalVisible = false) }
     }
 
     fun onSettingsBottomSheetDismissed() {

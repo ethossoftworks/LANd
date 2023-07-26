@@ -1,5 +1,6 @@
 package com.ethossoftworks.land.common.service.filetransfer
 
+import com.outsidesource.oskitkmp.outcome.Outcome
 import kotlinx.coroutines.flow.Flow
 import okio.Sink
 import okio.Source
@@ -18,6 +19,7 @@ interface IFileTransferServer {
 
 interface IFileTransferClient {
     suspend fun sendFile(file: FileTransferRequest, destinationIp: String): Flow<FileTransferClientEvent>
+    suspend fun testConnection(destinationIp: String): Outcome<Unit, Exception>
 }
 
 data class FileTransferRequest(

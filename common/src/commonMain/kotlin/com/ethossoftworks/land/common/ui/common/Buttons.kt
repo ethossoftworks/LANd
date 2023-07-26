@@ -15,6 +15,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -87,24 +88,25 @@ private fun BaseButton(
 fun ImageButton(
     resource: KMPResource,
     modifier: Modifier = Modifier,
+    tint: Color = Color.Black,
     onClick: () -> Unit,
 ) {
     Box(
         modifier = modifier
             .size(40.dp)
-            .offset(x = 8.dp, y = -(8).dp)
             .clip(CircleShape)
             .clickable(
                 onClick = onClick,
                 interactionSource = remember { MutableInteractionSource() },
-                indication = rememberRipple()
+                indication = rememberRipple(color = AppTheme.colors.primary)
             ),
         contentAlignment = Alignment.Center,
     ) {
         Image(
-            modifier = Modifier.size(24.dp),
+            modifier = Modifier.size(20.dp),
             painter = rememberKmpPainterResource(resource),
             contentDescription = null,
+            colorFilter = ColorFilter.tint(tint)
         )
     }
 }

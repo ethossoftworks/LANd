@@ -4,6 +4,8 @@ import com.outsidesource.oskitcompose.resources.KMPResource
 
 expect object Resources {
     val Settings: KMPResource
+    val Add: KMPResource
+    val Info: KMPResource
     val WifiTethering: KMPResource
     val DeviceDesktopLinux: KMPResource
     val DeviceDesktopWindows: KMPResource

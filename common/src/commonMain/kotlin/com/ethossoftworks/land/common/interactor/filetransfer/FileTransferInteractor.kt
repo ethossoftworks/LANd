@@ -276,6 +276,9 @@ class FileTransferInteractor(
         return Outcome.Ok(Unit)
     }
 
+    suspend fun testConnection(ipAddress: String): Outcome<Unit, Exception> =
+        fileTransferService.testConnection(ipAddress)
+
     fun transferMessageQueueItemHandled(item: FileTransfer) {
         update { state ->
             state.copy(

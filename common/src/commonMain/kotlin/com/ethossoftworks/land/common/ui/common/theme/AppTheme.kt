@@ -4,7 +4,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material.Colors
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Typography
 import androidx.compose.runtime.Composable
@@ -75,6 +74,7 @@ interface AppColors {
     val secondary: Color
     val primaryButtonBg: Color
     val secondaryButtonBg: Color
+    val homeScreenButtonTint: Color
 }
 
 object AppLightTheme : AppColors {
@@ -83,6 +83,7 @@ object AppLightTheme : AppColors {
     override val secondary = Color(0xFFCCCCCC)
     override val primaryButtonBg = primary
     override val secondaryButtonBg = Color.Black.copy(alpha = .07f)
+    override val homeScreenButtonTint = Color(0xFF444444)
 }
 
 data class AppDimensions internal constructor(
@@ -119,15 +120,22 @@ data class AppTypography internal constructor(
         fontSize = 14.sp,
         fontWeight = FontWeight.SemiBold,
     ),
-    val settingsSectionHeader: TextStyle = TextStyle(
+    val formSectionHeader: TextStyle = TextStyle(
         fontWeight = FontWeight.Bold,
         fontSize = 12.sp,
         letterSpacing = 1.sp,
     ),
-    val settingsFieldLabel: TextStyle = TextStyle(
+    val formFieldLabel: TextStyle = TextStyle(
         fontSize = 12.sp,
         letterSpacing = .5.sp,
         color = Color(0xFF333333),
+    ),
+    val formFieldNote: TextStyle = TextStyle(
+        fontSize = 12.sp,
+        color = Color(0xFF333333),
+    ),
+    val formFieldNoteError: TextStyle = formFieldNote.copy(
+        color = Color(0xFFCA2525)
     ),
     val ipAddress: TextStyle = TextStyle(
         fontSize = 11.sp,

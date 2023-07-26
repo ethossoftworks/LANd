@@ -4,6 +4,8 @@ import com.outsidesource.oskitcompose.resources.KMPResource
 
 actual object Resources {
     actual val Settings: KMPResource = KMPResource.Desktop("images/settings.svg")
+    actual val Add: KMPResource = KMPResource.Desktop("images/add.svg")
+    actual val Info: KMPResource = KMPResource.Desktop("images/info.svg")
     actual val WifiTethering: KMPResource = KMPResource.Desktop("images/wifi-tethering.svg")
     actual val DeviceDesktopLinux: KMPResource = KMPResource.Desktop("images/device-desktop-linux.svg")
     actual val DeviceDesktopWindows: KMPResource = KMPResource.Desktop("images/device-desktop-windows.svg")

@@ -3,7 +3,6 @@
 package com.ethossoftworks.land.common.ui.home
 
 import androidx.compose.foundation.layout.*
-import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -15,7 +14,8 @@ import com.ethossoftworks.land.common.ui.common.AppTextField
 import com.ethossoftworks.land.common.ui.common.PrimaryButton
 import com.ethossoftworks.land.common.ui.common.Radio
 import com.ethossoftworks.land.common.ui.common.SecondaryButton
-import com.ethossoftworks.land.common.ui.common.theme.AppTheme
+import com.ethossoftworks.land.common.ui.common.form.FormField
+import com.ethossoftworks.land.common.ui.common.form.FormSection
 import com.outsidesource.oskitcompose.interactor.collectAsState
 import com.outsidesource.oskitcompose.lib.rememberInjectForRoute
 import com.outsidesource.oskitcompose.popup.BottomSheet
@@ -39,8 +39,8 @@ fun SettingsBottomSheet(
         onDismissRequest = onDismissRequest,
     ) {
         Column(verticalArrangement = Arrangement.spacedBy(24.dp)) {
-            SettingsSection("Server Settings") {
-                SettingsField("Display Name") {
+            FormSection("Server Settings") {
+                FormField("Display Name") {
                     Row(
                         modifier = Modifier.fillMaxWidth()
                     ) {
@@ -64,8 +64,8 @@ fun SettingsBottomSheet(
                         }
                     }
                 }
-                SettingsField("Visibility") {
-                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                FormField("Visibility") {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         for (visibility in DeviceVisibility.values()) {
                             Radio(
                                 label = visibility.toViewString(),
@@ -76,8 +76,8 @@ fun SettingsBottomSheet(
                     }
                 }
             }
-            SettingsSection("Receiving Files") {
-                SettingsField("Save Folder") {
+            FormSection("Receiving Files") {
+                FormField("Save Folder") {
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         AppTextField(
                             modifier = Modifier.weight(1f),
@@ -114,54 +114,6 @@ fun SettingsBottomSheet(
 //            }
         }
     }
-}
-
-@Composable
-private fun SettingsSection(
-    header: String,
-    content: @Composable () -> Unit,
-) {
-    Column(
-        verticalArrangement = Arrangement.spacedBy(12.dp)
-    ) {
-        SettingsSectionHeader(label = header)
-        content()
-    }
-}
-
-@Composable
-private fun SettingsSectionHeader(
-    label: String,
-    modifier: Modifier = Modifier,
-) {
-    Text(
-        modifier = modifier,
-        text = label.uppercase(),
-        style = AppTheme.typography.settingsSectionHeader,
-    )
-}
-
-@Composable
-private fun SettingsField(
-    label: String,
-    content: @Composable () -> Unit,
-) {
-    Column {
-        SettingsFieldLabel(modifier = Modifier.padding(bottom = 6.dp), label = label)
-        content()
-    }
-}
-
-@Composable
-private fun SettingsFieldLabel(
-    label: String,
-    modifier: Modifier = Modifier,
-) {
-    Text(
-        modifier = modifier,
-        text = label.uppercase(),
-        style = AppTheme.typography.settingsFieldLabel,
-    )
 }
 
 private fun DeviceVisibility.toViewString() = when(this) {

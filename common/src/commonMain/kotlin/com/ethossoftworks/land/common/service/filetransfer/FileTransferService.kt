@@ -1,5 +1,6 @@
 package com.ethossoftworks.land.common.service.filetransfer
 
+import com.outsidesource.oskitkmp.outcome.Outcome
 import io.ktor.network.selector.*
 import io.ktor.network.sockets.*
 import io.ktor.utils.io.*
@@ -230,6 +231,29 @@ class FileTransferService: IFileTransferService {
             }
         }
     }.flowOn(Dispatchers.IO)
+
+    override suspend fun testConnection(destinationIp: String): Outcome<Unit, Exception> {
+        return try {
+            withTimeout(1_000) {
+                val socket = aSocket(selectorManager).tcp().connect(destinationIp, FILE_TRANSFER_PORT)
+                val readBuffer = ByteArray(bufferSize)
+                val socketReadChannel = socket.openReadChannel()
+                val socketWriteChannel = socket.openWriteChannel()
+
+                // Read auth challenge
+                socketReadChannel.readFully(readBuffer, 0, AUTH_CHALLENGE_LENGTH)
+                val authChallengeResponse = readBuffer.copyOfRange(0, AUTH_CHALLENGE_LENGTH)
+
+                // Write bad response to kill socket
+                socketWriteChannel.writeFully(authChallengeResponse, 0, AUTH_CHALLENGE_LENGTH)
+                socketWriteChannel.flush()
+
+                Outcome.Ok(Unit)
+            }
+        } catch (e: Exception) {
+            Outcome.Error(e)
+        }
+    }
 
     private fun calculateAuthResponse(random: ByteArray): ByteArray {
         val hashedBytes = random.sha256().bytes

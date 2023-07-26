@@ -46,6 +46,16 @@ class DiscoveryInteractor(
         }
     }
 
+    fun addManualDevice(ip: String) {
+        update { state ->
+            state.copy(
+                discoveredDevices = state.discoveredDevices.toMutableMap().apply {
+                    put(ip, Device(ip, DevicePlatform.Unknown, ip))
+                }
+            )
+        }
+    }
+
     fun startDeviceDiscovery() {
         interactorScope.launch {
             discoveryService.observeServices(DISCOVERY_TYPE).collect {
