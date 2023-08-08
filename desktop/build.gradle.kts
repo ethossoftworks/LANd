@@ -7,13 +7,13 @@ plugins {
     id("org.jetbrains.compose")
 }
 
-val versionProps = Properties().apply {
-    load(FileInputStream(File(rootProject.rootDir, "version.properties")))
+val buildInfoProps = Properties().apply {
+    load(FileInputStream(File(rootProject.rootDir, "buildInfo.properties")))
 }
 
 group = "com.ethossoftworks"
-version = versionProps["version"] as? String ?: "0.0.0"
-val buildNumber = versionProps["build"]?.toString()?.toInt() ?: 1
+version = buildInfoProps["version"] as? String ?: "0.0.0"
+val buildNumber = buildInfoProps["build"]?.toString()?.toInt() ?: 1
 
 kotlin {
     jvm {
