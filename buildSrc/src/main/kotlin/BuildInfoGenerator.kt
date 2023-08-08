@@ -12,7 +12,19 @@ fun generateBuildInfo(rootDir: File, buildDir: File) {
         it.write("class BuildInfo {\n")
         it.write("\tcompanion object {\n")
         buildInfoProps.forEach { (k, v) ->
-            it.write("\t\tconst val $k: String = \"$v\"\n")
+            try {
+                if (v.toString() == "true" || v.toString() == "false") {
+                    it.write("\t\tconst val $k: Boolean = $v\n")
+                } else if (v.toString().matches(Regex("^[0-9]+$"))) {
+                    it.write("\t\tconst val $k: Int = $v\n")
+                } else if (v.toString().matches(Regex("^[0-9.]+$"))) {
+                    it.write("\t\tconst val $k: Float = ${v.toString().toFloat()}f\n")
+                } else {
+                    it.write("\t\tconst val $k: String = \"$v\"\n")
+                }
+            } catch (e: Exception) {
+                it.write("\t\tconst val $k: String = \"$v\"\n")
+            }
         }
         it.write("\t}\n")
         it.write("}\n")
