@@ -25,6 +25,7 @@ data class HomeViewState(
     val activeRequests: Map<Short, FileTransfer> = emptyMap(),
     val transferMessageQueue: List<FileTransfer> = emptyList(),
     val isAddDeviceModalVisible: Boolean = false,
+    val isAboutModalVisible: Boolean = false,
 )
 
 class HomeScreenViewInteractor(
@@ -126,7 +127,11 @@ class HomeScreenViewInteractor(
     }
 
     fun onInfoButtonClicked() {
+        update { state -> state.copy(isAboutModalVisible = true) }
+    }
 
+    fun onAboutModalDismissed() {
+        update { state -> state.copy(isAboutModalVisible = false) }
     }
 
     fun onAddButtonClicked() {

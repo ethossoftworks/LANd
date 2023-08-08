@@ -181,6 +181,11 @@ fun HomeScreen(
             onDismissRequest = interactor::onAddDeviceModalDismissed,
         )
 
+        AboutModal(
+            isVisible = state.isAboutModalVisible,
+            onDismissRequest = interactor::onAboutModalDismissed,
+        )
+
         TransferMessage(
             state.transferMessageQueue.firstOrNull(),
             rememberValRef(interactor)

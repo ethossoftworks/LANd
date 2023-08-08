@@ -1,13 +1,19 @@
 import org.jetbrains.compose.desktop.application.dsl.TargetFormat
+import java.io.FileInputStream
+import java.util.*
 
 plugins {
     kotlin("multiplatform")
     id("org.jetbrains.compose")
 }
 
-group = "com.ethossoftworks"
-version = "0.1.0"
+val versionProps = Properties().apply {
+    load(FileInputStream(File(rootProject.rootDir, "version.properties")))
+}
 
+group = "com.ethossoftworks"
+version = versionProps["version"] as? String ?: "0.0.0"
+val buildNumber = versionProps["build"]?.toString()?.toInt() ?: 1
 
 kotlin {
     jvm {
@@ -32,7 +38,7 @@ compose.desktop {
             targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.Deb)
             packageName = "LANd"
             vendor = "Ethos Softworks"
-            packageVersion = "1.0.0"
+            packageVersion = version.toString()
         }
     }
 }

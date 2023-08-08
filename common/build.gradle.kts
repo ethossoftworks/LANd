@@ -1,3 +1,6 @@
+import java.io.FileInputStream
+import java.util.*
+
 plugins {
     kotlin("multiplatform")
     id("org.jetbrains.compose")
@@ -31,8 +34,13 @@ val lwjglNatives = Pair(
     }
 }
 
+val versionProps = Properties().apply {
+    load(FileInputStream(File(rootProject.rootDir, "version.properties")))
+}
+
 group = "com.ethossoftworks"
-version = "0.1.0"
+version = versionProps["version"] as? String ?: "0.0.0"
+val buildNumber = versionProps["build"]?.toString()?.toInt() ?: 1
 
 kotlin {
     android()
@@ -40,7 +48,11 @@ kotlin {
         jvmToolchain(11)
     }
     sourceSets {
+        generateLANdBuildFile(rootDir, buildDir)
+
         val commonMain by getting {
+            kotlin.srcDir("${buildDir}/generated")
+
             dependencies {
                 api(compose.runtime)
                 api(compose.foundation)
@@ -57,6 +69,7 @@ kotlin {
                 implementation("org.jetbrains.kotlinx:atomicfu:0.21.0")
                 implementation("com.soywiz.korlibs.krypto:krypto:4.0.8")
                 implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.5.1")
+                implementation("org.jetbrains.kotlinx:kotlinx-datetime:0.4.0")
                 api("io.insert-koin:koin-core:3.4.0")
                 api("co.touchlab:kermit:1.1.1")
             }

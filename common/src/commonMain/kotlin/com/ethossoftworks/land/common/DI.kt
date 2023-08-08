@@ -6,10 +6,7 @@ import com.ethossoftworks.land.common.interactor.filetransfer.FileTransferIntera
 import com.ethossoftworks.land.common.interactor.preferences.AppPreferencesInteractor
 import com.ethossoftworks.land.common.service.filetransfer.FileTransferService
 import com.ethossoftworks.land.common.service.filetransfer.IFileTransferService
-import com.ethossoftworks.land.common.ui.home.AddDeviceModalViewInteractor
-import com.ethossoftworks.land.common.ui.home.DiscoveredDeviceViewInteractor
-import com.ethossoftworks.land.common.ui.home.HomeScreenViewInteractor
-import com.ethossoftworks.land.common.ui.home.SettingsBottomSheetViewInteractor
+import com.ethossoftworks.land.common.ui.home.*
 import org.koin.core.KoinApplication
 import org.koin.core.context.startKoin
 import org.koin.core.context.stopKoin
@@ -36,6 +33,7 @@ fun commonModule() = module {
 
     factory { HomeScreenViewInteractor(get(), get(), get(), get(), get()) }
     factory { SettingsBottomSheetViewInteractor(get(), get(), get(), get()) }
+    factory { AboutModalViewInteractor() }
     factory { params -> DiscoveredDeviceViewInteractor(params[0], get(), get(), get()) }
     factory { params -> AddDeviceModalViewInteractor(get(), get(), params[0]) }
 
