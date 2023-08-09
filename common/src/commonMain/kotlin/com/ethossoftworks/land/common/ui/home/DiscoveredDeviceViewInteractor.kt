@@ -82,4 +82,8 @@ class DiscoveredDeviceViewInteractor(
             }
         }
     }
+
+    fun onTransferCancelledClicked() {
+
+    }
 }

@@ -6,6 +6,7 @@ expect object Resources {
     val Settings: KMPResource
     val Add: KMPResource
     val Info: KMPResource
+    val Cancel: KMPResource
     val WifiTethering: KMPResource
     val DeviceDesktopLinux: KMPResource
     val DeviceDesktopWindows: KMPResource

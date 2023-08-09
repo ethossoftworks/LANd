@@ -64,7 +64,7 @@ fun BoxScope.TransferMessage(
 //                .border(width = 1.dp, color = Color(0xFFD0D0D0), RoundedCornerShape(8.dp))
 //                .background(Color(0xFFF6F6F6))
 //                .border(width = 1.dp, color = Color(0xFF393a41), RoundedCornerShape(8.dp))
-                .background(Color(0xFF494C50))
+                .background(AppTheme.colors.tertiary)
                 .padding(12.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp),
             horizontalAlignment = Alignment.End,

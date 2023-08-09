@@ -73,6 +73,7 @@ interface AppColors {
     val screenBackground: Color
     val primary: Color
     val secondary: Color
+    val tertiary: Color
     val primaryButtonBg: Color
     val secondaryButtonBg: Color
     val homeScreenButtonTint: Color
@@ -82,6 +83,7 @@ object AppLightTheme : AppColors {
     override val screenBackground = Color.White
     override val primary = Color(0xFF155fd4)
     override val secondary = Color(0xFFCCCCCC)
+    override val tertiary = Color(0xFF494C50)
     override val primaryButtonBg = primary
     override val secondaryButtonBg = Color.Black.copy(alpha = .07f)
     override val homeScreenButtonTint = Color(0xFF444444)

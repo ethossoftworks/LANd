@@ -7,6 +7,7 @@ actual object Resources {
     actual val Settings: KMPResource = KMPResource.Android(R.drawable.settings)
     actual val Add: KMPResource = KMPResource.Android(R.drawable.add)
     actual val Info: KMPResource = KMPResource.Android(R.drawable.info)
+    actual val Cancel: KMPResource = KMPResource.Android(R.drawable.cancel)
     actual val WifiTethering: KMPResource = KMPResource.Android(R.drawable.wifi_tethering)
     actual val DeviceDesktopLinux: KMPResource = KMPResource.Android(R.drawable.device_desktop_linux)
     actual val DeviceDesktopWindows: KMPResource = KMPResource.Android(R.drawable.device_desktop_windows)
