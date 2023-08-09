@@ -163,7 +163,11 @@ fun DiscoveredDevice(
                             shape = CircleShape,
                         )
                         .clip(CircleShape)
-                        .clickable(onClick = interactor::onTransferCancelledClicked)
+                        .clickable {
+                            isPopoverHovering = false
+                            isHovering = false
+                            interactor.onTransferCancelledClicked()
+                        }
                         .background(AppTheme.colors.tertiary, CircleShape)
                         .padding(top = 6.dp, bottom = 6.dp, start = 12.dp, end = 6.dp),
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
