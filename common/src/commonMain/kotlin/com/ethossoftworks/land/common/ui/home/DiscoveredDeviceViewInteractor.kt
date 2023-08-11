@@ -17,6 +17,7 @@ data class DiscoveredDeviceState(
     val isWaiting: Boolean = false,
     val receivingProgress: Float = 0f,
     val sendingProgress: Float = 0f,
+    val transferCount: Int = 0,
 )
 
 class DiscoveredDeviceViewInteractor(
@@ -56,6 +57,7 @@ class DiscoveredDeviceViewInteractor(
             isWaiting = isWaiting,
             receivingProgress = if (receivingBytesTotal > 0) (receivingBytesTransferred.toFloat() / receivingBytesTotal.toFloat()) else 0f,
             sendingProgress = if (sendingBytesTotal > 0) (sendingBytesTransferred.toFloat() / sendingBytesTotal.toFloat()) else 0f,
+            transferCount = transferIds.size,
         )
     }
 
@@ -83,7 +85,11 @@ class DiscoveredDeviceViewInteractor(
         }
     }
 
-    fun onTransferCancelledClicked() {
+    fun onStopTransferClicked() {
+
+    }
+
+    fun onStopAndDeleteTransferClicked() {
 
     }
 }

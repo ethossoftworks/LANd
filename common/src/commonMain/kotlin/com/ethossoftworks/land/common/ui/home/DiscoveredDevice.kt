@@ -6,8 +6,6 @@ import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.updateTransition
 import androidx.compose.foundation.*
-import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.interaction.collectIsHoveredAsState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.Text
@@ -17,24 +15,23 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.scale
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.RoundRect
 import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.*
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.DpOffset
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.em
-import androidx.compose.ui.unit.sp
+import androidx.compose.ui.unit.*
+import com.ethossoftworks.land.common.interactor.filetransfer.FileTransferDirection
 import com.ethossoftworks.land.common.model.device.Device
 import com.ethossoftworks.land.common.model.device.DevicePlatform
 import com.ethossoftworks.land.common.resources.Resources
 import com.ethossoftworks.land.common.ui.common.theme.AppTheme
 import com.outsidesource.oskitcompose.canvas.rememberKmpPainterResource
 import com.outsidesource.oskitcompose.interactor.collectAsState
+import com.outsidesource.oskitcompose.layout.spaceBetweenPadded
 import com.outsidesource.oskitcompose.lib.rememberInject
 import com.outsidesource.oskitcompose.modifier.KMPDragData
 import com.outsidesource.oskitcompose.modifier.kmpOnExternalDrag
@@ -42,7 +39,7 @@ import com.outsidesource.oskitcompose.modifier.kmpPointerMoveFilter
 import com.outsidesource.oskitcompose.modifier.outerShadow
 import com.outsidesource.oskitcompose.popup.Popover
 import com.outsidesource.oskitcompose.popup.PopoverAnchors
-import com.outsidesource.oskitcompose.popup.Popup
+import com.outsidesource.oskitcompose.resources.KMPResource
 import com.outsidesource.oskitkmp.lib.Platform
 import com.outsidesource.oskitkmp.lib.current
 import org.koin.core.parameter.parametersOf
@@ -70,9 +67,7 @@ fun DiscoveredDevice(
         val progressTransition = updateTransition(if (state.sendingProgress > 0.0f) state.sendingProgress else state.receivingProgress)
         val progressAnim by progressTransition.animateFloat { it }
         val progressArcSpacing = 4.dp
-
-        var isHovering by remember { mutableStateOf(false) }
-        var isPopoverHovering by remember { mutableStateOf(false) }
+        val isHovering = remember { mutableStateOf(false) }
 
         Box(
             modifier = Modifier
@@ -80,11 +75,12 @@ fun DiscoveredDevice(
                 .scale(dropAnim)
                 .kmpPointerMoveFilter(
                     onEnter = {
-                        isHovering = true
+                        if (state.transferCount == 0) return@kmpPointerMoveFilter false
+                        isHovering.value = true
                         false
                     },
                     onExit = {
-                        isHovering = false
+                        isHovering.value = false
                         false
                     }
                 )
@@ -120,7 +116,8 @@ fun DiscoveredDevice(
                 .combinedClickable(
                     onLongClick = {
                         if (Platform.current.isDesktop) return@combinedClickable
-                        isHovering = true
+                        if (state.transferCount == 0) return@combinedClickable
+                        isHovering.value = true
                     },
                     onClick = { onClick() }
                 )
@@ -135,52 +132,12 @@ fun DiscoveredDevice(
                 ),
             contentAlignment = Alignment.Center,
         ) {
-            Popover(
-                isVisible = isHovering || isPopoverHovering,
-                anchors = PopoverAnchors.ExternalTopAlignCenter,
-                onDismissRequest = {
-                    isHovering = false
-                    isPopoverHovering = false
-                }
-            ) {
-                Row(
-                    modifier = Modifier
-                        .kmpPointerMoveFilter(
-                            onEnter = {
-                                isPopoverHovering = true
-                                false
-                            },
-                            onExit = {
-                                isPopoverHovering = false
-                                false
-                            }
-                        )
-                        .padding(top = 4.dp, bottom = 8.dp, start = 4.dp, end = 4.dp)
-                        .outerShadow(
-                            blur = 4.dp,
-                            color = Color.Black.copy(alpha = .5f),
-                            offset = DpOffset(0.dp, 2.dp),
-                            shape = CircleShape,
-                        )
-                        .clip(CircleShape)
-                        .clickable {
-                            isPopoverHovering = false
-                            isHovering = false
-                            interactor.onTransferCancelledClicked()
-                        }
-                        .background(AppTheme.colors.tertiary, CircleShape)
-                        .padding(top = 6.dp, bottom = 6.dp, start = 12.dp, end = 6.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Text("Cancel", style = AppTheme.typography.transferMessageText)
-                    Image(
-                        painter = rememberKmpPainterResource(Resources.Cancel),
-                        contentDescription = "Cancel",
-                        colorFilter = ColorFilter.tint(Color.White)
-                    )
-                }
-            }
+            StopTransferPopover(
+                isDiscoveredDeviceHovering = isHovering,
+                transferDirection = if (state.sendingProgress > 0f) FileTransferDirection.Sending else FileTransferDirection.Receiving,
+                onStopClicked = interactor::onStopTransferClicked,
+                onStopAndDeleteClicked = interactor::onStopAndDeleteTransferClicked,
+            )
             Image(
                 modifier = Modifier.width(48.dp),
                 painter = rememberKmpPainterResource(
@@ -217,6 +174,119 @@ fun DiscoveredDevice(
             textAlign = TextAlign.Center,
             maxLines = 2,
             lineHeight = 1.2.em,
+        )
+    }
+}
+
+@Composable
+private fun StopTransferPopover(
+    isDiscoveredDeviceHovering: MutableState<Boolean>,
+    transferDirection: FileTransferDirection,
+    onStopClicked: () -> Unit,
+    onStopAndDeleteClicked: () -> Unit,
+) {
+    var isPopoverHovering by remember { mutableStateOf(false) }
+    val popoverCorners = remember { PopupShape() }
+
+    Popover(
+        isVisible = isDiscoveredDeviceHovering.value || isPopoverHovering,
+        anchors = PopoverAnchors.ExternalTopAlignCenter,
+        onDismissRequest = {
+            isDiscoveredDeviceHovering.value = false
+            isPopoverHovering = false
+        }
+    ) {
+        Column(
+            modifier = Modifier
+                .width(175.dp)
+                .kmpPointerMoveFilter(
+                    onEnter = {
+                        isPopoverHovering = true
+                        false
+                    },
+                    onExit = {
+                        isPopoverHovering = false
+                        false
+                    }
+                )
+                .padding(top = 4.dp, bottom = 8.dp, start = 4.dp, end = 4.dp)
+                .outerShadow(
+                    blur = 4.dp,
+                    color = Color.Black.copy(alpha = .5f),
+                    offset = DpOffset(0.dp, 2.dp),
+                    shape = popoverCorners,
+                )
+                .clip(popoverCorners)
+                .clickable {
+                    isPopoverHovering = false
+                    isDiscoveredDeviceHovering.value = false
+                }
+                .background(AppTheme.colors.tertiary, popoverCorners),
+        ) {
+            MenuOption(
+                label = if (transferDirection == FileTransferDirection.Sending) "Stop Send" else "Stop Receive",
+                icon = Resources.Cancel,
+                onClick = {}
+            )
+            Spacer(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(1.dp)
+                    .background(Color.White.copy(alpha = .15f))
+            )
+            MenuOption(
+                label = if (transferDirection == FileTransferDirection.Sending) "Stop & Delete Send" else "Stop & Delete Receive",
+                icon = Resources.Cancel,
+                onClick = {}
+            )
+        }
+    }
+}
+
+private class PopupShape(
+    private val cornerRadius: Dp = 8.dp,
+    private val caretWidth: Dp = 20.dp,
+    private val caretHeight: Dp = 12.dp,
+): Shape {
+    override fun createOutline(size: Size, layoutDirection: LayoutDirection, density: Density): Outline {
+        with(density) {
+            val path = Path()
+            path.addRoundRect(RoundRect(
+                left = 0f,
+                top = 0f,
+                right = size.width,
+                bottom = size.height,
+                cornerRadius = CornerRadius(cornerRadius.toPx(), cornerRadius.toPx()))
+            )
+            path.moveTo((size.width / 2f) - (caretWidth.toPx() / 2), size.height)
+            path.lineTo((size.width / 2f), size.height + caretHeight.toPx())
+            path.lineTo((size.width / 2f) + (caretWidth.toPx() / 2), size.height)
+            path.close()
+
+            return Outline.Generic(path)
+        }
+    }
+}
+
+@Composable
+private fun MenuOption(
+    label: String,
+    icon: KMPResource,
+    onClick: () -> Unit,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(6.dp)
+            .clickable(onClick = onClick),
+        horizontalArrangement = Arrangement.spaceBetweenPadded(8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(label, style = AppTheme.typography.transferMessageText)
+        Image(
+            painter = rememberKmpPainterResource(icon),
+            contentDescription = label,
+            colorFilter = ColorFilter.tint(Color.White)
         )
     }
 }
