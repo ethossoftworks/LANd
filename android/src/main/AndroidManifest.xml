@@ -10,7 +10,9 @@
             android:label="LANd"
             android:allowBackup="false"
             android:supportsRtl="true"
-            android:theme="@style/Theme.App">
+            android:theme="@style/Theme.App"
+            android:icon="@mipmap/ic_launcher"
+    >
         <activity android:name=".MainActivity" android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN"/>

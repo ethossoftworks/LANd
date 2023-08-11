@@ -14,4 +14,5 @@ expect object Resources {
     val DeviceMobileIOS: KMPResource
     val DeviceMobileAndroid: KMPResource
     val DeviceUnknown: KMPResource
+    val Logo: KMPResource
 }

@@ -15,4 +15,5 @@ actual object Resources {
     actual val DeviceMobileIOS: KMPResource = KMPResource.Android(R.drawable.device_mobile_ios)
     actual val DeviceMobileAndroid: KMPResource = KMPResource.Android(R.drawable.device_mobile_android)
     actual val DeviceUnknown: KMPResource = KMPResource.Android(R.drawable.device_unknown)
+    actual val Logo: KMPResource = KMPResource.Android(R.drawable.land_logo)
 }
