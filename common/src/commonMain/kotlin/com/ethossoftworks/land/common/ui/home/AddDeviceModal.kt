@@ -2,6 +2,7 @@
 
 package com.ethossoftworks.land.common.ui.home
 
+import androidx.compose.animation.fadeIn
 import androidx.compose.foundation.layout.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -56,6 +57,7 @@ fun AddDeviceModal(
                         singleLine = true,
                         onValueChange = interactor::onIpAddressChanged
                     )
+
                     if (state.connectionState != ManualDeviceConnectionState.Idle) {
                         FormFieldNote(
                             modifier = Modifier.padding(top = 4.dp),
