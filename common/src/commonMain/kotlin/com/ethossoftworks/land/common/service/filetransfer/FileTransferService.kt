@@ -1,5 +1,6 @@
 package com.ethossoftworks.land.common.service.filetransfer
 
+import com.ethossoftworks.land.common.lib.coroutines.awaitOutcome
 import com.ethossoftworks.land.common.model.device.Device
 import com.ethossoftworks.land.common.model.device.DevicePlatform
 import com.ethossoftworks.land.common.model.device.toDevicePlatform
@@ -82,13 +83,13 @@ class FileTransferService(
     ) = coroutineScope {
         val transferId = generateConnectionId()
 
-        var sendJob: Job? = null
+        var receiveJob: Job? = null
         val cancellationListenerJob = launch {
             cancellationFlow.first { it == transferId }
-            sendJob?.cancel(LANdTransferCancelledException())
+            receiveJob?.cancel(LANdTransferCancelledException())
         }
 
-        sendJob = launch {
+        receiveJob = async {
             try {
                 val readBuffer = ByteArray(bufferSize)
                 val socketReadChannel = socket.openReadChannel()
@@ -105,7 +106,7 @@ class FileTransferService(
                 if (!authResponse.contentEquals(calculateAuthResponse(random))) {
                     eventChannel.send(FileTransferServerEvent.TransferStopped(transerId = transferId, reason = FileTransferStopReason.AuthorizationChallengeFail,))
                     socket.close()
-                    return@launch
+                    return@async
                 }
 
                 // Read Fixed Header
@@ -124,7 +125,7 @@ class FileTransferService(
                     socketWriteChannel.writeStringUtf8(deviceName)
                     socketWriteChannel.flush()
                     socket.close()
-                    return@launch
+                    return@async
                 }
 
                 // Read Dynamic Header
@@ -144,14 +145,14 @@ class FileTransferService(
 
                 if (response.responseType == FileTransferResponseType.Rejected) {
                     socket.close()
-                    return@launch
+                    return@async
                 }
 
                 val sink = response.sink
                 if (sink == null) {
                     eventChannel.send(FileTransferServerEvent.TransferStopped(transferId, FileTransferStopReason.UnableToOpenFile))
                     socket.close()
-                    return@launch
+                    return@async
                 }
 
                 eventChannel.send(FileTransferServerEvent.TransferProgress(transferId, 0, payloadLength))
@@ -187,11 +188,12 @@ class FileTransferService(
                 socket.close()
                 cancellationListenerJob.cancel()
             }
-        }.apply {
-            invokeOnCompletion { e ->
-                if (e !is LANdTransferCancelledException) return@invokeOnCompletion
-                eventChannel.trySend(FileTransferServerEvent.TransferStopped(transferId, FileTransferStopReason.Cancelled))
-            }
+        }
+
+        val outcome = receiveJob.awaitOutcome()
+        if (outcome is Outcome.Error) {
+            if (outcome.error !is LANdTransferCancelledException) return@coroutineScope
+            eventChannel.send(FileTransferServerEvent.TransferStopped(transferId, FileTransferStopReason.Cancelled))
         }
     }
 
@@ -216,7 +218,7 @@ class FileTransferService(
             sendJob?.cancel(LANdTransferCancelledException())
         }
 
-        sendJob = launch {
+        sendJob = async {
             var socket: ASocket? = null
 
             try {
@@ -252,21 +254,11 @@ class FileTransferService(
                 val existingFileLength = socketReadChannel.readLong()
 
                 if (response == 0x01) {
-                    send(
-                        FileTransferClientEvent.TransferResponseReceived(
-                            transferId,
-                            FileTransferResponseType.Accepted
-                        )
-                    )
+                    send(FileTransferClientEvent.TransferResponseReceived(transferId, FileTransferResponseType.Accepted))
                 } else if (response == 0x00) {
-                    send(
-                        FileTransferClientEvent.TransferResponseReceived(
-                            transferId,
-                            FileTransferResponseType.Rejected
-                        )
-                    )
+                    send(FileTransferClientEvent.TransferResponseReceived(transferId, FileTransferResponseType.Rejected))
                     socket.close()
-                    return@launch
+                    return@async
                 }
 
                 // Send File
@@ -297,11 +289,12 @@ class FileTransferService(
                 socket?.close()
                 cancellationListenerJob.cancel()
             }
-        }.apply {
-            invokeOnCompletion { e ->
-                if (e !is LANdTransferCancelledException) return@invokeOnCompletion
-                trySend(FileTransferClientEvent.TransferStopped(transferId, FileTransferStopReason.Cancelled))
-            }
+        }
+
+        val outcome = sendJob.awaitOutcome()
+        if (outcome is Outcome.Error) {
+            if (outcome.error !is LANdTransferCancelledException) return@channelFlow
+            send(FileTransferClientEvent.TransferStopped(transferId, FileTransferStopReason.Cancelled))
         }
     }.flowOn(Dispatchers.IO)
 
