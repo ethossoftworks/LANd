@@ -15,4 +15,8 @@ actual object Resources {
     actual val DeviceMobileAndroid: KMPResource = KMPResource.Desktop("images/device-mobile-android.svg")
     actual val DeviceUnknown: KMPResource = KMPResource.Desktop("images/device-unknown.svg")
     actual val Logo: KMPResource = KMPResource.Desktop("images/land-logo.svg")
+    actual val Upload: KMPResource = KMPResource.Desktop("images/upload.svg")
+    actual val Download: KMPResource = KMPResource.Desktop("images/download.svg")
+    actual val Delete: KMPResource = KMPResource.Desktop("images/delete.svg")
+    actual val Stop: KMPResource = KMPResource.Desktop("images/stop.svg")
 }

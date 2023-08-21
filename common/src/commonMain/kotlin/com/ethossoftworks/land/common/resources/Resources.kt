@@ -15,4 +15,8 @@ expect object Resources {
     val DeviceMobileAndroid: KMPResource
     val DeviceUnknown: KMPResource
     val Logo: KMPResource
+    val Upload: KMPResource
+    val Download: KMPResource
+    val Delete: KMPResource
+    val Stop: KMPResource
 }
