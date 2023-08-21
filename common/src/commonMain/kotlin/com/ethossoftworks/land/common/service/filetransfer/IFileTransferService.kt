@@ -6,7 +6,9 @@ import kotlinx.coroutines.flow.Flow
 import okio.Sink
 import okio.Source
 
-interface IFileTransferService: IFileTransferServer, IFileTransferClient
+interface IFileTransferService: IFileTransferServer, IFileTransferClient {
+    suspend fun cancelTransfer(transferId: Short)
+}
 
 interface IFileTransferServer {
     suspend fun startServer(): Flow<FileTransferServerEvent>
@@ -72,6 +74,7 @@ enum class FileTransferStopReason {
     AuthorizationChallengeFail,
     UnableToOpenFile,
     SocketClosed,
+    Cancelled,
     Unknown,
 }
 

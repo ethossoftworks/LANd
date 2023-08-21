@@ -7,6 +7,8 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.updateTransition
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.Text
 import androidx.compose.runtime.*
@@ -15,15 +17,19 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.scale
-import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.RoundRect
 import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.graphics.*
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.*
+import androidx.compose.ui.unit.DpOffset
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.em
+import androidx.compose.ui.unit.sp
+import com.ethossoftworks.land.common.interactor.filetransfer.FileTransfer
 import com.ethossoftworks.land.common.interactor.filetransfer.FileTransferDirection
 import com.ethossoftworks.land.common.model.device.Device
 import com.ethossoftworks.land.common.model.device.DevicePlatform
@@ -76,7 +82,7 @@ fun DiscoveredDevice(
                 .scale(dropAnim)
                 .kmpPointerMoveFilter(
                     onEnter = {
-                        if (state.transferCount == 0) return@kmpPointerMoveFilter false
+                        if (state.transfers.isEmpty()) return@kmpPointerMoveFilter false
                         isHovering.value = true
                         false
                     },
@@ -117,7 +123,7 @@ fun DiscoveredDevice(
                 .combinedClickable(
                     onLongClick = {
                         if (Platform.current.isDesktop) return@combinedClickable
-                        if (state.transferCount == 0) return@combinedClickable
+                        if (state.transfers.isEmpty()) return@combinedClickable
                         isHovering.value = true
                     },
                     onClick = { onClick() }
@@ -135,7 +141,7 @@ fun DiscoveredDevice(
         ) {
             StopTransferPopover(
                 isDiscoveredDeviceHovering = isHovering,
-                transferDirection = if (state.sendingProgress > 0f) FileTransferDirection.Sending else FileTransferDirection.Receiving,
+                transfers = state.transfers,
                 onStopClicked = interactor::onStopTransferClicked,
                 onStopAndDeleteClicked = interactor::onStopAndDeleteTransferClicked,
             )
@@ -181,13 +187,13 @@ fun DiscoveredDevice(
 
 @Composable
 private fun StopTransferPopover(
+    transfers: List<FileTransfer>,
     isDiscoveredDeviceHovering: MutableState<Boolean>,
-    transferDirection: FileTransferDirection,
-    onStopClicked: () -> Unit,
-    onStopAndDeleteClicked: () -> Unit,
+    onStopClicked: (Short) -> Unit,
+    onStopAndDeleteClicked: (Short) -> Unit,
 ) {
     var isPopoverHovering by remember { mutableStateOf(false) }
-    val popoverCorners = remember { PopupShape() }
+    val popoverCorners = remember { PopupShape(caretHeight = 12.dp) }
 
     Popover(
         isVisible = isDiscoveredDeviceHovering.value || isPopoverHovering,
@@ -197,9 +203,9 @@ private fun StopTransferPopover(
             isPopoverHovering = false
         }
     ) {
-        Column(
+        LazyColumn(
             modifier = Modifier
-                .width(175.dp)
+                .width(200.dp)
                 .kmpPointerMoveFilter(
                     onEnter = {
                         isPopoverHovering = true
@@ -210,7 +216,7 @@ private fun StopTransferPopover(
                         false
                     }
                 )
-                .padding(top = 4.dp, bottom = 8.dp, start = 4.dp, end = 4.dp)
+                .padding(bottom = 8.dp + 12.dp)
                 .outerShadow(
                     blur = 4.dp,
                     color = Color.Black.copy(alpha = .5f),
@@ -218,28 +224,24 @@ private fun StopTransferPopover(
                     shape = popoverCorners,
                 )
                 .clip(popoverCorners)
-                .clickable {
-                    isPopoverHovering = false
-                    isDiscoveredDeviceHovering.value = false
-                }
                 .background(AppTheme.colors.tertiary, popoverCorners),
         ) {
-            MenuOption(
-                label = if (transferDirection == FileTransferDirection.Sending) "Stop Send" else "Stop Receive",
-                icon = Resources.Cancel,
-                onClick = {}
-            )
-            Spacer(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(1.dp)
-                    .background(Color.White.copy(alpha = .15f))
-            )
-            MenuOption(
-                label = if (transferDirection == FileTransferDirection.Sending) "Stop & Delete Send" else "Stop & Delete Receive",
-                icon = Resources.Cancel,
-                onClick = {}
-            )
+            items(transfers, key = { it.transferId }) {
+                MenuOption(
+                    label = it.fileName,
+                    direction = it.direction,
+                    onStopClick = {
+                        isPopoverHovering = false
+                        isDiscoveredDeviceHovering.value = false
+                        onStopClicked(it.transferId)
+                    },
+                    onDeleteClick = {
+                        isPopoverHovering = false
+                        isDiscoveredDeviceHovering.value = false
+                        onStopAndDeleteClicked(it.transferId)
+                    },
+                )
+            }
         }
     }
 }
@@ -247,21 +249,52 @@ private fun StopTransferPopover(
 @Composable
 private fun MenuOption(
     label: String,
-    icon: KMPResource,
-    onClick: () -> Unit,
+    direction: FileTransferDirection,
+    onStopClick: () -> Unit,
+    onDeleteClick: () -> Unit,
 ) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(6.dp)
-            .clickable(onClick = onClick),
+            .padding(6.dp),
         horizontalArrangement = Arrangement.spaceBetweenPadded(8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text(label, style = AppTheme.typography.transferMessageText)
         Image(
-            painter = rememberKmpPainterResource(icon),
-            contentDescription = label,
+            modifier = Modifier.size(16.dp),
+            colorFilter = ColorFilter.tint(Color.White),
+            painter = rememberKmpPainterResource(when (direction) {
+                FileTransferDirection.Receiving -> Resources.Download
+                FileTransferDirection.Sending -> Resources.Upload
+            }),
+            contentDescription = when (direction) {
+                FileTransferDirection.Receiving -> "Receiving"
+                FileTransferDirection.Sending -> "Sending"
+            }
+        )
+        Text(
+            modifier = Modifier.weight(1f),
+            text = label,
+            style = AppTheme.typography.transferMessageText,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+        Image(
+            modifier = Modifier
+                .size(20.dp)
+                .clip(CircleShape)
+                .clickable(onClick = onStopClick),
+            painter = rememberKmpPainterResource(Resources.Stop),
+            contentDescription = "Stop",
+            colorFilter = ColorFilter.tint(Color.White)
+        )
+        Image(
+            modifier = Modifier
+                .size(20.dp)
+                .clip(CircleShape)
+                .clickable(onClick = onDeleteClick),
+            painter = rememberKmpPainterResource(Resources.Delete),
+            contentDescription = "Delete",
             colorFilter = ColorFilter.tint(Color.White)
         )
     }

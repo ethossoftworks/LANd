@@ -68,6 +68,18 @@ class DesktopFileHandler : IFileHandler {
         }
     }
 
+    override suspend fun deleteFile(folder: String, name: String): Outcome<Unit, Any> =
+        deleteFile("$folder/$name")
+
+    override suspend fun deleteFile(path: String): Outcome<Unit, Any> {
+        return try {
+            FileSystem.SYSTEM.delete(path.toPath())
+            Outcome.Ok(Unit)
+        } catch (e: Exception) {
+            Outcome.Error(e)
+        }
+    }
+
     override suspend fun readFileMetadata(folder: String, name: String): Outcome<FileMetadata, Any> =
         readFileMetadata("$folder/$name")
 
