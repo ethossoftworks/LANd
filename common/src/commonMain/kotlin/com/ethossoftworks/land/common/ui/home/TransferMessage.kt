@@ -16,6 +16,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import com.ethossoftworks.land.common.interactor.filetransfer.FileTransfer
+import com.ethossoftworks.land.common.interactor.filetransfer.FileTransferDirection
 import com.ethossoftworks.land.common.interactor.filetransfer.FileTransferStatus
 import com.ethossoftworks.land.common.service.file.FileWriteMode
 import com.ethossoftworks.land.common.service.filetransfer.FileTransferResponseType
@@ -132,6 +133,10 @@ fun BoxScope.TransferMessage(
                         text = when (fileTransfer.stopReason) {
                             FileTransferStopReason.UnableToOpenFile -> "Transfer stopped. Unable to create file."
                             FileTransferStopReason.SocketClosed -> "Transfer stopped due to a connection failure."
+                            is FileTransferStopReason.Cancelled -> when (fileTransfer.direction) {
+                                FileTransferDirection.Receiving -> "\"${fileTransfer.deviceName}\" cancelled sending \"${fileTransfer.fileName}\""
+                                FileTransferDirection.Sending -> "\"${fileTransfer.deviceName}\" cancelled receiving \"${fileTransfer.fileName}\""
+                            }
                             else -> "Transfer stopped for an unknown reason"
                         }
                     )

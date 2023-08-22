@@ -32,7 +32,12 @@ private object ClientCommand {
     const val FileTransfer = 0x01.toByte()
 }
 
-private class LANdTransferCancelledException : CancellationException()
+@OptIn(ExperimentalUnsignedTypes::class)
+private val cancellationSignalBytes = ubyteArrayOf(0x75u, 0xE6u, 0x07u, 0x9Eu, 0x8Du, 0x32u, 0x7Au).toByteArray()
+
+private data class CancellationSignal(val transferId: Short, val command: CancellationCommand)
+
+private class LANdTransferCancelledException(val command: CancellationCommand) : CancellationException()
 
 class FileTransferService(
     private val getServerDeviceName: () -> String,
@@ -42,15 +47,15 @@ class FileTransferService(
     private val connectionId = atomic<Short>(0)
     private val transferResponseFlow = MutableSharedFlow<FileTransferResponse>()
     private val serverSocket = atomic<ServerSocket?>(null)
-    private val cancellationFlow = MutableSharedFlow<Short>()
+    private val cancellationFlow = MutableSharedFlow<CancellationSignal>()
 
     private fun generateConnectionId(): Short {
         if (connectionId.value == Short.MAX_VALUE) return connectionId.updateAndGet { 0 }
         return connectionId.updateAndGet { (it + 1).toShort() }
     }
 
-    override suspend fun cancelTransfer(transferId: Short) {
-        cancellationFlow.emit(transferId)
+    override suspend fun cancelTransfer(transferId: Short, command: CancellationCommand) {
+        cancellationFlow.emit(CancellationSignal(transferId, command))
     }
 
     override suspend fun startServer(): Flow<FileTransferServerEvent> {
@@ -83,118 +88,132 @@ class FileTransferService(
     ) = coroutineScope {
         val transferId = generateConnectionId()
 
-        var receiveJob: Job? = null
-        val cancellationListenerJob = launch {
-            cancellationFlow.first { it == transferId }
-            receiveJob?.cancel(LANdTransferCancelledException())
-        }
+        val receiveJob = async(context = SupervisorJob()) {
+            val readBuffer = ByteArray(bufferSize)
+            val socketReadChannel = socket.openReadChannel()
+            val socketWriteChannel = socket.openWriteChannel()
 
-        receiveJob = async {
-            try {
-                val readBuffer = ByteArray(bufferSize)
-                val socketReadChannel = socket.openReadChannel()
-                val socketWriteChannel = socket.openWriteChannel()
+            // Write authorization challenge
+            val random = SecureRandom.nextBytes(AUTH_CHALLENGE_LENGTH)
+            socketWriteChannel.writeFully(random, 0, random.size)
+            socketWriteChannel.flush()
 
-                // Write authorization challenge
-                val random = SecureRandom.nextBytes(AUTH_CHALLENGE_LENGTH)
-                socketWriteChannel.writeFully(random, 0, random.size)
+            // Receive authorization response
+            socketReadChannel.readFully(readBuffer, 0, random.size)
+            val authResponse = readBuffer.copyOfRange(0, random.size)
+            if (!authResponse.contentEquals(calculateAuthResponse(random))) {
+                eventChannel.send(FileTransferServerEvent.TransferStopped(transferId = transferId, reason = FileTransferStopReason.AuthorizationChallengeFail,))
+                socket.close()
+                return@async
+            }
+
+            // Read Fixed Header
+            val protocolVersion = socketReadChannel.readByte().toInt()
+            val command = socketReadChannel.readByte()
+            val senderNameLength = socketReadChannel.readByte().toInt()
+            val fileNameLength = socketReadChannel.readShort().toInt()
+            val payloadLength = socketReadChannel.readLong()
+            socketReadChannel.readFully(ByteArray(24)) // Future use
+
+            // Handle connect command
+            if (command == ClientCommand.Connect) {
+                val deviceName = getServerDeviceName()
+                socketWriteChannel.writeByte(Platform.current.toDevicePlatform().toByte())
+                socketWriteChannel.writeByte(deviceName.length)
+                socketWriteChannel.writeStringUtf8(deviceName)
                 socketWriteChannel.flush()
+                socket.close()
+                return@async
+            }
 
-                // Receive authorization response
-                socketReadChannel.readFully(readBuffer, 0, random.size)
-                val authResponse = readBuffer.copyOfRange(0, random.size)
-                if (!authResponse.contentEquals(calculateAuthResponse(random))) {
-                    eventChannel.send(FileTransferServerEvent.TransferStopped(transerId = transferId, reason = FileTransferStopReason.AuthorizationChallengeFail,))
+            // Read Dynamic Header
+            val senderName =
+                ByteArray(senderNameLength).apply { socketReadChannel.readFully(this) }.decodeToString()
+            val fileName = ByteArray(fileNameLength).apply { socketReadChannel.readFully(this) }.decodeToString()
+
+            // Wait for user response and send response to client
+            eventChannel.send(
+                FileTransferServerEvent.TransferRequested(transferId, senderName, fileName, payloadLength)
+            )
+            val response = transferResponseFlow.first { it.transferId == transferId }
+            val responseByte = if (response.responseType == FileTransferResponseType.Accepted) 0x01 else 0x00
+            socketWriteChannel.writeByte(responseByte)
+            socketWriteChannel.writeLong(response.existingFileLength)
+            socketWriteChannel.flush()
+
+            if (response.responseType == FileTransferResponseType.Rejected) {
+                socket.close()
+                return@async
+            }
+
+            val sink = response.sink
+            if (sink == null) {
+                eventChannel.send(FileTransferServerEvent.TransferStopped(transferId, FileTransferStopReason.UnableToOpenFile))
+                socket.close()
+                return@async
+            }
+
+            eventChannel.send(FileTransferServerEvent.TransferProgress(transferId, 0, payloadLength))
+            val writer = sink.buffer()
+            var totalWritten = response.existingFileLength
+            var lastRead = 0
+
+            while (currentCoroutineContext().isActive) {
+                val read = socketReadChannel.readAvailable(readBuffer, 0, bufferSize)
+                if (read == 0) continue
+
+                if (read == -1) {
+                    writer.close()
                     socket.close()
-                    return@async
-                }
-
-                // Read Fixed Header
-                val protocolVersion = socketReadChannel.readByte().toInt()
-                val command = socketReadChannel.readByte()
-                val senderNameLength = socketReadChannel.readByte().toInt()
-                val fileNameLength = socketReadChannel.readShort().toInt()
-                val payloadLength = socketReadChannel.readLong()
-                socketReadChannel.readFully(ByteArray(24)) // Future use
-
-                // Handle connect command
-                if (command == ClientCommand.Connect) {
-                    val deviceName = getServerDeviceName()
-                    socketWriteChannel.writeByte(Platform.current.toDevicePlatform().toByte())
-                    socketWriteChannel.writeByte(deviceName.length)
-                    socketWriteChannel.writeStringUtf8(deviceName)
-                    socketWriteChannel.flush()
-                    socket.close()
-                    return@async
-                }
-
-                // Read Dynamic Header
-                val senderName =
-                    ByteArray(senderNameLength).apply { socketReadChannel.readFully(this) }.decodeToString()
-                val fileName = ByteArray(fileNameLength).apply { socketReadChannel.readFully(this) }.decodeToString()
-
-                // Wait for user response and send response to client
-                eventChannel.send(
-                    FileTransferServerEvent.TransferRequested(transferId, senderName, fileName, payloadLength)
-                )
-                val response = transferResponseFlow.first { it.transferId == transferId }
-                val responseByte = if (response.responseType == FileTransferResponseType.Accepted) 0x01 else 0x00
-                socketWriteChannel.writeByte(responseByte)
-                socketWriteChannel.writeLong(response.existingFileLength)
-                socketWriteChannel.flush()
-
-                if (response.responseType == FileTransferResponseType.Rejected) {
-                    socket.close()
-                    return@async
-                }
-
-                val sink = response.sink
-                if (sink == null) {
-                    eventChannel.send(FileTransferServerEvent.TransferStopped(transferId, FileTransferStopReason.UnableToOpenFile))
-                    socket.close()
-                    return@async
-                }
-
-                eventChannel.send(FileTransferServerEvent.TransferProgress(transferId, 0, payloadLength))
-                val writer = sink.buffer()
-                var totalWritten = response.existingFileLength
-
-                while (currentCoroutineContext().isActive) {
-                    val read = socketReadChannel.readAvailable(readBuffer, 0, bufferSize)
-                    if (read == 0) continue
-
-                    if (read == -1) {
-                        writer.close()
-                        socket.close()
-                        if (totalWritten == payloadLength) {
-                            eventChannel.send(FileTransferServerEvent.TransferComplete(transferId))
+                    if (totalWritten == payloadLength) {
+                        eventChannel.send(FileTransferServerEvent.TransferComplete(transferId))
+                    } else if (lastRead < cancellationSignalBytes.size + 1) {
+                        eventChannel.send(FileTransferServerEvent.TransferStopped(transferId, FileTransferStopReason.SocketClosed))
+                    } else {
+                        val cancellationCheck = readBuffer.copyOfRange(lastRead - cancellationSignalBytes.size - 1, lastRead - 1)
+                        if (cancellationCheck.contentEquals(cancellationSignalBytes)) {
+                            val cancelCommand = CancellationCommand.fromByte(readBuffer[lastRead - 1])
+                            eventChannel.send(FileTransferServerEvent.TransferStopped(transferId, FileTransferStopReason.Cancelled(cancelCommand)))
                         } else {
                             eventChannel.send(FileTransferServerEvent.TransferStopped(transferId, FileTransferStopReason.SocketClosed))
                         }
-                        break
                     }
+                    break
+                }
 
-                    writer.write(readBuffer, 0, read)
-                    totalWritten += read
-                    eventChannel.send(FileTransferServerEvent.TransferProgress(transferId, totalWritten, payloadLength))
-                }
-            } catch (e: Exception) {
-                if (isClosedConnectionException(e)) {
-                    eventChannel.send(FileTransferServerEvent.TransferStopped(transferId, FileTransferStopReason.SocketClosed))
-                } else {
-                    eventChannel.send(FileTransferServerEvent.TransferStopped(transferId, FileTransferStopReason.Unknown))
-                }
-            } finally {
-                socket.close()
-                cancellationListenerJob.cancel()
+                writer.write(readBuffer, 0, read)
+                totalWritten += read
+                eventChannel.send(FileTransferServerEvent.TransferProgress(transferId, totalWritten, payloadLength))
+                lastRead = read
             }
+        }
+
+        val cancellationListenerJob = launch {
+            val signal = cancellationFlow.first { it.transferId == transferId }
+            receiveJob.cancel(LANdTransferCancelledException(signal.command))
         }
 
         val outcome = receiveJob.awaitOutcome()
         if (outcome is Outcome.Error) {
-            if (outcome.error !is LANdTransferCancelledException) return@coroutineScope
-            eventChannel.send(FileTransferServerEvent.TransferStopped(transferId, FileTransferStopReason.Cancelled))
+            val error = outcome.error
+            when {
+                error is LANdTransferCancelledException -> {
+                    eventChannel.send(FileTransferServerEvent.TransferStopped(
+                        transferId = transferId,
+                        reason = FileTransferStopReason.Cancelled(error.command, cancelledByLocalUser = true)
+                    ))
+                }
+                isClosedConnectionException(error) -> {
+                    eventChannel.send(FileTransferServerEvent.TransferStopped(transferId, FileTransferStopReason.SocketClosed))
+                }
+                else -> {
+                    eventChannel.send(FileTransferServerEvent.TransferStopped(transferId, FileTransferStopReason.Unknown))
+                }
+            }
         }
+
+        socket.close()
+        cancellationListenerJob.cancel()
     }
 
     override suspend fun respondToTransferRequest(
@@ -211,91 +230,97 @@ class FileTransferService(
         destinationIp: String
     ): Flow<FileTransferClientEvent> = channelFlow {
         val transferId = generateConnectionId()
+        val readBuffer = ByteArray(bufferSize)
+        var outerSocket: ASocket? = null
+        var outerSocketWriteChannel: ByteWriteChannel? = null
 
-        var sendJob: Job? = null
-        val cancellationListenerJob = launch {
-            cancellationFlow.first { it == transferId }
-            sendJob?.cancel(LANdTransferCancelledException())
+        val sendJob = async(context = SupervisorJob()) {
+            send(FileTransferClientEvent.Connecting(transferId))
+            val socket = aSocket(selectorManager).tcp().connect(destinationIp, FILE_TRANSFER_PORT)
+            val socketReadChannel = socket.openReadChannel()
+            val socketWriteChannel = socket.openWriteChannel()
+            outerSocket = socket
+            outerSocketWriteChannel = socketWriteChannel
+
+            // Handle auth challenge
+            socketReadChannel.readFully(readBuffer, 0, AUTH_CHALLENGE_LENGTH)
+            val authChallengeResponse = calculateAuthResponse(readBuffer.copyOfRange(0, AUTH_CHALLENGE_LENGTH))
+            socketWriteChannel.writeFully(authChallengeResponse, 0, AUTH_CHALLENGE_LENGTH)
+            socketWriteChannel.flush()
+
+            // Send Fixed Header
+            socketWriteChannel.writeByte(PROTOCOL_VERSION) // Header Version
+            socketWriteChannel.writeByte(ClientCommand.FileTransfer) // Command
+            socketWriteChannel.writeByte(file.senderName.length) // Sender Name Length
+            socketWriteChannel.writeShort(file.fileName.length.toShort()) // File Name Length
+            socketWriteChannel.writeLong(file.length) // Payload Length
+            socketWriteChannel.writeFully(ByteArray(24) { 0x00 }) // Future use
+            socketWriteChannel.flush()
+
+            // Send Dynamic Header
+            socketWriteChannel.writeStringUtf8(file.senderName)
+            socketWriteChannel.writeStringUtf8(file.fileName)
+            socketWriteChannel.flush()
+
+            // Await Response
+            send(FileTransferClientEvent.AwaitingAcceptance(transferId))
+            val response = socketReadChannel.readByte().toInt()
+            val existingFileLength = socketReadChannel.readLong()
+
+            if (response == 0x01) {
+                send(FileTransferClientEvent.TransferResponseReceived(transferId, FileTransferResponseType.Accepted))
+            } else if (response == 0x00) {
+                send(FileTransferClientEvent.TransferResponseReceived(transferId, FileTransferResponseType.Rejected))
+                socket.close()
+                return@async
+            }
+
+            // Send File
+            send(FileTransferClientEvent.TransferProgress(transferId, 0, file.length))
+            val reader = file.source.buffer()
+            reader.skip(existingFileLength)
+            var totalRead = existingFileLength
+
+            while (currentCoroutineContext().isActive) {
+                val read = reader.read(readBuffer, 0, bufferSize)
+                if (read == -1) break
+                socketWriteChannel.writeFully(readBuffer, 0, read)
+                totalRead += read
+                send(FileTransferClientEvent.TransferProgress(transferId, totalRead, file.length))
+            }
+
+            socketWriteChannel.flush()
+            if (totalRead == file.length) send(FileTransferClientEvent.TransferComplete(transferId))
         }
 
-        sendJob = async {
-            var socket: ASocket? = null
-
-            try {
-                send(FileTransferClientEvent.Connecting(transferId))
-                socket = aSocket(selectorManager).tcp().connect(destinationIp, FILE_TRANSFER_PORT)
-                val readBuffer = ByteArray(bufferSize)
-                val socketReadChannel = socket.openReadChannel()
-                val socketWriteChannel = socket.openWriteChannel()
-
-                // Handle auth challenge
-                socketReadChannel.readFully(readBuffer, 0, AUTH_CHALLENGE_LENGTH)
-                val authChallengeResponse = calculateAuthResponse(readBuffer.copyOfRange(0, AUTH_CHALLENGE_LENGTH))
-                socketWriteChannel.writeFully(authChallengeResponse, 0, AUTH_CHALLENGE_LENGTH)
-                socketWriteChannel.flush()
-
-                // Send Fixed Header
-                socketWriteChannel.writeByte(PROTOCOL_VERSION) // Header Version
-                socketWriteChannel.writeByte(ClientCommand.FileTransfer) // Command
-                socketWriteChannel.writeByte(file.senderName.length) // Sender Name Length
-                socketWriteChannel.writeShort(file.fileName.length.toShort()) // File Name Length
-                socketWriteChannel.writeLong(file.length) // Payload Length
-                socketWriteChannel.writeFully(ByteArray(24) { 0x00 }) // Future use
-                socketWriteChannel.flush()
-
-                // Send Dynamic Header
-                socketWriteChannel.writeStringUtf8(file.senderName)
-                socketWriteChannel.writeStringUtf8(file.fileName)
-                socketWriteChannel.flush()
-
-                // Await Response
-                send(FileTransferClientEvent.AwaitingAcceptance(transferId))
-                val response = socketReadChannel.readByte().toInt()
-                val existingFileLength = socketReadChannel.readLong()
-
-                if (response == 0x01) {
-                    send(FileTransferClientEvent.TransferResponseReceived(transferId, FileTransferResponseType.Accepted))
-                } else if (response == 0x00) {
-                    send(FileTransferClientEvent.TransferResponseReceived(transferId, FileTransferResponseType.Rejected))
-                    socket.close()
-                    return@async
-                }
-
-                // Send File
-                send(FileTransferClientEvent.TransferProgress(transferId, 0, file.length))
-                val reader = file.source.buffer()
-                reader.skip(existingFileLength)
-                var totalRead = existingFileLength
-
-                while (currentCoroutineContext().isActive) {
-                    val read = reader.read(readBuffer, 0, bufferSize)
-                    if (read == -1) break
-                    socketWriteChannel.writeFully(readBuffer, 0, read)
-                    totalRead += read
-                    send(FileTransferClientEvent.TransferProgress(transferId, totalRead, file.length))
-                }
-
-                socketWriteChannel.flush()
-                socket.close()
-
-                if (totalRead == file.length) send(FileTransferClientEvent.TransferComplete(transferId))
-            } catch (e: Exception) {
-                if (isClosedConnectionException(e)) {
-                    send(FileTransferClientEvent.TransferStopped(transferId, FileTransferStopReason.SocketClosed))
-                } else {
-                    send(FileTransferClientEvent.TransferStopped(transferId, FileTransferStopReason.Unknown))
-                }
-            } finally {
-                socket?.close()
-                cancellationListenerJob.cancel()
-            }
+        val cancellationListenerJob = launch {
+            val signal = cancellationFlow.first { it.transferId == transferId }
+            sendJob.cancel(LANdTransferCancelledException(signal.command))
         }
 
         val outcome = sendJob.awaitOutcome()
         if (outcome is Outcome.Error) {
-            if (outcome.error !is LANdTransferCancelledException) return@channelFlow
-            send(FileTransferClientEvent.TransferStopped(transferId, FileTransferStopReason.Cancelled))
+            val error = outcome.error
+            when {
+                error is LANdTransferCancelledException -> {
+                    outerSocketWriteChannel?.writeFully(cancellationSignalBytes + error.command.toByte(), 0, cancellationSignalBytes.size + 1)
+                    outerSocketWriteChannel?.flush()
+                    send(FileTransferClientEvent.TransferStopped(
+                        transferId = transferId,
+                        reason = FileTransferStopReason.Cancelled(error.command, cancelledByLocalUser = true)
+                    ))
+                }
+                isClosedConnectionException(outcome.error) -> {
+                    send(FileTransferClientEvent.TransferStopped(transferId, FileTransferStopReason.SocketClosed))
+                }
+                else -> {
+                    send(FileTransferClientEvent.TransferStopped(transferId, FileTransferStopReason.Unknown))
+                }
+            }
         }
+
+        outerSocket?.close()
+        cancellationListenerJob.cancel()
     }.flowOn(Dispatchers.IO)
 
 
@@ -343,7 +368,7 @@ class FileTransferService(
     }
 }
 
-expect fun FileTransferService.isClosedConnectionException(exception: Exception): Boolean
+expect fun FileTransferService.isClosedConnectionException(exception: Throwable): Boolean
 
 private fun DevicePlatform.toByte() = when(this) {
     DevicePlatform.MacOS -> 0x00
@@ -361,4 +386,15 @@ private fun Byte.toDevicePlatform() = when(this) {
     0x03.toByte() -> DevicePlatform.iOS
     0x04.toByte() -> DevicePlatform.Android
     else -> DevicePlatform.Unknown
+}
+
+fun CancellationCommand.toByte() = when (this) {
+    CancellationCommand.Stop -> 0x00.toByte()
+    CancellationCommand.Delete -> 0x01.toByte()
+}
+
+fun CancellationCommand.Companion.fromByte(value: Byte) = when (value) {
+    0x00.toByte() -> CancellationCommand.Stop
+    0x01.toByte() -> CancellationCommand.Delete
+    else -> CancellationCommand.Stop
 }

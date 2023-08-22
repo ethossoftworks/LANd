@@ -11,7 +11,6 @@ import kotlinx.atomicfu.atomic
 import kotlinx.atomicfu.update
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancelAndJoin
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlin.math.round
 import kotlin.math.roundToInt
@@ -120,12 +119,12 @@ class FileTransferInteractor(
                         }
                     }
                     is FileTransferServerEvent.TransferStopped -> {
-                        update { state ->
-                            val transfer = state.activeTransfers[event.transerId]?.copy(stopReason = event.reason) ?: return@update state
+                        val transfer = state.activeTransfers[event.transferId]?.copy(stopReason = event.reason) ?: return@collect
 
+                        update { state ->
                             state.copy(
                                 activeTransfers = state.activeTransfers.toMutableMap().apply { remove(transfer.transferId) },
-                                transferMessageQueue = if (event.reason == FileTransferStopReason.Cancelled) {
+                                transferMessageQueue = if (event.reason is FileTransferStopReason.Cancelled && event.reason.cancelledByLocalUser) {
                                     state.transferMessageQueue
                                 } else {
                                     state.transferMessageQueue + transfer.copy(
@@ -134,6 +133,11 @@ class FileTransferInteractor(
                                     )
                                 }
                             )
+                        }
+
+                        if (event.reason is FileTransferStopReason.Cancelled && event.reason.command == CancellationCommand.Delete) {
+                            val saveFolder = appPreferencesInteractor.state.saveFolder ?: return@collect
+                            fileHandler.deleteFile(saveFolder, transfer.fileName)
                         }
                     }
                 }
@@ -226,7 +230,7 @@ class FileTransferInteractor(
                         update { state ->
                             state.copy(
                                 activeTransfers = state.activeTransfers.toMutableMap().apply { remove(event.transferId) },
-                                transferMessageQueue = if (event.reason == FileTransferStopReason.Cancelled) {
+                                transferMessageQueue = if (event.reason is FileTransferStopReason.Cancelled && event.reason.cancelledByLocalUser) {
                                     state.transferMessageQueue
                                 } else {
                                     state.transferMessageQueue + transfer.copy(
@@ -290,19 +294,10 @@ class FileTransferInteractor(
 
     suspend fun cancelTransfer(
         transferId: Short,
-        shouldDelete: Boolean = false
+        command: CancellationCommand = CancellationCommand.Stop,
     ) {
         val transfer = state.activeTransfers[transferId] ?: return
-        fileTransferService.cancelTransfer(transfer.transferId)
-
-        if (shouldDelete) {
-            if (transfer.direction == FileTransferDirection.Receiving) {
-                val saveFolder = appPreferencesInteractor.state.saveFolder ?: return
-                fileHandler.deleteFile(saveFolder, transfer.fileName)
-            } else {
-//                fileTransferService.deleteFile()
-            }
-        }
+        fileTransferService.cancelTransfer(transfer.transferId, command)
     }
 
     suspend fun testConnection(ipAddress: String): Outcome<Device, Exception> =

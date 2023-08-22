@@ -7,6 +7,7 @@ import com.ethossoftworks.land.common.interactor.filetransfer.FileTransferStatus
 import com.ethossoftworks.land.common.interactor.preferences.AppPreferencesInteractor
 import com.ethossoftworks.land.common.model.device.Device
 import com.ethossoftworks.land.common.service.file.IFileHandler
+import com.ethossoftworks.land.common.service.filetransfer.CancellationCommand
 import com.ethossoftworks.land.common.service.filetransfer.FileTransferRequest
 import com.outsidesource.oskitcompose.modifier.KMPDragData
 import com.outsidesource.oskitkmp.interactor.Interactor
@@ -93,13 +94,13 @@ class DiscoveredDeviceViewInteractor(
 
     fun onStopTransferClicked(transferId: Short) {
         interactorScope.launch {
-            fileTransferInteractor.cancelTransfer(transferId)
+            fileTransferInteractor.cancelTransfer(transferId, CancellationCommand.Stop)
         }
     }
 
     fun onStopAndDeleteTransferClicked(transferId: Short) {
         interactorScope.launch {
-            fileTransferInteractor.cancelTransfer(transferId, shouldDelete = true)
+            fileTransferInteractor.cancelTransfer(transferId, CancellationCommand.Delete)
         }
     }
 }
