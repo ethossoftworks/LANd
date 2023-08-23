@@ -1,5 +1,6 @@
 package com.ethossoftworks.land.common.service.filetransfer
 
+import com.ethossoftworks.land.common.lib.coroutines.asyncOutcome
 import com.ethossoftworks.land.common.lib.coroutines.awaitOutcome
 import com.ethossoftworks.land.common.model.device.Device
 import com.ethossoftworks.land.common.model.device.DevicePlatform
@@ -88,7 +89,7 @@ class FileTransferService(
     ) = coroutineScope {
         val transferId = generateConnectionId()
 
-        val receiveJob = async(context = SupervisorJob()) {
+        val receiveJob = asyncOutcome {
             val readBuffer = ByteArray(bufferSize)
             val socketReadChannel = socket.openReadChannel()
             val socketWriteChannel = socket.openWriteChannel()
@@ -104,7 +105,7 @@ class FileTransferService(
             if (!authResponse.contentEquals(calculateAuthResponse(random))) {
                 eventChannel.send(FileTransferServerEvent.TransferStopped(transferId = transferId, reason = FileTransferStopReason.AuthorizationChallengeFail,))
                 socket.close()
-                return@async
+                return@asyncOutcome
             }
 
             // Read Fixed Header
@@ -123,7 +124,7 @@ class FileTransferService(
                 socketWriteChannel.writeStringUtf8(deviceName)
                 socketWriteChannel.flush()
                 socket.close()
-                return@async
+                return@asyncOutcome
             }
 
             // Read Dynamic Header
@@ -143,14 +144,14 @@ class FileTransferService(
 
             if (response.responseType == FileTransferResponseType.Rejected) {
                 socket.close()
-                return@async
+                return@asyncOutcome
             }
 
             val sink = response.sink
             if (sink == null) {
                 eventChannel.send(FileTransferServerEvent.TransferStopped(transferId, FileTransferStopReason.UnableToOpenFile))
                 socket.close()
-                return@async
+                return@asyncOutcome
             }
 
             eventChannel.send(FileTransferServerEvent.TransferProgress(transferId, 0, payloadLength))
@@ -234,7 +235,7 @@ class FileTransferService(
         var outerSocket: ASocket? = null
         var outerSocketWriteChannel: ByteWriteChannel? = null
 
-        val sendJob = async(context = SupervisorJob()) {
+        val sendJob = asyncOutcome {
             send(FileTransferClientEvent.Connecting(transferId))
             val socket = aSocket(selectorManager).tcp().connect(destinationIp, FILE_TRANSFER_PORT)
             val socketReadChannel = socket.openReadChannel()
@@ -272,7 +273,7 @@ class FileTransferService(
             } else if (response == 0x00) {
                 send(FileTransferClientEvent.TransferResponseReceived(transferId, FileTransferResponseType.Rejected))
                 socket.close()
-                return@async
+                return@asyncOutcome
             }
 
             // Send File
