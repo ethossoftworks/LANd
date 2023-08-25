@@ -1,5 +1,6 @@
 package com.ethossoftworks.land.common.service.filetransfer
 
+import com.ethossoftworks.land.common.lib.bytes.offsetContentEquals
 import com.ethossoftworks.land.common.model.device.Device
 import com.ethossoftworks.land.common.model.device.DevicePlatform
 import com.ethossoftworks.land.common.model.device.toDevicePlatform
@@ -157,27 +158,23 @@ class FileTransferService(
             eventChannel.send(FileTransferServerEvent.TransferProgress(transferId, 0, payloadLength))
             val writer = sink.buffer()
             var totalWritten = response.existingFileLength
-            var lastRead = 0
 
             while (currentCoroutineContext().isActive) {
                 val read = socketReadChannel.readAvailable(readBuffer, 0, bufferSize)
                 if (read == 0) continue
 
-                if (read == -1) {
+                // Check for cancellation signal in tail of read buffer
+                if (readBuffer.offsetContentEquals(cancellationSignalBytes, read - cancellationSignalBytes.size - 1)) {
+                    val cancelCommand = CancellationCommand.fromByte(readBuffer[read - 1])
+                    eventChannel.send(FileTransferServerEvent.TransferStopped(transferId, FileTransferStopReason.Cancelled(cancelCommand)))
+                    break
+                } else if (read == -1) {
                     writer.close()
                     socket.close()
                     if (totalWritten == payloadLength) {
                         eventChannel.send(FileTransferServerEvent.TransferComplete(transferId))
-                    } else if (lastRead < cancellationSignalBytes.size + 1) {
-                        eventChannel.send(FileTransferServerEvent.TransferStopped(transferId, FileTransferStopReason.SocketClosed))
                     } else {
-                        val cancellationCheck = readBuffer.copyOfRange(lastRead - cancellationSignalBytes.size - 1, lastRead - 1)
-                        if (cancellationCheck.contentEquals(cancellationSignalBytes)) {
-                            val cancelCommand = CancellationCommand.fromByte(readBuffer[lastRead - 1])
-                            eventChannel.send(FileTransferServerEvent.TransferStopped(transferId, FileTransferStopReason.Cancelled(cancelCommand)))
-                        } else {
-                            eventChannel.send(FileTransferServerEvent.TransferStopped(transferId, FileTransferStopReason.SocketClosed))
-                        }
+                        eventChannel.send(FileTransferServerEvent.TransferStopped(transferId, FileTransferStopReason.SocketClosed))
                     }
                     break
                 }
@@ -185,7 +182,6 @@ class FileTransferService(
                 writer.write(readBuffer, 0, read)
                 totalWritten += read
                 eventChannel.send(FileTransferServerEvent.TransferProgress(transferId, totalWritten, payloadLength))
-                lastRead = read
             }
 
             Outcome.Ok(Unit)
