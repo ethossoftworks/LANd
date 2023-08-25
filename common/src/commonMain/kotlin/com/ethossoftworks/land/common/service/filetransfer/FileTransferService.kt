@@ -297,8 +297,7 @@ class FileTransferService(
 
             // Send File
             send(FileTransferClientEvent.TransferProgress(transferId, 0, file.length))
-            val reader = file.source.buffer()
-            reader.skip(existingFileLength)
+            val reader = file.source.buffer().apply { skip(existingFileLength) }
             var totalRead = existingFileLength
 
             while (isActive) {
