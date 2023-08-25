@@ -89,11 +89,13 @@ class FileTransferService(
         eventChannel: SendChannel<FileTransferServerEvent>
     ) = coroutineScope {
         val transferId = generateConnectionId()
+        var outerSocketWriteChannel: ByteWriteChannel? = null
 
         val receiveJob = asyncOutcome {
             val readBuffer = ByteArray(bufferSize)
             val socketReadChannel = socket.openReadChannel()
             val socketWriteChannel = socket.openWriteChannel()
+            outerSocketWriteChannel = socketWriteChannel
 
             // Write authorization challenge
             val random = SecureRandom.nextBytes(AUTH_CHALLENGE_LENGTH)
@@ -159,16 +161,11 @@ class FileTransferService(
             val writer = sink.buffer()
             var totalWritten = response.existingFileLength
 
-            while (currentCoroutineContext().isActive) {
+            while (isActive) {
                 val read = socketReadChannel.readAvailable(readBuffer, 0, bufferSize)
                 if (read == 0) continue
 
-                // Check for cancellation signal in tail of read buffer
-                if (readBuffer.offsetContentEquals(cancellationSignalBytes, read - cancellationSignalBytes.size - 1)) {
-                    val cancelCommand = CancellationCommand.fromByte(readBuffer[read - 1])
-                    eventChannel.send(FileTransferServerEvent.TransferStopped(transferId, FileTransferStopReason.Cancelled(cancelCommand)))
-                    break
-                } else if (read == -1) {
+                if (read == -1) {
                     writer.close()
                     socket.close()
                     if (totalWritten == payloadLength) {
@@ -176,6 +173,13 @@ class FileTransferService(
                     } else {
                         eventChannel.send(FileTransferServerEvent.TransferStopped(transferId, FileTransferStopReason.SocketClosed))
                     }
+                    break
+                }
+
+                // Check for cancellation signal in tail of read buffer
+                if (readBuffer.offsetContentEquals(cancellationSignalBytes, read - cancellationSignalBytes.size - 1)) {
+                    val cancelCommand = CancellationCommand.fromByte(readBuffer[read - 1])
+                    eventChannel.send(FileTransferServerEvent.TransferStopped(transferId, FileTransferStopReason.Cancelled(cancelCommand)))
                     break
                 }
 
@@ -197,6 +201,8 @@ class FileTransferService(
             val error = outcome.error
             when {
                 error is LANdTransferCancelledException -> {
+                    outerSocketWriteChannel?.writeFully(cancellationSignalBytes + error.command.toByte(), 0, cancellationSignalBytes.size + 1)
+                    outerSocketWriteChannel?.flush()
                     eventChannel.send(FileTransferServerEvent.TransferStopped(
                         transferId = transferId,
                         reason = FileTransferStopReason.Cancelled(error.command, cancelledByLocalUser = true)
@@ -233,7 +239,7 @@ class FileTransferService(
         var outerSocket: ASocket? = null
         var outerSocketWriteChannel: ByteWriteChannel? = null
 
-        val sendJob = asyncOutcome {
+        val sendJob = asyncOutcome sendJob@ {
             send(FileTransferClientEvent.Connecting(transferId))
             val socket = aSocket(selectorManager).tcp().connect(destinationIp, FILE_TRANSFER_PORT)
             val socketReadChannel = socket.openReadChannel()
@@ -271,7 +277,22 @@ class FileTransferService(
             } else if (response == 0x00) {
                 send(FileTransferClientEvent.TransferResponseReceived(transferId, FileTransferResponseType.Rejected))
                 socket.close()
-                return@asyncOutcome Outcome.Ok(Unit)
+                return@sendJob Outcome.Ok(Unit)
+            }
+
+            // Start recipient cancellation listener
+            val recipientCancellationListener = asyncOutcome {
+                val cancellationSignalBuffer = ByteArray(cancellationSignalBytes.size + 1)
+                while (isActive) {
+                    socketReadChannel.readAvailable(cancellationSignalBuffer)
+                    if (!cancellationSignalBuffer.offsetContentEquals(cancellationSignalBytes, 0)) continue
+
+                    val command = CancellationCommand.fromByte(cancellationSignalBuffer.last())
+                    send(FileTransferClientEvent.TransferStopped(transferId, FileTransferStopReason.Cancelled(command)))
+                    this@sendJob.cancel()
+                }
+
+                Outcome.Ok(Unit)
             }
 
             // Send File
@@ -280,7 +301,7 @@ class FileTransferService(
             reader.skip(existingFileLength)
             var totalRead = existingFileLength
 
-            while (currentCoroutineContext().isActive) {
+            while (isActive) {
                 val read = reader.read(readBuffer, 0, bufferSize)
                 if (read == -1) break
                 socketWriteChannel.writeFully(readBuffer, 0, read)
@@ -290,6 +311,8 @@ class FileTransferService(
 
             socketWriteChannel.flush()
             if (totalRead == file.length) send(FileTransferClientEvent.TransferComplete(transferId))
+
+            recipientCancellationListener.cancel()
             Outcome.Ok(Unit)
         }
 
