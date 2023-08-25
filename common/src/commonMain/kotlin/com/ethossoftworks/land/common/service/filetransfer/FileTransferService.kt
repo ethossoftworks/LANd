@@ -1,10 +1,10 @@
 package com.ethossoftworks.land.common.service.filetransfer
 
-import com.ethossoftworks.land.common.lib.coroutines.asyncOutcome
-import com.ethossoftworks.land.common.lib.coroutines.awaitOutcome
 import com.ethossoftworks.land.common.model.device.Device
 import com.ethossoftworks.land.common.model.device.DevicePlatform
 import com.ethossoftworks.land.common.model.device.toDevicePlatform
+import com.outsidesource.oskitkmp.concurrency.asyncOutcome
+import com.outsidesource.oskitkmp.concurrency.awaitOutcome
 import com.outsidesource.oskitkmp.lib.Platform
 import com.outsidesource.oskitkmp.lib.current
 import com.outsidesource.oskitkmp.outcome.Outcome
@@ -105,7 +105,7 @@ class FileTransferService(
             if (!authResponse.contentEquals(calculateAuthResponse(random))) {
                 eventChannel.send(FileTransferServerEvent.TransferStopped(transferId = transferId, reason = FileTransferStopReason.AuthorizationChallengeFail,))
                 socket.close()
-                return@asyncOutcome
+                return@asyncOutcome Outcome.Ok(Unit)
             }
 
             // Read Fixed Header
@@ -124,7 +124,7 @@ class FileTransferService(
                 socketWriteChannel.writeStringUtf8(deviceName)
                 socketWriteChannel.flush()
                 socket.close()
-                return@asyncOutcome
+                return@asyncOutcome Outcome.Ok(Unit)
             }
 
             // Read Dynamic Header
@@ -144,14 +144,14 @@ class FileTransferService(
 
             if (response.responseType == FileTransferResponseType.Rejected) {
                 socket.close()
-                return@asyncOutcome
+                return@asyncOutcome Outcome.Ok(Unit)
             }
 
             val sink = response.sink
             if (sink == null) {
                 eventChannel.send(FileTransferServerEvent.TransferStopped(transferId, FileTransferStopReason.UnableToOpenFile))
                 socket.close()
-                return@asyncOutcome
+                return@asyncOutcome Outcome.Ok(Unit)
             }
 
             eventChannel.send(FileTransferServerEvent.TransferProgress(transferId, 0, payloadLength))
@@ -187,6 +187,8 @@ class FileTransferService(
                 eventChannel.send(FileTransferServerEvent.TransferProgress(transferId, totalWritten, payloadLength))
                 lastRead = read
             }
+
+            Outcome.Ok(Unit)
         }
 
         val cancellationListenerJob = launch {
@@ -273,7 +275,7 @@ class FileTransferService(
             } else if (response == 0x00) {
                 send(FileTransferClientEvent.TransferResponseReceived(transferId, FileTransferResponseType.Rejected))
                 socket.close()
-                return@asyncOutcome
+                return@asyncOutcome Outcome.Ok(Unit)
             }
 
             // Send File
@@ -292,6 +294,7 @@ class FileTransferService(
 
             socketWriteChannel.flush()
             if (totalRead == file.length) send(FileTransferClientEvent.TransferComplete(transferId))
+            Outcome.Ok(Unit)
         }
 
         val cancellationListenerJob = launch {
@@ -311,7 +314,7 @@ class FileTransferService(
                         reason = FileTransferStopReason.Cancelled(error.command, cancelledByLocalUser = true)
                     ))
                 }
-                isClosedConnectionException(outcome.error) -> {
+                isClosedConnectionException(error) -> {
                     send(FileTransferClientEvent.TransferStopped(transferId, FileTransferStopReason.SocketClosed))
                 }
                 else -> {
@@ -369,7 +372,7 @@ class FileTransferService(
     }
 }
 
-expect fun FileTransferService.isClosedConnectionException(exception: Throwable): Boolean
+expect fun FileTransferService.isClosedConnectionException(exception: Any): Boolean
 
 private fun DevicePlatform.toByte() = when(this) {
     DevicePlatform.MacOS -> 0x00

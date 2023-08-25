@@ -104,11 +104,7 @@ class AndroidFileHandler: IFileHandler {
 
             val context = context ?: return Outcome.Error(FileHandlerError.NotInitialized)
             val parentUri = DocumentFile.fromTreeUri(context, folder.toUri()) ?: return Outcome.Error(FileHandlerError.FolderDoesntExist)
-            val file = if (mode == FileWriteMode.Append) {
-                parentUri.findFile(name) ?: parentUri.createFile("", name)
-            } else {
-                parentUri.createFile("", name)
-            } ?: return Outcome.Error(FileHandlerError.CouldNotCreateFile)
+            val file = parentUri.findFile(name) ?: parentUri.createFile("", name) ?: return Outcome.Error(FileHandlerError.CouldNotCreateFile)
             val outputStream = context.contentResolver.openOutputStream(file.uri, modeString) ?: return Outcome.Error(FileHandlerError.CouldNotCreateFile)
 
             Outcome.Ok(outputStream.sink())
