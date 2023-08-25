@@ -1,11 +1,13 @@
 package com.ethossoftworks.land.common.ui.home
 
+import com.ethossoftworks.land.common.interactor.filetransfer.FileTransfer
 import com.ethossoftworks.land.common.interactor.filetransfer.FileTransferDirection
 import com.ethossoftworks.land.common.interactor.filetransfer.FileTransferInteractor
 import com.ethossoftworks.land.common.interactor.filetransfer.FileTransferStatus
 import com.ethossoftworks.land.common.interactor.preferences.AppPreferencesInteractor
 import com.ethossoftworks.land.common.model.device.Device
 import com.ethossoftworks.land.common.service.file.IFileHandler
+import com.ethossoftworks.land.common.service.filetransfer.CancellationCommand
 import com.ethossoftworks.land.common.service.filetransfer.FileTransferRequest
 import com.outsidesource.oskitcompose.modifier.KMPDragData
 import com.outsidesource.oskitkmp.interactor.Interactor
@@ -15,9 +17,10 @@ import kotlinx.coroutines.launch
 
 data class DiscoveredDeviceState(
     val isWaiting: Boolean = false,
+    val isSending: Boolean = false,
     val receivingProgress: Float = 0f,
     val sendingProgress: Float = 0f,
-    val transferCount: Int = 0,
+    val transfers: List<FileTransfer> = emptyList(),
 )
 
 class DiscoveredDeviceViewInteractor(
@@ -36,11 +39,13 @@ class DiscoveredDeviceViewInteractor(
         var sendingBytesTransferred = 0L
         var receivingBytesTotal = 0L
         var receivingBytesTransferred = 0L
+        var isSending = false
 
-        transferIds.forEach { id ->
-            val transfer = fileTransferInteractor.state.activeTransfers[id] ?: return@forEach
+        val transfers = transferIds.mapNotNull { id ->
+            val transfer = fileTransferInteractor.state.activeTransfers[id] ?: return@mapNotNull null
 
             if (transfer.direction == FileTransferDirection.Sending) {
+                isSending = true
                 sendingBytesTotal += transfer.bytesTotal
                 sendingBytesTransferred += transfer.bytesTransferred
             } else {
@@ -51,13 +56,15 @@ class DiscoveredDeviceViewInteractor(
             isWaiting = isWaiting ||
                     (transfer.status == FileTransferStatus.AwaitingAcceptance &&
                             transfer.direction == FileTransferDirection.Sending)
+            transfer
         }
 
         return state.copy(
             isWaiting = isWaiting,
+            isSending = isSending,
             receivingProgress = if (receivingBytesTotal > 0) (receivingBytesTransferred.toFloat() / receivingBytesTotal.toFloat()) else 0f,
             sendingProgress = if (sendingBytesTotal > 0) (sendingBytesTransferred.toFloat() / sendingBytesTotal.toFloat()) else 0f,
-            transferCount = transferIds.size,
+            transfers = transfers,
         )
     }
 
@@ -85,11 +92,15 @@ class DiscoveredDeviceViewInteractor(
         }
     }
 
-    fun onStopTransferClicked() {
-
+    fun onStopTransferClicked(transferId: Short) {
+        interactorScope.launch {
+            fileTransferInteractor.cancelTransfer(transferId, CancellationCommand.Stop)
+        }
     }
 
-    fun onStopAndDeleteTransferClicked() {
-
+    fun onStopAndDeleteTransferClicked(transferId: Short) {
+        interactorScope.launch {
+            fileTransferInteractor.cancelTransfer(transferId, CancellationCommand.Delete)
+        }
     }
 }

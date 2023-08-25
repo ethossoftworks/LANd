@@ -84,9 +84,7 @@ class AndroidFileHandler: IFileHandler {
     override suspend fun selectFile(): Outcome<String?, Any> {
         return try {
             val fileResultLauncher = openFileResultLauncher ?: return Outcome.Error(FileHandlerError.NotInitialized)
-
             fileResultLauncher.launch(arrayOf("*/*"))
-
             Outcome.Ok(openFileResultFlow.first()?.toString())
         } catch (e: Exception) {
             Outcome.Error(e)
@@ -106,11 +104,7 @@ class AndroidFileHandler: IFileHandler {
 
             val context = context ?: return Outcome.Error(FileHandlerError.NotInitialized)
             val parentUri = DocumentFile.fromTreeUri(context, folder.toUri()) ?: return Outcome.Error(FileHandlerError.FolderDoesntExist)
-            val file = if (mode == FileWriteMode.Append) {
-                parentUri.findFile(name) ?: parentUri.createFile("", name)
-            } else {
-                parentUri.createFile("", name)
-            } ?: return Outcome.Error(FileHandlerError.CouldNotCreateFile)
+            val file = parentUri.findFile(name) ?: parentUri.createFile("", name) ?: return Outcome.Error(FileHandlerError.CouldNotCreateFile)
             val outputStream = context.contentResolver.openOutputStream(file.uri, modeString) ?: return Outcome.Error(FileHandlerError.CouldNotCreateFile)
 
             Outcome.Ok(outputStream.sink())
@@ -125,6 +119,23 @@ class AndroidFileHandler: IFileHandler {
             val stream = context.contentResolver.openInputStream(path.toUri()) ?: return Outcome.Error(FileHandlerError.FileDoesntExist)
 
             return Outcome.Ok(stream.source())
+        } catch (e: Exception) {
+            Outcome.Error(e)
+        }
+    }
+
+    override suspend fun deleteFile(folder: String, name: String): Outcome<Unit, Any> {
+        val context = context ?: return Outcome.Error(FileHandlerError.NotInitialized)
+        val parentUri = DocumentFile.fromTreeUri(context, folder.toUri()) ?: return Outcome.Error(FileHandlerError.FolderDoesntExist)
+        val file = parentUri.findFile(name) ?: return Outcome.Error(FileHandlerError.FileDoesntExist)
+        return deleteFile(file.uri.toString())
+    }
+
+    override suspend fun deleteFile(path: String): Outcome<Unit, Any> {
+        return try {
+            val context = context ?: return Outcome.Error(FileHandlerError.NotInitialized)
+            DocumentFile.fromSingleUri(context, path.toUri())?.delete() ?: return Outcome.Error(FileHandlerError.FileDoesntExist)
+            return Outcome.Ok(Unit)
         } catch (e: Exception) {
             Outcome.Error(e)
         }

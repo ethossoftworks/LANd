@@ -69,23 +69,23 @@ class FileTransferInteractor(
     suspend fun startServer() {
         stopServer()
         interactorScope.launch {
-            fileTransferService.startServer().collect {
-                when (it) {
+            fileTransferService.startServer().collect { event ->
+                when (event) {
                     is FileTransferServerEvent.ServerStarted -> update { state -> state.copy(isServerRunning = true) }
                     is FileTransferServerEvent.ServerStopped -> update { state -> state.copy(isServerRunning = false) }
                     is FileTransferServerEvent.TransferRequested -> {
                         // TODO: Implement better early return handling
                         val saveFolder = appPreferencesInteractor.state.saveFolder ?: return@collect
-                        val metadataOutcome = fileHandler.readFileMetadata(saveFolder, it.fileName)
+                        val metadataOutcome = fileHandler.readFileMetadata(saveFolder, event.fileName)
 
                         update { state ->
                             state.copy(
                                 transferMessageQueue = state.transferMessageQueue +
                                     FileTransfer(
-                                        transferId = it.transferId,
-                                        fileName = it.fileName,
-                                        deviceName = it.senderName,
-                                        bytesTotal = it.length,
+                                        transferId = event.transferId,
+                                        fileName = event.fileName,
+                                        deviceName = event.senderName,
+                                        bytesTotal = event.length,
                                         bytesExisting = when (metadataOutcome) {
                                             is Outcome.Ok -> metadataOutcome.value.length
                                             else -> 0
@@ -100,32 +100,44 @@ class FileTransferInteractor(
                         update { state ->
                             state.copy(
                                 activeTransfers = state.activeTransfers.toMutableMap().apply {
-                                    val transfer = this[it.transferId] ?: return@apply
-                                    put(it.transferId, transfer.copy(bytesTransferred = it.bytesReceived))
+                                    val transfer = this[event.transferId] ?: return@apply
+                                    put(event.transferId, transfer.copy(bytesTransferred = event.bytesReceived))
                                 }
                             )
                         }
                     }
                     is FileTransferServerEvent.TransferComplete -> {
                         update { state ->
-                            val sender = state.activeTransfers[it.transferId]?.deviceName ?: return@update state
+                            val sender = state.activeTransfers[event.transferId]?.deviceName ?: return@update state
 
                             state.copy(
-                                activeTransfers = state.activeTransfers.toMutableMap().apply { remove(it.transferId) },
+                                activeTransfers = state.activeTransfers.toMutableMap().apply { remove(event.transferId) },
                                 deviceNameTransferIdMap = state.deviceNameTransferIdMap.toMutableMap().apply {
-                                    put(sender, (this[sender] ?: emptyList()) - it.transferId)
+                                    put(sender, (this[sender] ?: emptyList()) - event.transferId)
                                 },
                             )
                         }
                     }
                     is FileTransferServerEvent.TransferStopped -> {
-                        update { state ->
-                            val transfer = state.activeTransfers[it.transerId]?.copy(stopReason = it.reason) ?: return@update state
+                        val transfer = state.activeTransfers[event.transferId]?.copy(stopReason = event.reason) ?: return@collect
 
+                        update { state ->
                             state.copy(
                                 activeTransfers = state.activeTransfers.toMutableMap().apply { remove(transfer.transferId) },
-                                transferMessageQueue = state.transferMessageQueue + transfer.copy(status = FileTransferStatus.Stopped),
+                                transferMessageQueue = if (event.reason is FileTransferStopReason.Cancelled && event.reason.cancelledByLocalUser) {
+                                    state.transferMessageQueue
+                                } else {
+                                    state.transferMessageQueue + transfer.copy(
+                                        stopReason = event.reason,
+                                        status = FileTransferStatus.Stopped,
+                                    )
+                                }
                             )
+                        }
+
+                        if (event.reason is FileTransferStopReason.Cancelled && event.reason.command == CancellationCommand.Delete) {
+                            val saveFolder = appPreferencesInteractor.state.saveFolder ?: return@collect
+                            fileHandler.deleteFile(saveFolder, transfer.fileName)
                         }
                     }
                 }
@@ -189,7 +201,7 @@ class FileTransferInteractor(
                                     state.activeTransfers.toMutableMap().apply { remove(event.transferId) }
                                 } else {
                                     state.activeTransfers.toMutableMap().apply {
-                                        this[event.transferId] = transfer.copy(status = FileTransferStatus.Progress)
+                                        put(event.transferId, transfer.copy(status = FileTransferStatus.Progress))
                                     }
                                 },
                             )
@@ -218,10 +230,14 @@ class FileTransferInteractor(
                         update { state ->
                             state.copy(
                                 activeTransfers = state.activeTransfers.toMutableMap().apply { remove(event.transferId) },
-                                transferMessageQueue = state.transferMessageQueue + transfer.copy(
-                                    stopReason = event.reason,
-                                    status = FileTransferStatus.Stopped,
-                                ),
+                                transferMessageQueue = if (event.reason is FileTransferStopReason.Cancelled && event.reason.cancelledByLocalUser) {
+                                    state.transferMessageQueue
+                                } else {
+                                    state.transferMessageQueue + transfer.copy(
+                                        stopReason = event.reason,
+                                        status = FileTransferStatus.Stopped,
+                                    )
+                                },
                             )
                         }
                     }
@@ -274,6 +290,14 @@ class FileTransferInteractor(
         )
 
         return Outcome.Ok(Unit)
+    }
+
+    suspend fun cancelTransfer(
+        transferId: Short,
+        command: CancellationCommand = CancellationCommand.Stop,
+    ) {
+        val transfer = state.activeTransfers[transferId] ?: return
+        fileTransferService.cancelTransfer(transfer.transferId, command)
     }
 
     suspend fun testConnection(ipAddress: String): Outcome<Device, Exception> =
