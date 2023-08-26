@@ -31,12 +31,6 @@ fun initDI(
 fun commonModule() = module {
     single { AppCoordinator() }
 
-    factory { HomeScreenViewInteractor(get(), get(), get(), get(), get()) }
-    factory { SettingsBottomSheetViewInteractor(get(), get(), get(), get()) }
-    factory { AboutModalViewInteractor() }
-    factory { params -> DiscoveredDeviceViewInteractor(params[0], get(), get(), get()) }
-    factory { params -> AddDeviceModalViewInteractor(get(), get(), params[0]) }
-
     single { DiscoveryInteractor(get()) }
     single { AppPreferencesInteractor(get(), get()) }
     single { FileTransferInteractor(get(), get(), get()) }
@@ -45,4 +39,11 @@ fun commonModule() = module {
         val appPreferencesInteractor: AppPreferencesInteractor = get()
         FileTransferService { appPreferencesInteractor.state.displayName }
     } bind IFileTransferService::class
+
+    factory { HomeScreenViewInteractor(get(), get(), get(), get(), get()) }
+    factory { SettingsBottomSheetViewInteractor(get(), get(), get(), get()) }
+    factory { AboutModalViewInteractor() }
+    factory { params -> DiscoveredDeviceViewInteractor(params[0], get(), get(), get()) }
+    factory { params -> AddDeviceModalViewInteractor(get(), get(), params[0]) }
+    factory { TransferMessageViewInteractor(get()) }
 }

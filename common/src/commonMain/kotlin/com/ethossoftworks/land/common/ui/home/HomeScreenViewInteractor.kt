@@ -108,20 +108,6 @@ class HomeScreenViewInteractor(
         }
     }
 
-    fun respondToRequest(
-        request: FileTransfer,
-        response: FileTransferResponseType,
-        mode: FileWriteMode = FileWriteMode.Overwrite,
-    ) {
-        interactorScope.launch {
-            fileTransferInteractor.respondToTransferRequest(request, response, mode)
-        }
-    }
-
-    fun transferMessageQueueItemHandled(item: FileTransfer) {
-        fileTransferInteractor.transferMessageQueueItemHandled(item)
-    }
-
     fun onSettingsButtonClicked() {
         update { state -> state.copy(isSettingsBottomSheetVisible = true) }
     }

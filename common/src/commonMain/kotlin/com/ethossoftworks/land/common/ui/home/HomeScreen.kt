@@ -186,10 +186,7 @@ fun HomeScreen(
             onDismissRequest = interactor::onAboutModalDismissed,
         )
 
-        TransferMessage(
-            state.transferMessageQueue.firstOrNull(),
-            rememberValRef(interactor)
-        )
+        TransferMessage()
     }
 }
 
