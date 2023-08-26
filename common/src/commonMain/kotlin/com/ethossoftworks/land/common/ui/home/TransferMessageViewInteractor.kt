@@ -35,6 +35,6 @@ class TransferMessageViewInteractor(
     }
 
     fun transferMessageQueueItemHandled(item: FileTransfer) {
-        fileTransferInteractor.transferMessageQueueItemHandled(item)
+        fileTransferInteractor.transferMessageHandled(item)
     }
 }

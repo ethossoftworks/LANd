@@ -17,7 +17,7 @@ import kotlin.math.roundToInt
 
 data class FileTransferState(
     val isServerRunning: Boolean = false,
-    val deviceNameTransferIdMap: Map<String, List<Short>> = LinkedHashMap(),
+    val deviceToTransferIdMap: Map<String, List<Short>> = LinkedHashMap(),
     val activeTransfers: Map<Short, FileTransfer> = LinkedHashMap(),
     val transferMessageQueue: List<FileTransfer> = emptyList(),
 )
@@ -112,7 +112,7 @@ class FileTransferInteractor(
 
                             state.copy(
                                 activeTransfers = state.activeTransfers.toMutableMap().apply { remove(event.transferId) },
-                                deviceNameTransferIdMap = state.deviceNameTransferIdMap.toMutableMap().apply {
+                                deviceToTransferIdMap = state.deviceToTransferIdMap.toMutableMap().apply {
                                     put(sender, (this[sender] ?: emptyList()) - event.transferId)
                                 },
                             )
@@ -124,13 +124,9 @@ class FileTransferInteractor(
                         update { state ->
                             state.copy(
                                 activeTransfers = state.activeTransfers.toMutableMap().apply { remove(transfer.transferId) },
-                                transferMessageQueue = if (event.reason is FileTransferStopReason.Cancelled && event.reason.cancelledByLocalUser) {
-                                    state.transferMessageQueue
-                                } else {
-                                    state.transferMessageQueue + transfer.copy(
-                                        stopReason = event.reason,
-                                        status = FileTransferStatus.Stopped,
-                                    )
+                                transferMessageQueue = state.transferMessageQueue.toMutableList().apply {
+                                    if (event.reason is FileTransferStopReason.Cancelled && event.reason.cancelledByLocalUser) return@apply
+                                    add(transfer.copy(stopReason = event.reason, status = FileTransferStatus.Stopped))
                                 }
                             )
                         }
@@ -167,7 +163,7 @@ class FileTransferInteractor(
 
                         update { state ->
                             state.copy(
-                                deviceNameTransferIdMap = state.deviceNameTransferIdMap.toMutableMap().apply {
+                                deviceToTransferIdMap = state.deviceToTransferIdMap.toMutableMap().apply {
                                     put(device.name, (this[device.name] ?: emptyList()) + event.transferId)
                                 },
                                 activeTransfers = state.activeTransfers.toMutableMap().apply {
@@ -192,15 +188,14 @@ class FileTransferInteractor(
                             val transfer = state.activeTransfers[event.transferId] ?: return@update state
 
                             state.copy(
-                                transferMessageQueue = if (event.response == FileTransferResponseType.Rejected) {
-                                    state.transferMessageQueue + transfer.copy(status = FileTransferStatus.Rejected)
-                                } else {
-                                    state.transferMessageQueue
+                                transferMessageQueue = state.transferMessageQueue.toMutableList().apply {
+                                    if (event.response == FileTransferResponseType.Accepted) return@apply
+                                    add(transfer.copy(status = FileTransferStatus.Rejected))
                                 },
-                                activeTransfers = if (event.response == FileTransferResponseType.Rejected) {
-                                    state.activeTransfers.toMutableMap().apply { remove(event.transferId) }
-                                } else {
-                                    state.activeTransfers.toMutableMap().apply {
+                                activeTransfers = state.activeTransfers.toMutableMap().apply {
+                                    if (event.response == FileTransferResponseType.Rejected) {
+                                        remove(event.transferId)
+                                    } else {
                                         put(event.transferId, transfer.copy(status = FileTransferStatus.Progress))
                                     }
                                 },
@@ -230,13 +225,9 @@ class FileTransferInteractor(
                         update { state ->
                             state.copy(
                                 activeTransfers = state.activeTransfers.toMutableMap().apply { remove(event.transferId) },
-                                transferMessageQueue = if (event.reason is FileTransferStopReason.Cancelled && event.reason.cancelledByLocalUser) {
-                                    state.transferMessageQueue
-                                } else {
-                                    state.transferMessageQueue + transfer.copy(
-                                        stopReason = event.reason,
-                                        status = FileTransferStatus.Stopped,
-                                    )
+                                transferMessageQueue = state.transferMessageQueue.toMutableList().apply {
+                                    if (event.reason is FileTransferStopReason.Cancelled && event.reason.cancelledByLocalUser) return@apply
+                                    add(transfer.copy(stopReason = event.reason, status = FileTransferStatus.Stopped))
                                 },
                             )
                         }
@@ -250,33 +241,37 @@ class FileTransferInteractor(
         transfer: FileTransfer,
         response: FileTransferResponseType,
         mode: FileWriteMode
-    ): Outcome<Unit, Any> {
-        // TODO: Implement better early return errors
-        val saveFolder = appPreferencesInteractor.state.saveFolder ?: return Outcome.Error(Unit)
-        val sink = if (response == FileTransferResponseType.Accepted) {
-            val sinkOutcome = fileHandler.openFileToWrite(saveFolder, transfer.fileName, mode)
-            if (sinkOutcome !is Outcome.Ok) return Outcome.Error(Unit)
-            sinkOutcome.value
-        } else {
-            null
-        }
-
+    ) {
         update { state ->
             val pendingTransfer = state.transferMessageQueue.firstOrNull { it.transferId == transfer.transferId } ?: return@update state
 
             state.copy(
-                activeTransfers = if (response == FileTransferResponseType.Accepted) {
-                    state.activeTransfers.toMutableMap().apply {
-                        put(transfer.transferId, pendingTransfer.copy(status = FileTransferStatus.Progress))
-                    }
-                } else {
-                    state.activeTransfers
+                activeTransfers = state.activeTransfers.toMutableMap().apply {
+                    if (response == FileTransferResponseType.Rejected) return@apply
+                    put(transfer.transferId, pendingTransfer.copy(status = FileTransferStatus.Progress))
                 },
                 transferMessageQueue = state.transferMessageQueue - pendingTransfer,
-                deviceNameTransferIdMap = state.deviceNameTransferIdMap.toMutableMap().apply {
+                deviceToTransferIdMap = state.deviceToTransferIdMap.toMutableMap().apply {
                     put(transfer.deviceName, (this[transfer.deviceName] ?: emptyList()) + transfer.transferId)
                 }
             )
+        }
+
+        val saveFolder = appPreferencesInteractor.state.saveFolder
+        if (saveFolder == null) {
+            addTransferMessage(transfer.copy(status = FileTransferStatus.Stopped, stopReason = FileTransferStopReason.UnableToOpenFile))
+            return
+        }
+
+        val sink = if (response == FileTransferResponseType.Accepted) {
+            val sinkOutcome = fileHandler.openFileToWrite(saveFolder, transfer.fileName, mode)
+            if (sinkOutcome !is Outcome.Ok) {
+                addTransferMessage(transfer.copy(status = FileTransferStatus.Stopped, stopReason = FileTransferStopReason.UnableToOpenFile))
+                return
+            }
+            sinkOutcome.value
+        } else {
+            null
         }
 
         fileTransferService.respondToTransferRequest(
@@ -288,8 +283,6 @@ class FileTransferInteractor(
             response = response,
             sink = sink
         )
-
-        return Outcome.Ok(Unit)
     }
 
     suspend fun cancelTransfer(
@@ -303,11 +296,20 @@ class FileTransferInteractor(
     suspend fun testConnection(ipAddress: String): Outcome<Device, Exception> =
         fileTransferService.testConnection(ipAddress)
 
-    fun transferMessageQueueItemHandled(item: FileTransfer) {
+    private fun addTransferMessage(transfer: FileTransfer) {
+        update { state ->
+            state.copy(
+                activeTransfers = state.activeTransfers.toMutableMap().apply { remove(transfer.transferId) },
+                transferMessageQueue = state.transferMessageQueue.toMutableList().apply { add(transfer) },
+            )
+        }
+    }
+
+    fun transferMessageHandled(item: FileTransfer) {
         update { state ->
             state.copy(
                 transferMessageQueue = state.transferMessageQueue - item,
-                deviceNameTransferIdMap = state.deviceNameTransferIdMap.toMutableMap().apply {
+                deviceToTransferIdMap = state.deviceToTransferIdMap.toMutableMap().apply {
                     put(item.deviceName, (this[item.deviceName] ?: emptyList()) - item.transferId)
                 }
             )

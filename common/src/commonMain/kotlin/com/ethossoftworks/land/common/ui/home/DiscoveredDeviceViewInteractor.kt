@@ -33,7 +33,7 @@ class DiscoveredDeviceViewInteractor(
     dependencies = listOf(fileTransferInteractor)
 ) {
     override fun computed(state: DiscoveredDeviceState): DiscoveredDeviceState {
-        val transferIds = fileTransferInteractor.state.deviceNameTransferIdMap[deviceName] ?: emptyList()
+        val transferIds = fileTransferInteractor.state.deviceToTransferIdMap[deviceName] ?: emptyList()
         var isWaiting = false
         var sendingBytesTotal = 0L
         var sendingBytesTransferred = 0L
