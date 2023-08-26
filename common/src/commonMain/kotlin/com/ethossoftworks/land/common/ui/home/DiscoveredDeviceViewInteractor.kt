@@ -18,6 +18,8 @@ import kotlinx.coroutines.launch
 data class DiscoveredDeviceState(
     val isWaiting: Boolean = false,
     val isSending: Boolean = false,
+    val isTransferring: Boolean = false,
+    val totalProgress: Float = 0f,
     val receivingProgress: Float = 0f,
     val sendingProgress: Float = 0f,
     val transfers: List<FileTransfer> = emptyList(),
@@ -39,13 +41,12 @@ class DiscoveredDeviceViewInteractor(
         var sendingBytesTransferred = 0L
         var receivingBytesTotal = 0L
         var receivingBytesTransferred = 0L
-        var isSending = false
+        var isTransferring = false
 
         val transfers = transferIds.mapNotNull { id ->
             val transfer = fileTransferInteractor.state.activeTransfers[id] ?: return@mapNotNull null
 
             if (transfer.direction == FileTransferDirection.Sending) {
-                isSending = true
                 sendingBytesTotal += transfer.bytesTotal
                 sendingBytesTransferred += transfer.bytesTransferred
             } else {
@@ -56,12 +57,18 @@ class DiscoveredDeviceViewInteractor(
             isWaiting = isWaiting ||
                     (transfer.status == FileTransferStatus.AwaitingAcceptance &&
                             transfer.direction == FileTransferDirection.Sending)
+            isTransferring = isTransferring || transfer.status == FileTransferStatus.Progress
+
             transfer
         }
 
+        val totalBytes = receivingBytesTotal + sendingBytesTotal
+        val totalTransferred = receivingBytesTransferred + sendingBytesTransferred
+
         return state.copy(
             isWaiting = isWaiting,
-            isSending = isSending,
+            isTransferring = isTransferring,
+            totalProgress = if (totalBytes > 0) (totalTransferred.toFloat() / totalBytes.toFloat()) else 0f,
             receivingProgress = if (receivingBytesTotal > 0) (receivingBytesTransferred.toFloat() / receivingBytesTotal.toFloat()) else 0f,
             sendingProgress = if (sendingBytesTotal > 0) (sendingBytesTransferred.toFloat() / sendingBytesTotal.toFloat()) else 0f,
             transfers = transfers,

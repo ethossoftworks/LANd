@@ -46,7 +46,6 @@ import com.outsidesource.oskitcompose.modifier.kmpPointerMoveFilter
 import com.outsidesource.oskitcompose.modifier.outerShadow
 import com.outsidesource.oskitcompose.popup.Popover
 import com.outsidesource.oskitcompose.popup.PopoverAnchors
-import com.outsidesource.oskitcompose.resources.KMPResource
 import com.outsidesource.oskitkmp.lib.Platform
 import com.outsidesource.oskitkmp.lib.current
 import org.koin.core.parameter.parametersOf
@@ -71,7 +70,7 @@ fun DiscoveredDevice(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
-        val progressTransition = updateTransition(if (state.sendingProgress > 0.0f) state.sendingProgress else state.receivingProgress)
+        val progressTransition = updateTransition(state.totalProgress)
         val progressAnim by progressTransition.animateFloat { it }
         val progressArcSpacing = 4.dp
         val isHovering = remember { mutableStateOf(false) }
@@ -171,14 +170,21 @@ fun DiscoveredDevice(
         )
         Text(
             text = when {
+                state.isTransferring && state.totalProgress == 0f && state.receivingProgress == 0f -> "Transferring..."
+                state.totalProgress > 0f || state.receivingProgress > 0f -> buildString {
+                    val hasSend = state.sendingProgress > 0f
+                    val hasReceive = state.receivingProgress > 0f
+                    if (hasSend) append("Sending ${(state.sendingProgress * 100).roundToInt()}%")
+                    if (hasSend && hasReceive) append("\n")
+                    if (hasReceive) append("Receiving ${(state.receivingProgress * 100).roundToInt()}%")
+                }
                 state.isWaiting -> "Waiting..."
-                state.sendingProgress > 0.0f -> "Sending ${(state.sendingProgress * 100).roundToInt()}%"
-                state.receivingProgress > 0.0f -> "Receiving ${(state.receivingProgress * 100).roundToInt()}%"
                 else -> ""
             },
             style = AppTheme.typography.deviceTransferStatus,
             overflow = TextOverflow.Ellipsis,
             textAlign = TextAlign.Center,
+            minLines = 2,
             maxLines = 2,
             lineHeight = 1.2.em,
         )
