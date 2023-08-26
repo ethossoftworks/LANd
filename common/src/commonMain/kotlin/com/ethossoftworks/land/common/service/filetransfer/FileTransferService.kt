@@ -43,6 +43,7 @@ private class LANdTransferCancelledException(val command: CancellationCommand) :
 
 class FileTransferService(
     private val getServerDeviceName: () -> String,
+    private val getLocalIpAddress: suspend () -> String,
 ): IFileTransferService {
     private val selectorManager = SelectorManager(Dispatchers.IO)
     private val bufferSize = 65_536
@@ -114,6 +115,8 @@ class FileTransferService(
             // Read Fixed Header
             val protocolVersion = socketReadChannel.readByte().toInt()
             val command = socketReadChannel.readByte()
+            val ipAddress = ByteArray(17).apply { socketReadChannel.readFully(this) }.toIPString()
+            val platform = socketReadChannel.readByte().toDevicePlatform()
             val senderNameLength = socketReadChannel.readByte().toInt()
             val fileNameLength = socketReadChannel.readShort().toInt()
             val payloadLength = socketReadChannel.readLong()
@@ -137,7 +140,7 @@ class FileTransferService(
 
             // Wait for user response and send response to client
             eventChannel.send(
-                FileTransferServerEvent.TransferRequested(transferId, senderName, fileName, payloadLength)
+                FileTransferServerEvent.TransferRequested(transferId, senderName, platform, ipAddress, fileName, payloadLength)
             )
             val response = transferResponseFlow.first { it.transferId == transferId }
             val responseByte = if (response.responseType == FileTransferResponseType.Accepted) 0x01 else 0x00
@@ -256,6 +259,8 @@ class FileTransferService(
             // Send Fixed Header
             socketWriteChannel.writeByte(PROTOCOL_VERSION) // Header Version
             socketWriteChannel.writeByte(ClientCommand.FileTransfer) // Command
+            socketWriteChannel.writeFully(getLocalIpAddress().toIPBytes())
+            socketWriteChannel.writeByte(Platform.current.toDevicePlatform().toByte())
             socketWriteChannel.writeByte(file.senderName.length) // Sender Name Length
             socketWriteChannel.writeShort(file.fileName.length.toShort()) // File Name Length
             socketWriteChannel.writeLong(file.length) // Payload Length
@@ -363,6 +368,7 @@ class FileTransferService(
                 // Send fixed header
                 socketWriteChannel.writeByte(PROTOCOL_VERSION) // Header Version
                 socketWriteChannel.writeByte(ClientCommand.Connect) // Command (future use)
+                socketWriteChannel.writeFully(getLocalIpAddress().toIPBytes())
                 socketWriteChannel.writeByte(0) // Sender Name Length
                 socketWriteChannel.writeShort(0) // File Name Length
                 socketWriteChannel.writeLong(0) // Payload Length
@@ -419,4 +425,21 @@ fun CancellationCommand.Companion.fromByte(value: Byte) = when (value) {
     0x00.toByte() -> CancellationCommand.Stop
     0x01.toByte() -> CancellationCommand.Delete
     else -> CancellationCommand.Stop
+}
+
+private fun ByteArray.toIPString(): String {
+    if (this[0] == 0x01.toByte()) return "" // IPV6 not supported yet
+    if (this.size < 5) return "" // Invalid IPV4 (4 bytes + 1 version byte)
+
+    return buildString {
+        for (i in 1..4) {
+            append(this@toIPString[i].toUByte().toString(10))
+            if (i < 4) append(".")
+        }
+    }
+}
+
+// Only support IPV4 for now but leave room for IPV6 expansion
+private fun String.toIPBytes(): ByteArray {
+    return byteArrayOf(0x00) + split(".").map { it.toUInt().toByte() }.take(4).toByteArray() + ByteArray(12)
 }

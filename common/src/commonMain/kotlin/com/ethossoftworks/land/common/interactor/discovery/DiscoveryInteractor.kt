@@ -90,6 +90,14 @@ class DiscoveryInteractor(
         }
     }
 
+    fun addUnknownDevice(device: Device) {
+        update { state ->
+            state.copy(
+                discoveredDevices = state.discoveredDevices.toMutableMap().apply { put(device.name, device) }
+            )
+        }
+    }
+
     suspend fun startServiceBroadcasting(name: String): Outcome<Unit, Any> {
         update { state -> state.copy(broadcastingDeviceName = name) }
 

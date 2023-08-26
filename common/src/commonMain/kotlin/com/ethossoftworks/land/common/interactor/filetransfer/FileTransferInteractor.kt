@@ -1,5 +1,6 @@
 package com.ethossoftworks.land.common.interactor.filetransfer
 
+import com.ethossoftworks.land.common.interactor.discovery.DiscoveryInteractor
 import com.ethossoftworks.land.common.interactor.preferences.AppPreferencesInteractor
 import com.ethossoftworks.land.common.model.device.Device
 import com.ethossoftworks.land.common.service.file.FileWriteMode
@@ -59,6 +60,7 @@ enum class FileTransferDirection {
 class FileTransferInteractor(
     private val fileTransferService: IFileTransferService,
     private val appPreferencesInteractor: AppPreferencesInteractor,
+    private val discoveryInteractor: DiscoveryInteractor,
     private val fileHandler: IFileHandler,
 ): Interactor<FileTransferState>(
     initialState = FileTransferState(),
@@ -77,6 +79,16 @@ class FileTransferInteractor(
                         // TODO: Implement better early return handling
                         val saveFolder = appPreferencesInteractor.state.saveFolder ?: return@collect
                         val metadataOutcome = fileHandler.readFileMetadata(saveFolder, event.fileName)
+
+                        if (!discoveryInteractor.state.discoveredDevices.contains(event.senderName)) {
+                            discoveryInteractor.addUnknownDevice(
+                                Device(
+                                    name = event.senderName,
+                                    ipAddress = event.senderIPAddress,
+                                    platform = event.senderPlatform,
+                                )
+                            )
+                        }
 
                         update { state ->
                             state.copy(

@@ -1,6 +1,7 @@
 package com.ethossoftworks.land.common.service.filetransfer
 
 import com.ethossoftworks.land.common.model.device.Device
+import com.ethossoftworks.land.common.model.device.DevicePlatform
 import com.outsidesource.oskitkmp.outcome.Outcome
 import kotlinx.coroutines.flow.Flow
 import okio.Sink
@@ -59,6 +60,8 @@ sealed class FileTransferServerEvent {
     data class TransferRequested(
         val transferId: Short,
         val senderName: String,
+        val senderPlatform: DevicePlatform,
+        val senderIPAddress: String,
         val fileName: String,
         val length: Long,
     ): FileTransferServerEvent()

@@ -4,6 +4,8 @@ import com.ethossoftworks.land.common.coordinator.AppCoordinator
 import com.ethossoftworks.land.common.interactor.discovery.DiscoveryInteractor
 import com.ethossoftworks.land.common.interactor.filetransfer.FileTransferInteractor
 import com.ethossoftworks.land.common.interactor.preferences.AppPreferencesInteractor
+import com.ethossoftworks.land.common.service.discovery.INSDService
+import com.ethossoftworks.land.common.service.discovery.NSDService
 import com.ethossoftworks.land.common.service.filetransfer.FileTransferService
 import com.ethossoftworks.land.common.service.filetransfer.IFileTransferService
 import com.ethossoftworks.land.common.ui.home.*
@@ -33,11 +35,15 @@ fun commonModule() = module {
 
     single { DiscoveryInteractor(get()) }
     single { AppPreferencesInteractor(get(), get()) }
-    single { FileTransferInteractor(get(), get(), get()) }
+    single { FileTransferInteractor(get(), get(), get(), get()) }
 
     single {
         val appPreferencesInteractor: AppPreferencesInteractor = get()
-        FileTransferService { appPreferencesInteractor.state.displayName }
+        val nsdService: INSDService = get()
+        FileTransferService(
+            getServerDeviceName = { appPreferencesInteractor.state.displayName },
+            getLocalIpAddress = nsdService::getLocalIpAddress,
+        )
     } bind IFileTransferService::class
 
     factory { HomeScreenViewInteractor(get(), get(), get(), get(), get()) }
