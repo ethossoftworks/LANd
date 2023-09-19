@@ -1,5 +1,3 @@
-@file:Suppress("INLINE_FROM_HIGHER_PLATFORM") // https://youtrack.jetbrains.com/issue/KTIJ-20816/Bogus-error-Cannot-inline-bytecode-built-with-JVM-target-11-into-bytecode-that-is-being-built-with-JVM-target-1.8.
-
 package com.ethossoftworks.land.common.ui.home
 
 import androidx.compose.animation.core.animateFloat
@@ -35,7 +33,6 @@ import com.ethossoftworks.land.common.model.device.Device
 import com.ethossoftworks.land.common.model.device.DevicePlatform
 import com.ethossoftworks.land.common.resources.Resources
 import com.ethossoftworks.land.common.ui.common.theme.AppTheme
-import com.outsidesource.oskitcompose.canvas.rememberKmpPainterResource
 import com.outsidesource.oskitcompose.geometry.PopupShape
 import com.outsidesource.oskitcompose.interactor.collectAsState
 import com.outsidesource.oskitcompose.layout.spaceBetweenPadded
@@ -46,6 +43,7 @@ import com.outsidesource.oskitcompose.modifier.kmpPointerMoveFilter
 import com.outsidesource.oskitcompose.modifier.outerShadow
 import com.outsidesource.oskitcompose.popup.Popover
 import com.outsidesource.oskitcompose.popup.PopoverAnchors
+import com.outsidesource.oskitcompose.resources.rememberKmpImage
 import com.outsidesource.oskitkmp.lib.Platform
 import com.outsidesource.oskitkmp.lib.current
 import org.koin.core.parameter.parametersOf
@@ -59,7 +57,7 @@ fun DiscoveredDevice(
     onClick: () -> Unit,
     interactor: DiscoveredDeviceViewInteractor = rememberInject { parametersOf(device.name) },
 ) {
-    val state by interactor.collectAsState()
+    val state = interactor.collectAsState()
     var isDropping by remember { mutableStateOf(false) }
     val dropAnim by animateFloatAsState(if (isDropping) 1.2f else 1f)
     val colors = AppTheme.colors
@@ -146,7 +144,7 @@ fun DiscoveredDevice(
             )
             Image(
                 modifier = Modifier.width(48.dp),
-                painter = rememberKmpPainterResource(
+                painter = rememberKmpImage(
                     when (device.platform) {
                         DevicePlatform.iOS -> Resources.DeviceMobileIOS
                         DevicePlatform.Android -> Resources.DeviceMobileAndroid
@@ -269,7 +267,7 @@ private fun MenuOption(
         Image(
             modifier = Modifier.size(16.dp),
             colorFilter = ColorFilter.tint(Color.White),
-            painter = rememberKmpPainterResource(when (direction) {
+            painter = rememberKmpImage(when (direction) {
                 FileTransferDirection.Receiving -> Resources.Download
                 FileTransferDirection.Sending -> Resources.Upload
             }),
@@ -290,7 +288,7 @@ private fun MenuOption(
                 .size(20.dp)
                 .clip(CircleShape)
                 .clickable(onClick = onStopClick),
-            painter = rememberKmpPainterResource(Resources.Stop),
+            painter = rememberKmpImage(Resources.Stop),
             contentDescription = "Stop",
             colorFilter = ColorFilter.tint(Color.White)
         )
@@ -299,7 +297,7 @@ private fun MenuOption(
                 .size(20.dp)
                 .clip(CircleShape)
                 .clickable(onClick = onDeleteClick),
-            painter = rememberKmpPainterResource(Resources.Delete),
+            painter = rememberKmpImage(Resources.Delete),
             contentDescription = "Delete",
             colorFilter = ColorFilter.tint(Color.White)
         )

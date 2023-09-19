@@ -20,9 +20,9 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.ethossoftworks.land.common.ui.common.theme.AppTheme
-import com.outsidesource.oskitcompose.canvas.rememberKmpPainterResource
-import com.outsidesource.oskitcompose.modifier.outerShadow
+import com.outsidesource.oskitcompose.resources.KMPImage
 import com.outsidesource.oskitcompose.resources.KMPResource
+import com.outsidesource.oskitcompose.resources.rememberKmpImage
 
 @Composable
 fun PrimaryButton(
@@ -86,7 +86,7 @@ private fun BaseButton(
 
 @Composable
 fun ImageButton(
-    resource: KMPResource,
+    resource: KMPImage,
     modifier: Modifier = Modifier,
     tint: Color = Color.Black,
     onClick: () -> Unit,
@@ -104,7 +104,7 @@ fun ImageButton(
     ) {
         Image(
             modifier = Modifier.size(20.dp),
-            painter = rememberKmpPainterResource(resource),
+            painter = rememberKmpImage(resource),
             contentDescription = null,
             colorFilter = ColorFilter.tint(tint)
         )

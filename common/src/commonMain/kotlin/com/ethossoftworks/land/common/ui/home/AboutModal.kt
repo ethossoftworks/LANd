@@ -1,5 +1,3 @@
-@file:Suppress("INLINE_FROM_HIGHER_PLATFORM") // https://youtrack.jetbrains.com/issue/KTIJ-20816/Bogus-error-Cannot-inline-bytecode-built-with-JVM-target-11-into-bytecode-that-is-being-built-with-JVM-target-1.8.
-
 package com.ethossoftworks.land.common.ui.home
 
 import androidx.compose.foundation.Image
@@ -10,14 +8,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.ethossoftworks.land.BuildInfo
+import com.ethossoftworks.land.common.resources.Resources
 import com.ethossoftworks.land.common.ui.common.theme.AppTheme
-import com.outsidesource.oskitcompose.canvas.rememberKmpPainterResource
 import com.outsidesource.oskitcompose.lib.rememberInjectForRoute
 import com.outsidesource.oskitcompose.popup.Modal
+import com.outsidesource.oskitcompose.resources.rememberKmpImage
 import kotlinx.datetime.Clock
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
-import com.ethossoftworks.land.common.resources.Resources
 
 @Composable
 fun AboutModal(
@@ -53,7 +51,7 @@ fun AboutModal(
             Box(modifier = Modifier.padding(24.dp)) {
                 Image(
                     modifier = Modifier.size(128.dp),
-                    painter = rememberKmpPainterResource(Resources.Logo),
+                    painter = rememberKmpImage(Resources.Logo),
                     contentDescription = "Logo",
                 )
             }

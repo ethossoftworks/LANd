@@ -1,13 +1,8 @@
-@file:Suppress("INLINE_FROM_HIGHER_PLATFORM") // https://youtrack.jetbrains.com/issue/KTIJ-20816/Bogus-error-Cannot-inline-bytecode-built-with-JVM-target-11-into-bytecode-that-is-being-built-with-JVM-target-1.8.
-
 package com.ethossoftworks.land.common.ui.home
 
-import androidx.compose.animation.fadeIn
 import androidx.compose.foundation.layout.*
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
-import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.key
@@ -23,14 +18,13 @@ import com.outsidesource.oskitcompose.lib.rememberInjectForRoute
 import com.outsidesource.oskitcompose.popup.Modal
 import org.koin.core.parameter.parametersOf
 
-@OptIn(ExperimentalComposeUiApi::class)
 @Composable
 fun AddDeviceModal(
     isVisible: Boolean,
     onDismissRequest: () -> Unit,
     interactor: AddDeviceModalViewInteractor = rememberInjectForRoute { parametersOf(onDismissRequest) }
 ) {
-    val state by interactor.collectAsState()
+    val state = interactor.collectAsState()
 
     Modal(
         isVisible = isVisible,

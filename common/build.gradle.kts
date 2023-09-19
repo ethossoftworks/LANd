@@ -43,9 +43,11 @@ version = buildInfoProps["version"] as? String ?: "0.0.0"
 val buildNumber = buildInfoProps["build"]?.toString()?.toInt() ?: 1
 
 kotlin {
-    android()
-    jvm("desktop") {
+    android() {
         jvmToolchain(11)
+    }
+    jvm("desktop") {
+        jvmToolchain(17)
     }
     sourceSets {
         generateBuildInfo(rootDir, buildDir)
@@ -57,20 +59,20 @@ kotlin {
                 api(compose.runtime)
                 api(compose.foundation)
                 api(compose.material)
-                implementation("com.outsidesource:oskit-kmp:3.1.0")
-                implementation("com.outsidesource:oskit-compose:2.1.0")
-                implementation("io.ktor:ktor-network:2.3.1")
+                implementation("com.outsidesource:oskit-kmp:4.0.0")
+                implementation("com.outsidesource:oskit-compose:3.0.0")
+                implementation("io.ktor:ktor-network:2.3.3")
                 implementation("io.ktor:ktor-server-core:2.3.1")
                 implementation("io.ktor:ktor-server-cio:2.3.1")
-                implementation("io.ktor:ktor-client-core:2.3.1")
-                implementation("io.ktor:ktor-client-cio:2.3.1")
-                implementation("com.squareup.okio:okio:3.3.0")
+                implementation("io.ktor:ktor-client-core:2.3.3")
+                implementation("io.ktor:ktor-client-cio:2.3.3")
+                implementation("com.squareup.okio:okio:3.5.0")
                 implementation("org.jmdns:jmdns:3.5.8")
                 implementation("org.jetbrains.kotlinx:atomicfu:0.21.0")
                 implementation("com.soywiz.korlibs.krypto:krypto:4.0.8")
                 implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.5.1")
                 implementation("org.jetbrains.kotlinx:kotlinx-datetime:0.4.0")
-                api("io.insert-koin:koin-core:3.4.0")
+                api("io.insert-koin:koin-core:3.4.3")
                 api("co.touchlab:kermit:1.1.1")
             }
         }
@@ -82,7 +84,7 @@ kotlin {
         val androidMain by getting {
             dependencies {
                 api("androidx.appcompat:appcompat:1.6.1")
-                api("androidx.core:core-ktx:1.10.1")
+                api("androidx.core:core-ktx:1.12.0")
                 implementation("androidx.documentfile:documentfile:1.0.1")
             }
         }
@@ -106,11 +108,11 @@ kotlin {
 }
 
 android {
-    compileSdk = 33
+    compileSdk = 34
     sourceSets["main"].manifest.srcFile("src/androidMain/AndroidManifest.xml")
     defaultConfig {
         minSdk = 24
-        targetSdk = 33
+        targetSdk = 34
     }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11

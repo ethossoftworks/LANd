@@ -1,8 +1,5 @@
-@file:Suppress("INLINE_FROM_HIGHER_PLATFORM") // https://youtrack.jetbrains.com/issue/KTIJ-20816/Bogus-error-Cannot-inline-bytecode-built-with-JVM-target-11-into-bytecode-that-is-being-built-with-JVM-target-1.8.
-
 package com.ethossoftworks.land.common.ui.home
 
-import TransferMessage
 import androidx.compose.animation.*
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.LinearEasing
@@ -13,7 +10,6 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -28,19 +24,13 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import com.ethossoftworks.land.common.resources.Resources
-import com.ethossoftworks.land.common.ui.common.AppTextField
 import com.ethossoftworks.land.common.ui.common.ImageButton
 import com.ethossoftworks.land.common.ui.common.PrimaryButton
-import com.ethossoftworks.land.common.ui.common.SecondaryButton
-import com.ethossoftworks.land.common.ui.common.form.FormField
-import com.ethossoftworks.land.common.ui.common.form.FormSection
 import com.ethossoftworks.land.common.ui.common.theme.AppTheme
-import com.outsidesource.oskitcompose.canvas.rememberKmpPainterResource
 import com.outsidesource.oskitcompose.interactor.collectAsState
 import com.outsidesource.oskitcompose.layout.WrappableRow
 import com.outsidesource.oskitcompose.lib.rememberInjectForRoute
-import com.outsidesource.oskitcompose.lib.rememberValRef
-import com.outsidesource.oskitcompose.popup.Modal
+import com.outsidesource.oskitcompose.resources.rememberKmpImage
 import com.outsidesource.oskitcompose.systemui.KMPWindowInsets
 import com.outsidesource.oskitcompose.systemui.StatusBarIconColorEffect
 import com.outsidesource.oskitcompose.systemui.topInsets
@@ -54,7 +44,7 @@ import com.outsidesource.oskitkmp.lib.current
 fun HomeScreen(
     interactor: HomeScreenViewInteractor = rememberInjectForRoute()
 ) {
-    val state by interactor.collectAsState()
+    val state = interactor.collectAsState()
 
     LaunchedEffect(Unit) {
         interactor.viewMounted()
@@ -227,7 +217,7 @@ private fun RadiatingLogo(ringSpacing: Dp) {
                     )
                 }
             },
-        painter = rememberKmpPainterResource(Resources.WifiTethering),
+        painter = rememberKmpImage(Resources.WifiTethering),
         colorFilter = ColorFilter.tint(AppTheme.colors.primary),
         contentDescription = ""
     )

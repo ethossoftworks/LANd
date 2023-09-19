@@ -9,7 +9,7 @@ import com.outsidesource.oskitkmp.interactor.Interactor
 import com.outsidesource.oskitkmp.lib.Platform
 import com.outsidesource.oskitkmp.lib.current
 import com.outsidesource.oskitkmp.outcome.Outcome
-import com.outsidesource.oskitkmp.outcome.getOrElse
+import com.outsidesource.oskitkmp.outcome.unwrapOrDefault
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
@@ -49,10 +49,10 @@ class AppPreferencesInteractor(
                 }
             }
 
-            val saveFolder = preferencesService.getSaveFolder().getOrElse(fileHandler.defaultSaveFolder())
+            val saveFolder = preferencesService.getSaveFolder().unwrapOrDefault(fileHandler.defaultSaveFolder())
 //            val contacts = preferencesService.getContacts().getOrElse(emptyMap())
-            val deviceVisibility = preferencesService.getVisibility().getOrElse(DeviceVisibility.Visible)
-            val requestPermissionType = preferencesService.getTransferRequestPermission().getOrElse(TransferRequestPermissionType.AskAll)
+            val deviceVisibility = preferencesService.getVisibility().unwrapOrDefault(DeviceVisibility.Visible)
+            val requestPermissionType = preferencesService.getTransferRequestPermission().unwrapOrDefault(TransferRequestPermissionType.AskAll)
 
             update { state ->
                 state.copy(

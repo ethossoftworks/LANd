@@ -6,10 +6,8 @@ import com.ethossoftworks.land.common.interactor.filetransfer.FileTransfer
 import com.ethossoftworks.land.common.interactor.filetransfer.FileTransferInteractor
 import com.ethossoftworks.land.common.interactor.preferences.AppPreferencesInteractor
 import com.ethossoftworks.land.common.model.device.Device
-import com.ethossoftworks.land.common.service.file.FileWriteMode
 import com.ethossoftworks.land.common.service.file.IFileHandler
 import com.ethossoftworks.land.common.service.filetransfer.FileTransferRequest
-import com.ethossoftworks.land.common.service.filetransfer.FileTransferResponseType
 import com.ethossoftworks.land.common.service.preferences.DeviceVisibility
 import com.outsidesource.oskitkmp.interactor.Interactor
 import com.outsidesource.oskitkmp.outcome.Outcome

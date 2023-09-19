@@ -1,23 +1,22 @@
 package com.ethossoftworks.land.common.resources
 
-import com.ethossoftworks.land.R
-import com.outsidesource.oskitcompose.resources.KMPResource
+import com.outsidesource.oskitcompose.resources.KMPImage
 
 actual object Resources {
-    actual val Settings: KMPResource = KMPResource.Android(R.drawable.settings)
-    actual val Add: KMPResource = KMPResource.Android(R.drawable.add)
-    actual val Info: KMPResource = KMPResource.Android(R.drawable.info)
-    actual val Cancel: KMPResource = KMPResource.Android(R.drawable.cancel)
-    actual val WifiTethering: KMPResource = KMPResource.Android(R.drawable.wifi_tethering)
-    actual val DeviceDesktopLinux: KMPResource = KMPResource.Android(R.drawable.device_desktop_linux)
-    actual val DeviceDesktopWindows: KMPResource = KMPResource.Android(R.drawable.device_desktop_windows)
-    actual val DeviceDesktopMacOS: KMPResource = KMPResource.Android(R.drawable.device_desktop_macos)
-    actual val DeviceMobileIOS: KMPResource = KMPResource.Android(R.drawable.device_mobile_ios)
-    actual val DeviceMobileAndroid: KMPResource = KMPResource.Android(R.drawable.device_mobile_android)
-    actual val DeviceUnknown: KMPResource = KMPResource.Android(R.drawable.device_unknown)
-    actual val Logo: KMPResource = KMPResource.Android(R.drawable.land_logo)
-    actual val Upload: KMPResource = KMPResource.Android(R.drawable.upload)
-    actual val Download: KMPResource = KMPResource.Android(R.drawable.download)
-    actual val Delete: KMPResource = KMPResource.Android(R.drawable.delete)
-    actual val Stop: KMPResource = KMPResource.Android(R.drawable.stop)
+    actual val Settings = KMPImage("images/settings.xml")
+    actual val Add = KMPImage("images/add.xml")
+    actual val Info = KMPImage("images/info.xml")
+    actual val Cancel = KMPImage("images/cancel.xml")
+    actual val WifiTethering = KMPImage("images/wifi_tethering.xml")
+    actual val DeviceDesktopLinux = KMPImage("images/device_desktop_linux.xml")
+    actual val DeviceDesktopWindows = KMPImage("images/device_desktop_windows.xml")
+    actual val DeviceDesktopMacOS = KMPImage("images/device_desktop_macos.xml")
+    actual val DeviceMobileIOS = KMPImage("images/device_mobile_ios.xml")
+    actual val DeviceMobileAndroid = KMPImage("images/device_mobile_android.xml")
+    actual val DeviceUnknown = KMPImage("images/device_unknown.xml")
+    actual val Logo = KMPImage("images/land_logo.xml")
+    actual val Upload = KMPImage("images/upload.xml")
+    actual val Download = KMPImage("images/download.xml")
+    actual val Delete = KMPImage("images/delete.xml")
+    actual val Stop = KMPImage("images/stop.xml")
 }

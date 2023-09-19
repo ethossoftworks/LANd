@@ -1,22 +1,22 @@
 package com.ethossoftworks.land.common.resources
 
-import com.outsidesource.oskitcompose.resources.KMPResource
+import com.outsidesource.oskitcompose.resources.KMPImage
 
 actual object Resources {
-    actual val Settings: KMPResource = KMPResource.Desktop("images/settings.svg")
-    actual val Add: KMPResource = KMPResource.Desktop("images/add.svg")
-    actual val Info: KMPResource = KMPResource.Desktop("images/info.svg")
-    actual val Cancel: KMPResource = KMPResource.Desktop("images/cancel.svg")
-    actual val WifiTethering: KMPResource = KMPResource.Desktop("images/wifi-tethering.svg")
-    actual val DeviceDesktopLinux: KMPResource = KMPResource.Desktop("images/device-desktop-linux.svg")
-    actual val DeviceDesktopWindows: KMPResource = KMPResource.Desktop("images/device-desktop-windows.svg")
-    actual val DeviceDesktopMacOS: KMPResource = KMPResource.Desktop("images/device-desktop-macos.svg")
-    actual val DeviceMobileIOS: KMPResource = KMPResource.Desktop("images/device-mobile-ios.svg")
-    actual val DeviceMobileAndroid: KMPResource = KMPResource.Desktop("images/device-mobile-android.svg")
-    actual val DeviceUnknown: KMPResource = KMPResource.Desktop("images/device-unknown.svg")
-    actual val Logo: KMPResource = KMPResource.Desktop("images/land-logo.svg")
-    actual val Upload: KMPResource = KMPResource.Desktop("images/upload.svg")
-    actual val Download: KMPResource = KMPResource.Desktop("images/download.svg")
-    actual val Delete: KMPResource = KMPResource.Desktop("images/delete.svg")
-    actual val Stop: KMPResource = KMPResource.Desktop("images/stop.svg")
+    actual val Settings = KMPImage("images/settings.svg")
+    actual val Add = KMPImage("images/add.svg")
+    actual val Info = KMPImage("images/info.svg")
+    actual val Cancel = KMPImage("images/cancel.svg")
+    actual val WifiTethering = KMPImage("images/wifi-tethering.svg")
+    actual val DeviceDesktopLinux = KMPImage("images/device-linux.svg")
+    actual val DeviceDesktopWindows = KMPImage("images/device-windows.svg")
+    actual val DeviceDesktopMacOS = KMPImage("images/device-macos.svg")
+    actual val DeviceMobileIOS = KMPImage("images/device-mobile-ios.svg")
+    actual val DeviceMobileAndroid = KMPImage("images/device-mobile-android.svg")
+    actual val DeviceUnknown = KMPImage("images/device-unknown.svg")
+    actual val Logo = KMPImage("images/land-logo.svg")
+    actual val Upload = KMPImage("images/upload.svg")
+    actual val Download = KMPImage("images/download.svg")
+    actual val Delete = KMPImage("images/delete.svg")
+    actual val Stop = KMPImage("images/stop.svg")
 }

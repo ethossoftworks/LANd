@@ -1,4 +1,4 @@
-@file:Suppress("INLINE_FROM_HIGHER_PLATFORM") // https://youtrack.jetbrains.com/issue/KTIJ-20816/Bogus-error-Cannot-inline-bytecode-built-with-JVM-target-11-into-bytecode-that-is-being-built-with-JVM-target-1.8.
+package com.ethossoftworks.land.common.ui.home
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -6,14 +6,12 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.ethossoftworks.land.common.interactor.filetransfer.FileTransfer
 import com.ethossoftworks.land.common.interactor.filetransfer.FileTransferDirection
 import com.ethossoftworks.land.common.interactor.filetransfer.FileTransferStatus
 import com.ethossoftworks.land.common.service.file.FileWriteMode
@@ -21,10 +19,8 @@ import com.ethossoftworks.land.common.service.filetransfer.FileTransferResponseT
 import com.ethossoftworks.land.common.service.filetransfer.FileTransferStopReason
 import com.ethossoftworks.land.common.ui.common.InfoMessage
 import com.ethossoftworks.land.common.ui.common.theme.AppTheme
-import com.ethossoftworks.land.common.ui.home.HomeScreenViewInteractor
 import com.ethossoftworks.land.common.ui.home.TransferMessageViewInteractor
 import com.outsidesource.oskitcompose.interactor.collectAsState
-import com.outsidesource.oskitcompose.lib.ValRef
 import com.outsidesource.oskitcompose.lib.rememberInjectForRoute
 import com.outsidesource.oskitkmp.lib.Platform
 import com.outsidesource.oskitkmp.lib.current
@@ -33,7 +29,7 @@ import com.outsidesource.oskitkmp.lib.current
 fun BoxScope.TransferMessage(
     interactor: TransferMessageViewInteractor = rememberInjectForRoute()
 ) {
-    val state by interactor.collectAsState()
+    val state = interactor.collectAsState()
 
     InfoMessage(
         targetState = state.transfer,
