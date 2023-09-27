@@ -80,7 +80,7 @@ fun SettingsBottomSheet(
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         AppTextField(
                             modifier = Modifier.weight(1f),
-                            value = state.saveFolder ?: "",
+                            value = state.saveFolder?.name ?: "",
                             readOnly = true,
                             singleLine = true,
                             onValueChange = {}

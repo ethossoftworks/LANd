@@ -2,8 +2,8 @@ package com.ethossoftworks.land.common.ui.home
 
 import com.ethossoftworks.land.common.interactor.filetransfer.FileTransfer
 import com.ethossoftworks.land.common.interactor.filetransfer.FileTransferInteractor
-import com.ethossoftworks.land.common.service.file.FileWriteMode
 import com.ethossoftworks.land.common.service.filetransfer.FileTransferResponseType
+import com.outsidesource.oskitkmp.file.KMPFileWriteMode
 import com.outsidesource.oskitkmp.interactor.Interactor
 import kotlinx.coroutines.launch
 
@@ -27,7 +27,7 @@ class TransferMessageViewInteractor(
     fun respondToRequest(
         request: FileTransfer,
         response: FileTransferResponseType,
-        mode: FileWriteMode = FileWriteMode.Overwrite,
+        mode: KMPFileWriteMode = KMPFileWriteMode.Overwrite,
     ) {
         interactorScope.launch {
             fileTransferInteractor.respondToTransferRequest(request, response, mode)

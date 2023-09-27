@@ -4,13 +4,13 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.core.view.WindowCompat
-import com.ethossoftworks.land.common.service.file.FileHandlerContext
-import com.ethossoftworks.land.common.service.file.IFileHandler
 import com.ethossoftworks.land.common.ui.app.App
+import com.outsidesource.oskitkmp.file.IKMPFileHandler
+import com.outsidesource.oskitkmp.file.KMPFileHandlerContext
 import org.koin.java.KoinJavaComponent.inject
 
 class MainActivity : ComponentActivity() {
-    private val fileHandler: IFileHandler by inject(IFileHandler::class.java)
+    private val fileHandler: IKMPFileHandler by inject(IKMPFileHandler::class.java)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -18,7 +18,7 @@ class MainActivity : ComponentActivity() {
         WindowCompat.setDecorFitsSystemWindows(window, false)
 
         fileHandler.init(
-            FileHandlerContext.Android(
+            KMPFileHandlerContext(
                 applicationContext = application,
                 activity = this,
             )

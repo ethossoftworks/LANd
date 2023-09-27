@@ -6,10 +6,10 @@ import com.ethossoftworks.land.common.interactor.filetransfer.FileTransferIntera
 import com.ethossoftworks.land.common.interactor.filetransfer.FileTransferStatus
 import com.ethossoftworks.land.common.interactor.preferences.AppPreferencesInteractor
 import com.ethossoftworks.land.common.model.device.Device
-import com.ethossoftworks.land.common.service.file.IFileHandler
 import com.ethossoftworks.land.common.service.filetransfer.CancellationCommand
 import com.ethossoftworks.land.common.service.filetransfer.FileTransferRequest
 import com.outsidesource.oskitcompose.modifier.KMPDragData
+import com.outsidesource.oskitkmp.file.IKMPFileHandler
 import com.outsidesource.oskitkmp.interactor.Interactor
 import com.outsidesource.oskitkmp.outcome.Outcome
 import io.ktor.http.*
@@ -28,7 +28,7 @@ data class DiscoveredDeviceState(
 class DiscoveredDeviceViewInteractor(
     private val deviceName: String,
     private val fileTransferInteractor: FileTransferInteractor,
-    private val fileHandler: IFileHandler,
+    private val fileHandler: IKMPFileHandler,
     private val appPreferencesInteractor: AppPreferencesInteractor,
 ): Interactor<DiscoveredDeviceState>(
     initialState = DiscoveredDeviceState(),
@@ -78,23 +78,23 @@ class DiscoveredDeviceViewInteractor(
     fun onFilesDropped(device: Device, data: KMPDragData.FilesList) {
         val files = data.readFiles().map { it.removePrefix("file:").decodeURLPart() }
 
-        files.forEach {file ->
+        files.forEach { file ->
             interactorScope.launch {
-                val metadataOutcome = fileHandler.readFileMetadata(file)
-                if (metadataOutcome !is Outcome.Ok) return@launch
-                if (metadataOutcome.value.isDirectory) return@launch
+//                val metadataOutcome = fileHandler.readMetadata(file)
+//                if (metadataOutcome !is Outcome.Ok) return@launch
+//                if (metadataOutcome.value.isDirectory) return@launch
+//
+//                val sourceOutcome = fileHandler.openFileToRead(file)
+//                if (sourceOutcome !is Outcome.Ok) return@launch
+//
+//                val fileTransfer = FileTransferRequest(
+//                    senderName = appPreferencesInteractor.state.displayName,
+//                    fileName = metadataOutcome.value.name,
+//                    length = metadataOutcome.value.length,
+//                    source = sourceOutcome.value,
+//                )
 
-                val sourceOutcome = fileHandler.openFileToRead(file)
-                if (sourceOutcome !is Outcome.Ok) return@launch
-
-                val fileTransfer = FileTransferRequest(
-                    senderName = appPreferencesInteractor.state.displayName,
-                    fileName = metadataOutcome.value.name,
-                    length = metadataOutcome.value.length,
-                    source = sourceOutcome.value,
-                )
-
-                fileTransferInteractor.sendFile(device, fileTransfer)
+//                fileTransferInteractor.sendFile(device, fileTransfer)
             }
         }
     }

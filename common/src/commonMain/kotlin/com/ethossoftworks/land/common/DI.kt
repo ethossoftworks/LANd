@@ -34,7 +34,7 @@ fun commonModule() = module {
     single { AppCoordinator() }
 
     single { DiscoveryInteractor(get()) }
-    single { AppPreferencesInteractor(get(), get()) }
+    single { AppPreferencesInteractor(get()) }
     single { FileTransferInteractor(get(), get(), get(), get()) }
 
     single {

@@ -4,15 +4,16 @@ import com.ethossoftworks.land.common.interactor.discovery.DiscoveryInteractor
 import com.ethossoftworks.land.common.interactor.filetransfer.FileTransferInteractor
 import com.ethossoftworks.land.common.interactor.preferences.AppPreferencesInteractor
 import com.ethossoftworks.land.common.model.Contact
-import com.ethossoftworks.land.common.service.file.IFileHandler
 import com.ethossoftworks.land.common.service.preferences.DeviceVisibility
 import com.ethossoftworks.land.common.service.preferences.TransferRequestPermissionType
+import com.outsidesource.oskitkmp.file.IKMPFileHandler
+import com.outsidesource.oskitkmp.file.KMPFileRef
 import com.outsidesource.oskitkmp.interactor.Interactor
 import com.outsidesource.oskitkmp.outcome.Outcome
 import kotlinx.coroutines.launch
 
 data class SettingsBottomSheetState(
-    val saveFolder: String? = null,
+    val saveFolder: KMPFileRef? = null,
     val saveFolderExists: Boolean = false,
     val displayName: String = "",
     val contacts: Map<String, Contact> = emptyMap(),
@@ -27,7 +28,7 @@ class SettingsBottomSheetViewInteractor(
     private val preferencesInteractor: AppPreferencesInteractor,
     private val discoveryInteractor: DiscoveryInteractor,
     private val fileTransferInteractor: FileTransferInteractor,
-    private val fileHandler: IFileHandler,
+    private val fileHandler: IKMPFileHandler,
 ) : Interactor<SettingsBottomSheetState>(
     initialState = SettingsBottomSheetState(
         editableDisplayName = preferencesInteractor.state.displayName
@@ -46,7 +47,7 @@ class SettingsBottomSheetViewInteractor(
 
     fun onSaveFolderChangeClicked() {
         interactorScope.launch {
-            val folderOutcome = fileHandler.selectFolder()
+            val folderOutcome = fileHandler.pickDirectory(startingDir = state.saveFolder)
             if (folderOutcome !is Outcome.Ok) return@launch
 
             val folder = folderOutcome.value ?: return@launch

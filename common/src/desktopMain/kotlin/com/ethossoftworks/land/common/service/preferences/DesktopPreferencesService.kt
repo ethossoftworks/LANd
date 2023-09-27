@@ -1,6 +1,7 @@
 package com.ethossoftworks.land.common.service.preferences
 
 import com.ethossoftworks.land.common.model.Contact
+import com.outsidesource.oskitkmp.file.KMPFileRef
 import com.outsidesource.oskitkmp.outcome.Outcome
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
@@ -16,9 +17,9 @@ private val json = Json { ignoreUnknownKeys = true }
 class DesktopPreferencesService: IPreferencesService {
     private val preferences = Preferences.userRoot().node("com.ethossoftworks.LANd.preferences")
 
-    override suspend fun setSaveFolder(folder: String): Outcome<Unit, Any> {
+    override suspend fun setSaveFolder(folder: KMPFileRef): Outcome<Unit, Any> {
         return try {
-            preferences.put(SAVE_FOLDER_KEY, folder)
+            preferences.put(SAVE_FOLDER_KEY, folder.toPersistableString())
             preferences.flush()
             Outcome.Ok(Unit)
         } catch (e: Exception) {
@@ -26,10 +27,10 @@ class DesktopPreferencesService: IPreferencesService {
         }
     }
 
-    override suspend fun getSaveFolder(): Outcome<String, Any> {
+    override suspend fun getSaveFolder(): Outcome<KMPFileRef, Any> {
         return try {
             val value = preferences.get(SAVE_FOLDER_KEY, null) ?: return Outcome.Error(Unit)
-            Outcome.Ok(value)
+            Outcome.Ok(KMPFileRef.fromPersistableString(value))
         } catch (e: Exception) {
             Outcome.Error(e)
         }

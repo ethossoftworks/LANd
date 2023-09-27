@@ -3,11 +3,13 @@ package com.ethossoftworks.land.common.interactor.filetransfer
 import com.ethossoftworks.land.common.interactor.discovery.DiscoveryInteractor
 import com.ethossoftworks.land.common.interactor.preferences.AppPreferencesInteractor
 import com.ethossoftworks.land.common.model.device.Device
-import com.ethossoftworks.land.common.service.file.FileWriteMode
-import com.ethossoftworks.land.common.service.file.IFileHandler
 import com.ethossoftworks.land.common.service.filetransfer.*
+import com.outsidesource.oskitkmp.file.IKMPFileHandler
+import com.outsidesource.oskitkmp.file.KMPFileWriteMode
+import com.outsidesource.oskitkmp.file.sink
 import com.outsidesource.oskitkmp.interactor.Interactor
 import com.outsidesource.oskitkmp.outcome.Outcome
+import com.outsidesource.oskitkmp.outcome.unwrapOrElse
 import kotlinx.atomicfu.atomic
 import kotlinx.atomicfu.update
 import kotlinx.coroutines.Job
@@ -61,7 +63,7 @@ class FileTransferInteractor(
     private val fileTransferService: IFileTransferService,
     private val appPreferencesInteractor: AppPreferencesInteractor,
     private val discoveryInteractor: DiscoveryInteractor,
-    private val fileHandler: IFileHandler,
+    private val fileHandler: IKMPFileHandler,
 ): Interactor<FileTransferState>(
     initialState = FileTransferState(),
 ) {
@@ -78,7 +80,7 @@ class FileTransferInteractor(
                     is FileTransferServerEvent.TransferRequested -> {
                         // TODO: Implement better early return handling
                         val saveFolder = appPreferencesInteractor.state.saveFolder ?: return@collect
-                        val metadataOutcome = fileHandler.readFileMetadata(saveFolder, event.fileName)
+                        val metadataOutcome = fileHandler.readMetadata(saveFolder, event.fileName)
 
                         if (!discoveryInteractor.state.discoveredDevices.contains(event.senderName)) {
                             discoveryInteractor.addUnknownDevice(
@@ -99,7 +101,7 @@ class FileTransferInteractor(
                                         deviceName = event.senderName,
                                         bytesTotal = event.length,
                                         bytesExisting = when (metadataOutcome) {
-                                            is Outcome.Ok -> metadataOutcome.value.length
+                                            is Outcome.Ok -> metadataOutcome.value.size
                                             else -> 0
                                         },
                                         direction = FileTransferDirection.Receiving,
@@ -145,7 +147,7 @@ class FileTransferInteractor(
 
                         if (event.reason is FileTransferStopReason.Cancelled && event.reason.command == CancellationCommand.Delete) {
                             val saveFolder = appPreferencesInteractor.state.saveFolder ?: return@collect
-                            fileHandler.deleteFile(saveFolder, transfer.fileName)
+                            fileHandler.delete(saveFolder, transfer.fileName)
                         }
                     }
                 }
@@ -252,7 +254,7 @@ class FileTransferInteractor(
     suspend fun respondToTransferRequest(
         transfer: FileTransfer,
         response: FileTransferResponseType,
-        mode: FileWriteMode
+        mode: KMPFileWriteMode
     ) {
         update { state ->
             val pendingTransfer = state.transferMessageQueue.firstOrNull { it.transferId == transfer.transferId } ?: return@update state
@@ -276,12 +278,15 @@ class FileTransferInteractor(
         }
 
         val sink = if (response == FileTransferResponseType.Accepted) {
-            val sinkOutcome = fileHandler.openFileToWrite(saveFolder, transfer.fileName, mode)
-            if (sinkOutcome !is Outcome.Ok) {
+            val file = fileHandler.resolveFile(saveFolder, transfer.fileName, create = true).unwrapOrElse {
+                 addTransferMessage(transfer.copy(status = FileTransferStatus.Stopped, stopReason = FileTransferStopReason.UnableToOpenFile))
+                 return
+            }
+
+            file.sink(mode).unwrapOrElse {
                 addTransferMessage(transfer.copy(status = FileTransferStatus.Stopped, stopReason = FileTransferStopReason.UnableToOpenFile))
                 return
             }
-            sinkOutcome.value
         } else {
             null
         }
@@ -289,7 +294,7 @@ class FileTransferInteractor(
         fileTransferService.respondToTransferRequest(
             transferId = transfer.transferId,
             existingFileLength = when (mode) {
-                FileWriteMode.Append -> transfer.bytesExisting
+                KMPFileWriteMode.Append -> transfer.bytesExisting
                 else -> 0
             },
             response = response,

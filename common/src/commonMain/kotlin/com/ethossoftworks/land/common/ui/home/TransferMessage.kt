@@ -14,14 +14,13 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.ethossoftworks.land.common.interactor.filetransfer.FileTransferDirection
 import com.ethossoftworks.land.common.interactor.filetransfer.FileTransferStatus
-import com.ethossoftworks.land.common.service.file.FileWriteMode
 import com.ethossoftworks.land.common.service.filetransfer.FileTransferResponseType
 import com.ethossoftworks.land.common.service.filetransfer.FileTransferStopReason
 import com.ethossoftworks.land.common.ui.common.InfoMessage
 import com.ethossoftworks.land.common.ui.common.theme.AppTheme
-import com.ethossoftworks.land.common.ui.home.TransferMessageViewInteractor
 import com.outsidesource.oskitcompose.interactor.collectAsState
 import com.outsidesource.oskitcompose.lib.rememberInjectForRoute
+import com.outsidesource.oskitkmp.file.KMPFileWriteMode
 import com.outsidesource.oskitkmp.lib.Platform
 import com.outsidesource.oskitkmp.lib.current
 
@@ -59,7 +58,7 @@ fun BoxScope.TransferMessage(
                                 interactor.respondToRequest(
                                     fileTransfer,
                                     FileTransferResponseType.Accepted,
-                                    FileWriteMode.Overwrite,
+                                    KMPFileWriteMode.Overwrite,
                                 )
                             }
                         )
@@ -69,7 +68,7 @@ fun BoxScope.TransferMessage(
                                 interactor.respondToRequest(
                                     fileTransfer,
                                     FileTransferResponseType.Accepted,
-                                    FileWriteMode.Append,
+                                    KMPFileWriteMode.Append,
                                 )
                             }
                         )
@@ -87,7 +86,7 @@ fun BoxScope.TransferMessage(
                                 interactor.respondToRequest(
                                     fileTransfer,
                                     FileTransferResponseType.Accepted,
-                                    FileWriteMode.Overwrite
+                                    KMPFileWriteMode.Overwrite
                                 )
                             }
                         )

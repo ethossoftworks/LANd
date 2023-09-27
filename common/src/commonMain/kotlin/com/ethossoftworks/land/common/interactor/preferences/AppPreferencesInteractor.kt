@@ -1,10 +1,10 @@
 package com.ethossoftworks.land.common.interactor.preferences
 
 import com.ethossoftworks.land.common.model.Contact
-import com.ethossoftworks.land.common.service.file.IFileHandler
 import com.ethossoftworks.land.common.service.preferences.DeviceVisibility
 import com.ethossoftworks.land.common.service.preferences.IPreferencesService
 import com.ethossoftworks.land.common.service.preferences.TransferRequestPermissionType
+import com.outsidesource.oskitkmp.file.KMPFileRef
 import com.outsidesource.oskitkmp.interactor.Interactor
 import com.outsidesource.oskitkmp.lib.Platform
 import com.outsidesource.oskitkmp.lib.current
@@ -16,7 +16,7 @@ import kotlin.math.roundToInt
 
 data class AppPreferencesState(
     val displayName: String = "",
-    val saveFolder: String? = null,
+    val saveFolder: KMPFileRef? = null,
     val contacts: Map<String, Contact> = emptyMap(),
     val transferRequestPermissionType: TransferRequestPermissionType = TransferRequestPermissionType.AskAll,
     val deviceVisibility: DeviceVisibility = DeviceVisibility.Visible,
@@ -24,7 +24,6 @@ data class AppPreferencesState(
 
 class AppPreferencesInteractor(
     private val preferencesService: IPreferencesService,
-    private val fileHandler: IFileHandler,
 ): Interactor<AppPreferencesState>(
     initialState = AppPreferencesState(),
 ) {
@@ -49,7 +48,7 @@ class AppPreferencesInteractor(
                 }
             }
 
-            val saveFolder = preferencesService.getSaveFolder().unwrapOrDefault(fileHandler.defaultSaveFolder())
+            val saveFolder = preferencesService.getSaveFolder().unwrapOrDefault(null)
 //            val contacts = preferencesService.getContacts().getOrElse(emptyMap())
             val deviceVisibility = preferencesService.getVisibility().unwrapOrDefault(DeviceVisibility.Visible)
             val requestPermissionType = preferencesService.getTransferRequestPermission().unwrapOrDefault(TransferRequestPermissionType.AskAll)
@@ -71,7 +70,7 @@ class AppPreferencesInteractor(
         hasInitialized.join()
     }
 
-    suspend fun setSaveFolder(folder: String): Outcome<Unit, Any> {
+    suspend fun setSaveFolder(folder: KMPFileRef): Outcome<Unit, Any> {
         val outcome = preferencesService.setSaveFolder(folder)
         if (outcome is Outcome.Ok) update { state -> state.copy(saveFolder = folder) }
         return outcome

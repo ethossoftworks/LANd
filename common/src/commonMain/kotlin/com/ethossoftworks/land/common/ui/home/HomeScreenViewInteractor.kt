@@ -6,9 +6,10 @@ import com.ethossoftworks.land.common.interactor.filetransfer.FileTransfer
 import com.ethossoftworks.land.common.interactor.filetransfer.FileTransferInteractor
 import com.ethossoftworks.land.common.interactor.preferences.AppPreferencesInteractor
 import com.ethossoftworks.land.common.model.device.Device
-import com.ethossoftworks.land.common.service.file.IFileHandler
 import com.ethossoftworks.land.common.service.filetransfer.FileTransferRequest
 import com.ethossoftworks.land.common.service.preferences.DeviceVisibility
+import com.outsidesource.oskitkmp.file.IKMPFileHandler
+import com.outsidesource.oskitkmp.file.source
 import com.outsidesource.oskitkmp.interactor.Interactor
 import com.outsidesource.oskitkmp.outcome.Outcome
 import kotlinx.coroutines.launch
@@ -30,7 +31,7 @@ class HomeScreenViewInteractor(
     private val appPreferencesInteractor: AppPreferencesInteractor,
     private val discoveryInteractor: DiscoveryInteractor,
     private val fileTransferInteractor: FileTransferInteractor,
-    private val fileHandler: IFileHandler,
+    private val fileHandler: IKMPFileHandler,
     private val appCoordinator: AppCoordinator,
 ): Interactor<HomeViewState>(
     initialState = HomeViewState(),
@@ -70,7 +71,7 @@ class HomeScreenViewInteractor(
 
     fun onSelectSaveFolderClicked() {
         interactorScope.launch {
-            val folderOutcome = fileHandler.selectFolder()
+            val folderOutcome = fileHandler.pickDirectory()
             if (folderOutcome !is Outcome.Ok) return@launch
             val folder = folderOutcome.value ?: return@launch
 
@@ -83,22 +84,22 @@ class HomeScreenViewInteractor(
 
     fun onDeviceClicked(device: Device) {
         interactorScope.launch {
-            val fileOutcome = fileHandler.selectFile()
+            val fileOutcome = fileHandler.pickFile()
             if (fileOutcome !is Outcome.Ok) return@launch
 
             // TODO: Handle providing the user details for early returns
             val file = fileOutcome.value ?: return@launch
 
-            val metadataOutcome = fileHandler.readFileMetadata(file)
+            val metadataOutcome = fileHandler.readMetadata(file)
             if (metadataOutcome !is Outcome.Ok) return@launch
 
-            val sourceOutcome = fileHandler.openFileToRead(file)
+            val sourceOutcome = file.source()
             if (sourceOutcome !is Outcome.Ok) return@launch
 
             val fileTransfer = FileTransferRequest(
                 senderName = appPreferencesInteractor.state.displayName,
-                fileName = metadataOutcome.value.name,
-                length = metadataOutcome.value.length,
+                fileName = file.name,
+                length = metadataOutcome.value.size,
                 source = sourceOutcome.value,
             )
 
