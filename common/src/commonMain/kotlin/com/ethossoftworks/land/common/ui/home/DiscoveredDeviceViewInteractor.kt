@@ -10,8 +10,9 @@ import com.ethossoftworks.land.common.service.filetransfer.CancellationCommand
 import com.ethossoftworks.land.common.service.filetransfer.FileTransferRequest
 import com.outsidesource.oskitcompose.modifier.KMPDragData
 import com.outsidesource.oskitkmp.file.IKMPFileHandler
+import com.outsidesource.oskitkmp.file.source
 import com.outsidesource.oskitkmp.interactor.Interactor
-import com.outsidesource.oskitkmp.outcome.Outcome
+import com.outsidesource.oskitkmp.outcome.unwrapOrElse
 import io.ktor.http.*
 import kotlinx.coroutines.launch
 
@@ -80,21 +81,19 @@ class DiscoveredDeviceViewInteractor(
 
         files.forEach { file ->
             interactorScope.launch {
-//                val metadataOutcome = fileHandler.readMetadata(file)
-//                if (metadataOutcome !is Outcome.Ok) return@launch
-//                if (metadataOutcome.value.isDirectory) return@launch
-//
-//                val sourceOutcome = fileHandler.openFileToRead(file)
-//                if (sourceOutcome !is Outcome.Ok) return@launch
-//
-//                val fileTransfer = FileTransferRequest(
-//                    senderName = appPreferencesInteractor.state.displayName,
-//                    fileName = metadataOutcome.value.name,
-//                    length = metadataOutcome.value.length,
-//                    source = sourceOutcome.value,
-//                )
+                val fileRef = fileHandler.resolveRefFromPath(file).unwrapOrElse { return@launch }
+                val metadata = fileHandler.readMetadata(fileRef).unwrapOrElse { return@launch }
+                if (fileRef.isDirectory) return@launch
+                val source = fileRef.source().unwrapOrElse { return@launch }
 
-//                fileTransferInteractor.sendFile(device, fileTransfer)
+                val fileTransfer = FileTransferRequest(
+                    senderName = appPreferencesInteractor.state.displayName,
+                    fileName = fileRef.name,
+                    length = metadata.size,
+                    source = source,
+                )
+
+                fileTransferInteractor.sendFile(device, fileTransfer)
             }
         }
     }
