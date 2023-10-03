@@ -9,9 +9,12 @@ import com.ethossoftworks.land.common.model.device.Device
 import com.ethossoftworks.land.common.service.filetransfer.FileTransferRequest
 import com.ethossoftworks.land.common.service.preferences.DeviceVisibility
 import com.outsidesource.oskitkmp.file.IKMPFileHandler
+import com.outsidesource.oskitkmp.file.KMPFileMetadata
+import com.outsidesource.oskitkmp.file.KMPFileMimeType
 import com.outsidesource.oskitkmp.file.source
 import com.outsidesource.oskitkmp.interactor.Interactor
 import com.outsidesource.oskitkmp.outcome.Outcome
+import com.outsidesource.oskitkmp.outcome.unwrapOrElse
 import kotlinx.coroutines.launch
 
 data class HomeViewState(
@@ -83,27 +86,27 @@ class HomeScreenViewInteractor(
     }
 
     fun onDeviceClicked(device: Device) {
-        interactorScope.launch {
-            val fileOutcome = fileHandler.pickFile()
-            if (fileOutcome !is Outcome.Ok) return@launch
+        interactorScope.launch onDeviceClickedLaunch@{
+            val files = fileHandler.pickFiles().unwrapOrElse { return@onDeviceClickedLaunch }
 
             // TODO: Handle providing the user details for early returns
-            val file = fileOutcome.value ?: return@launch
+            if (files == null) return@onDeviceClickedLaunch
 
-            val metadataOutcome = fileHandler.readMetadata(file)
-            if (metadataOutcome !is Outcome.Ok) return@launch
+            files.forEach { file ->
+                launch {
+                    val metadata = fileHandler.readMetadata(file).unwrapOrElse { return@launch }
+                    val source = file.source().unwrapOrElse { return@launch }
 
-            val sourceOutcome = file.source()
-            if (sourceOutcome !is Outcome.Ok) return@launch
+                    val fileTransfer = FileTransferRequest(
+                        senderName = appPreferencesInteractor.state.displayName,
+                        fileName = file.name,
+                        length = metadata.size,
+                        source = source,
+                    )
 
-            val fileTransfer = FileTransferRequest(
-                senderName = appPreferencesInteractor.state.displayName,
-                fileName = file.name,
-                length = metadataOutcome.value.size,
-                source = sourceOutcome.value,
-            )
-
-            fileTransferInteractor.sendFile(device, fileTransfer)
+                    fileTransferInteractor.sendFile(device, fileTransfer)
+                }
+            }
         }
     }
 
