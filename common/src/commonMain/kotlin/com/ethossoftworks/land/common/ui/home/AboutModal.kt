@@ -12,7 +12,7 @@ import com.ethossoftworks.land.common.resources.Resources
 import com.ethossoftworks.land.common.ui.common.theme.AppTheme
 import com.outsidesource.oskitcompose.lib.rememberInjectForRoute
 import com.outsidesource.oskitcompose.popup.Modal
-import com.outsidesource.oskitcompose.resources.rememberKmpImage
+import com.outsidesource.oskitcompose.resources.rememberKmpImagePainter
 import kotlinx.datetime.Clock
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
@@ -51,7 +51,7 @@ fun AboutModal(
             Box(modifier = Modifier.padding(24.dp)) {
                 Image(
                     modifier = Modifier.size(128.dp),
-                    painter = rememberKmpImage(Resources.Logo),
+                    painter = rememberKmpImagePainter(Resources.Logo),
                     contentDescription = "Logo",
                 )
             }

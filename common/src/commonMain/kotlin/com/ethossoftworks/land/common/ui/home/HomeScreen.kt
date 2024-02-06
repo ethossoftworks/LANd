@@ -30,11 +30,8 @@ import com.ethossoftworks.land.common.ui.common.theme.AppTheme
 import com.outsidesource.oskitcompose.interactor.collectAsState
 import com.outsidesource.oskitcompose.layout.WrappableRow
 import com.outsidesource.oskitcompose.lib.rememberInjectForRoute
-import com.outsidesource.oskitcompose.resources.rememberKmpImage
-import com.outsidesource.oskitcompose.systemui.KMPWindowInsets
-import com.outsidesource.oskitcompose.systemui.StatusBarIconColorEffect
-import com.outsidesource.oskitcompose.systemui.topInsets
-import com.outsidesource.oskitcompose.systemui.verticalInsets
+import com.outsidesource.oskitcompose.resources.rememberKmpImagePainter
+import com.outsidesource.oskitcompose.systemui.*
 import com.outsidesource.oskitkmp.lib.Platform
 import com.outsidesource.oskitkmp.lib.current
 
@@ -50,7 +47,7 @@ fun HomeScreen(
         interactor.viewMounted()
     }
 
-    StatusBarIconColorEffect(useDarkIcons = true)
+    SystemBarColorEffect(statusBarIconColor = SystemBarIconColor.Dark)
 
     BoxWithConstraints {
         val ringSpacing = maxHeight / 6f
@@ -217,7 +214,7 @@ private fun RadiatingLogo(ringSpacing: Dp) {
                     )
                 }
             },
-        painter = rememberKmpImage(Resources.WifiTethering),
+        painter = rememberKmpImagePainter(Resources.WifiTethering),
         colorFilter = ColorFilter.tint(AppTheme.colors.primary),
         contentDescription = ""
     )

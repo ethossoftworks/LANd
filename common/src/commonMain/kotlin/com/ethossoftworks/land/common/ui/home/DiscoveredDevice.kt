@@ -43,7 +43,7 @@ import com.outsidesource.oskitcompose.modifier.kmpPointerMoveFilter
 import com.outsidesource.oskitcompose.modifier.outerShadow
 import com.outsidesource.oskitcompose.popup.Popover
 import com.outsidesource.oskitcompose.popup.PopoverAnchors
-import com.outsidesource.oskitcompose.resources.rememberKmpImage
+import com.outsidesource.oskitcompose.resources.rememberKmpImagePainter
 import com.outsidesource.oskitkmp.lib.Platform
 import com.outsidesource.oskitkmp.lib.current
 import org.koin.core.parameter.parametersOf
@@ -144,7 +144,7 @@ fun DiscoveredDevice(
             )
             Image(
                 modifier = Modifier.width(48.dp),
-                painter = rememberKmpImage(
+                painter = rememberKmpImagePainter(
                     when (device.platform) {
                         DevicePlatform.iOS -> Resources.DeviceMobileIOS
                         DevicePlatform.Android -> Resources.DeviceMobileAndroid
@@ -267,7 +267,7 @@ private fun MenuOption(
         Image(
             modifier = Modifier.size(16.dp),
             colorFilter = ColorFilter.tint(Color.White),
-            painter = rememberKmpImage(when (direction) {
+            painter = rememberKmpImagePainter(when (direction) {
                 FileTransferDirection.Receiving -> Resources.Download
                 FileTransferDirection.Sending -> Resources.Upload
             }),
@@ -288,7 +288,7 @@ private fun MenuOption(
                 .size(20.dp)
                 .clip(CircleShape)
                 .clickable(onClick = onStopClick),
-            painter = rememberKmpImage(Resources.Stop),
+            painter = rememberKmpImagePainter(Resources.Stop),
             contentDescription = "Stop",
             colorFilter = ColorFilter.tint(Color.White)
         )
@@ -297,7 +297,7 @@ private fun MenuOption(
                 .size(20.dp)
                 .clip(CircleShape)
                 .clickable(onClick = onDeleteClick),
-            painter = rememberKmpImage(Resources.Delete),
+            painter = rememberKmpImagePainter(Resources.Delete),
             contentDescription = "Delete",
             colorFilter = ColorFilter.tint(Color.White)
         )

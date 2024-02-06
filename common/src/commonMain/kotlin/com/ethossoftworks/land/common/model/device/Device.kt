@@ -22,6 +22,6 @@ fun Platform.toDevicePlatform() = when(this) {
     Platform.MacOS -> DevicePlatform.MacOS
     Platform.Linux -> DevicePlatform.Linux
     Platform.Android -> DevicePlatform.Android
-    Platform.iOS -> DevicePlatform.iOS
+    Platform.IOS -> DevicePlatform.iOS
     Platform.Unknown -> DevicePlatform.Unknown
 }

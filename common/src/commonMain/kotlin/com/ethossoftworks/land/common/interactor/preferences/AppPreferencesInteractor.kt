@@ -39,7 +39,7 @@ class AppPreferencesInteractor(
                         Platform.Windows -> "Windows"
                         Platform.Linux -> "Linux"
                         Platform.Android -> "Android"
-                        Platform.iOS -> "iOS"
+                        Platform.IOS -> "iOS"
                         Platform.Unknown -> "Unknown"
                     }
                     val defaultName = "$platform ${(Math.random() * 10_000).roundToInt()}"
