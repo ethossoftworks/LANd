@@ -5,7 +5,7 @@ import com.ethossoftworks.land.common.interactor.filetransfer.FileTransferDirect
 import com.ethossoftworks.land.common.interactor.filetransfer.FileTransferInteractor
 import com.ethossoftworks.land.common.interactor.filetransfer.FileTransferStatus
 import com.ethossoftworks.land.common.interactor.preferences.AppPreferencesInteractor
-import com.ethossoftworks.land.common.model.device.Device
+import com.ethossoftworks.land.common.entity.Device
 import com.ethossoftworks.land.common.service.filetransfer.CancellationCommand
 import com.ethossoftworks.land.common.service.filetransfer.FileTransferRequest
 import com.outsidesource.oskitcompose.modifier.KMPDragData

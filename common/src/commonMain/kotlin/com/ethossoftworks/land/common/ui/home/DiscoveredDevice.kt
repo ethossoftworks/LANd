@@ -29,8 +29,8 @@ import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
 import com.ethossoftworks.land.common.interactor.filetransfer.FileTransfer
 import com.ethossoftworks.land.common.interactor.filetransfer.FileTransferDirection
-import com.ethossoftworks.land.common.model.device.Device
-import com.ethossoftworks.land.common.model.device.DevicePlatform
+import com.ethossoftworks.land.common.entity.Device
+import com.ethossoftworks.land.common.entity.DevicePlatform
 import com.ethossoftworks.land.common.resources.Resources
 import com.ethossoftworks.land.common.ui.common.theme.AppTheme
 import com.outsidesource.oskitcompose.geometry.PopupShape

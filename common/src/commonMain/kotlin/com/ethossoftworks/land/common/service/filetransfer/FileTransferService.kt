@@ -1,9 +1,9 @@
 package com.ethossoftworks.land.common.service.filetransfer
 
 import com.ethossoftworks.land.common.lib.bytes.offsetContentEquals
-import com.ethossoftworks.land.common.model.device.Device
-import com.ethossoftworks.land.common.model.device.DevicePlatform
-import com.ethossoftworks.land.common.model.device.toDevicePlatform
+import com.ethossoftworks.land.common.entity.Device
+import com.ethossoftworks.land.common.entity.DevicePlatform
+import com.ethossoftworks.land.common.entity.toDevicePlatform
 import com.outsidesource.oskitkmp.concurrency.asyncOutcome
 import com.outsidesource.oskitkmp.concurrency.awaitOutcome
 import com.outsidesource.oskitkmp.lib.Platform

@@ -1,7 +1,9 @@
-package com.ethossoftworks.land.common.model.device
+package com.ethossoftworks.land.common.entity
 
+import androidx.compose.runtime.Immutable
 import com.outsidesource.oskitkmp.lib.Platform
 
+@Immutable
 data class Device(
     val name: String,
     val platform: DevicePlatform,

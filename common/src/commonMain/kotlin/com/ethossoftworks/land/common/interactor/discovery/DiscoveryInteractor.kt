@@ -1,8 +1,8 @@
 package com.ethossoftworks.land.common.interactor.discovery
 
-import com.ethossoftworks.land.common.model.device.Device
-import com.ethossoftworks.land.common.model.device.DevicePlatform
-import com.ethossoftworks.land.common.model.device.toDevicePlatform
+import com.ethossoftworks.land.common.entity.Device
+import com.ethossoftworks.land.common.entity.DevicePlatform
+import com.ethossoftworks.land.common.entity.toDevicePlatform
 import com.ethossoftworks.land.common.service.discovery.INSDService
 import com.ethossoftworks.land.common.service.discovery.NSDService
 import com.ethossoftworks.land.common.service.discovery.NSDServiceEvent

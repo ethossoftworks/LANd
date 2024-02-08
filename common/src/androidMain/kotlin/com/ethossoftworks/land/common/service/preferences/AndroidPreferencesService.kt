@@ -2,7 +2,7 @@ package com.ethossoftworks.land.common.service.preferences
 
 import android.content.Context
 import android.content.Context.MODE_PRIVATE
-import com.ethossoftworks.land.common.model.Contact
+import com.ethossoftworks.land.common.entity.Contact
 import com.outsidesource.oskitkmp.file.KMPFileRef
 import com.outsidesource.oskitkmp.outcome.Outcome
 import kotlinx.serialization.encodeToString

@@ -1,6 +1,6 @@
 package com.ethossoftworks.land.common.service.preferences
 
-import com.ethossoftworks.land.common.model.Contact
+import com.ethossoftworks.land.common.entity.Contact
 import com.outsidesource.oskitkmp.file.KMPFileRef
 import com.outsidesource.oskitkmp.outcome.Outcome
 import kotlinx.serialization.encodeToString

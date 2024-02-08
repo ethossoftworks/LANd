@@ -1,6 +1,6 @@
 package com.ethossoftworks.land.common.interactor.preferences
 
-import com.ethossoftworks.land.common.model.Contact
+import com.ethossoftworks.land.common.entity.Contact
 import com.ethossoftworks.land.common.service.preferences.DeviceVisibility
 import com.ethossoftworks.land.common.service.preferences.IPreferencesService
 import com.ethossoftworks.land.common.service.preferences.TransferRequestPermissionType

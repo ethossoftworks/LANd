@@ -3,7 +3,7 @@ package com.ethossoftworks.land.common.ui.home
 import com.ethossoftworks.land.common.interactor.discovery.DiscoveryInteractor
 import com.ethossoftworks.land.common.interactor.filetransfer.FileTransferInteractor
 import com.ethossoftworks.land.common.interactor.preferences.AppPreferencesInteractor
-import com.ethossoftworks.land.common.model.Contact
+import com.ethossoftworks.land.common.entity.Contact
 import com.ethossoftworks.land.common.service.preferences.DeviceVisibility
 import com.ethossoftworks.land.common.service.preferences.TransferRequestPermissionType
 import com.outsidesource.oskitkmp.file.IKMPFileHandler
