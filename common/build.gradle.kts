@@ -5,7 +5,7 @@ plugins {
     kotlin("multiplatform")
     id("org.jetbrains.compose")
     id("com.android.library")
-    kotlin("plugin.serialization") version "1.8.22"
+    kotlin("plugin.serialization") version "1.9.10"
 }
 
 val buildInfoProps = Properties().apply {
@@ -33,8 +33,8 @@ kotlin {
                 api(compose.runtime)
                 api(compose.foundation)
                 api(compose.material)
-                implementation("com.outsidesource:oskit-kmp:4.0.0")
-                implementation("com.outsidesource:oskit-compose:3.0.0")
+                implementation("com.outsidesource:oskit-kmp:4.4.0")
+                implementation("com.outsidesource:oskit-compose:3.3.0")
                 implementation("io.ktor:ktor-network:2.3.3")
                 implementation("io.ktor:ktor-server-core:2.3.1")
                 implementation("io.ktor:ktor-server-cio:2.3.1")

@@ -18,6 +18,5 @@ actual fun platformModule(platformContext: DIPlatformContext) = module {
     val context = (platformContext as DIPlatformContext.Android).applicationContext
 
     single { AndroidNSDService(context) } bind INSDService::class
-    single { AndroidKMPFileHandler() } bind IKMPFileHandler::class
     single { AndroidPreferencesService(context) } bind IPreferencesService::class
 }

@@ -197,7 +197,7 @@ private fun StopTransferPopover(
     onStopAndDeleteClicked: (Short) -> Unit,
 ) {
     var isPopoverHovering by remember { mutableStateOf(false) }
-    val popoverCorners = remember { PopupShape(caretHeight = 12.dp) }
+    val popoverCorners = remember { PopupShape(caretPointHeight = 12.dp) }
 
     Popover(
         isVisible = isDiscoveredDeviceHovering.value || isPopoverHovering,

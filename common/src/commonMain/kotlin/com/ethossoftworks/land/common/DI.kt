@@ -9,6 +9,8 @@ import com.ethossoftworks.land.common.service.discovery.NSDService
 import com.ethossoftworks.land.common.service.filetransfer.FileTransferService
 import com.ethossoftworks.land.common.service.filetransfer.IFileTransferService
 import com.ethossoftworks.land.common.ui.home.*
+import com.outsidesource.oskitkmp.file.IKMPFileHandler
+import com.outsidesource.oskitkmp.file.KMPFileHandler
 import org.koin.core.KoinApplication
 import org.koin.core.context.startKoin
 import org.koin.core.context.stopKoin
@@ -36,6 +38,7 @@ fun commonModule() = module {
     single { DiscoveryInteractor(get()) }
     single { AppPreferencesInteractor(get()) }
     single { FileTransferInteractor(get(), get(), get(), get()) }
+    single { KMPFileHandler() } bind IKMPFileHandler::class
 
     single {
         val appPreferencesInteractor: AppPreferencesInteractor = get()
