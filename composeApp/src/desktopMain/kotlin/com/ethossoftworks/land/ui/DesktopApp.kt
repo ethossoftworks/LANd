@@ -1,3 +1,5 @@
+@file:OptIn(ExperimentalResourceApi::class)
+
 package com.ethossoftworks.land.ui
 
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -15,6 +17,10 @@ import com.outsidesource.oskitcompose.window.SizedWindow
 import com.outsidesource.oskitcompose.window.rememberPersistedWindowState
 import com.outsidesource.oskitkmp.lib.Platform
 import com.outsidesource.oskitkmp.lib.current
+import land.composeapp.generated.resources.Res
+import land.composeapp.generated.resources.window_icon
+import org.jetbrains.compose.resources.ExperimentalResourceApi
+import org.jetbrains.compose.resources.painterResource
 import java.awt.Dimension
 
 @Composable
@@ -29,6 +35,7 @@ fun ApplicationScope.DesktopApp(
     SizedWindow(
         onCloseRequest = ::exitApplication,
         minWindowSize = Dimension(800, 600),
+        icon = painterResource(Res.drawable.window_icon),
         state = windowState,
         title = "LANd",
     ) {

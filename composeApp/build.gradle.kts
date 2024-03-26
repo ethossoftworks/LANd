@@ -108,6 +108,24 @@ compose.desktop {
             packageName = "LANd"
             vendor = "Ethos Softworks"
             packageVersion = version.toString()
+
+            macOS {
+                packageBuildVersion = properties["osbuild.buildNumber"]?.toString()
+                iconFile.set(project.file("src/desktopMain/icons/app-icon-macos.icns"))
+                bundleID = "com.ethossoftworks.LANd"
+                copyright = "Copyright \u00a9 2024 Ethos Softworks"
+            }
+
+            windows {
+                iconFile.set(project.file("src/desktopMain/icons/app-icon-windows.ico"))
+                shortcut = true
+                menu = true
+                menuGroup = "LANd"
+            }
+
+            linux {
+                iconFile.set(project.file("src/desktopMain/icons/app-icon-linux.png"))
+            }
         }
     }
 }
