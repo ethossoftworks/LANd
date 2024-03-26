@@ -5,8 +5,6 @@ import com.ethossoftworks.land.common.service.discovery.AndroidNSDService
 import com.ethossoftworks.land.common.service.discovery.INSDService
 import com.ethossoftworks.land.common.service.preferences.AndroidPreferencesService
 import com.ethossoftworks.land.common.service.preferences.IPreferencesService
-import com.outsidesource.oskitkmp.file.AndroidKMPFileHandler
-import com.outsidesource.oskitkmp.file.IKMPFileHandler
 import org.koin.dsl.bind
 import org.koin.dsl.module
 

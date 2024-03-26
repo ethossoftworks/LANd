@@ -9,7 +9,7 @@ import org.koin.dsl.bind
 import org.koin.dsl.module
 
 actual sealed class DIPlatformContext {
-    object Desktop: DIPlatformContext()
+    data object Desktop: DIPlatformContext()
 }
 
 actual fun platformModule(platformContext: DIPlatformContext) = module {

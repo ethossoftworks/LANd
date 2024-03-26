@@ -62,9 +62,10 @@ kotlin {
         }
         val androidMain by getting {
             dependencies {
-                api(libs.androidx.appcompat)
-                api(libs.androidx.core.ktx)
-//                implementation("androidx.documentfile:documentfile:1.0.1")
+                implementation(libs.androidx.ui)
+                implementation(libs.androidx.appcompat)
+                implementation(libs.androidx.core.ktx)
+                implementation(libs.androidx.activity.compose)
             }
         }
         val androidInstrumentedTest by getting {
@@ -74,7 +75,7 @@ kotlin {
         }
         val desktopMain by getting {
             dependencies {
-                api(compose.preview)
+                implementation(compose.desktop.currentOs)
             }
         }
         val desktopTest by getting
