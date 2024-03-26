@@ -7,6 +7,8 @@ import com.ethossoftworks.land.interactor.preferences.AppPreferencesInteractor
 import com.ethossoftworks.land.service.discovery.INSDService
 import com.ethossoftworks.land.service.filetransfer.FileTransferService
 import com.ethossoftworks.land.service.filetransfer.IFileTransferService
+import com.ethossoftworks.land.service.preferences.IPreferencesService
+import com.ethossoftworks.land.service.preferences.PreferencesService
 import com.ethossoftworks.land.ui.home.*
 import com.outsidesource.oskitkmp.file.IKMPFileHandler
 import com.outsidesource.oskitkmp.file.KMPFileHandler
@@ -47,6 +49,7 @@ fun commonModule() = module {
             getLocalIpAddress = nsdService::getLocalIpAddress,
         )
     } bind IFileTransferService::class
+    single { PreferencesService(get()) } bind IPreferencesService::class
 
     factory { HomeScreenViewInteractor(get(), get(), get(), get(), get()) }
     factory { SettingsBottomSheetViewInteractor(get(), get(), get(), get()) }

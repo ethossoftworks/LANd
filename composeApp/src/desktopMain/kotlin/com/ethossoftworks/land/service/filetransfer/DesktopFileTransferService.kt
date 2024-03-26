@@ -1,6 +1,5 @@
 package com.ethossoftworks.land.service.filetransfer
 
-import com.ethossoftworks.land.service.filetransfer.FileTransferService
 import java.io.IOException
 import java.net.ConnectException
 

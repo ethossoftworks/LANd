@@ -3,8 +3,8 @@ package com.ethossoftworks.land
 import android.content.Context
 import com.ethossoftworks.land.service.discovery.AndroidNSDService
 import com.ethossoftworks.land.service.discovery.INSDService
-import com.ethossoftworks.land.service.preferences.AndroidPreferencesService
-import com.ethossoftworks.land.service.preferences.IPreferencesService
+import com.outsidesource.oskitkmp.storage.AndroidKMPStorage
+import com.outsidesource.oskitkmp.storage.IKMPStorage
 import org.koin.dsl.bind
 import org.koin.dsl.module
 
@@ -16,5 +16,5 @@ actual fun platformModule(platformContext: DIPlatformContext) = module {
     val context = (platformContext as DIPlatformContext.Android).applicationContext
 
     single { AndroidNSDService(context) } bind INSDService::class
-    single { AndroidPreferencesService(context) } bind IPreferencesService::class
+    single { AndroidKMPStorage(context) } bind IKMPStorage::class
 }
