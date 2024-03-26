@@ -28,57 +28,52 @@ kotlin {
     applyDefaultHierarchyTemplate()
 
     sourceSets {
+        val desktopMain by getting
+        val desktopTest by getting
+        val androidInstrumentedTest by getting
+
         generateBuildInfo(rootDir, buildDir)
 
-        val commonMain by getting {
-            kotlin.srcDir("${buildDir}/generated")
+        commonMain.invoke {
+            kotlin.srcDir("${buildDir}/es-generated")
+        }
 
-            dependencies {
-                api(compose.runtime)
-                api(compose.foundation)
-                api(compose.material)
-                api(libs.oskit.kmp)
-                api(libs.oskit.compose)
-                api(libs.koin.core)
-                api(libs.kermit)
-                implementation(compose.components.resources)
-                implementation(libs.okio)
-                implementation(libs.kotlinx.atomicfu)
-                implementation(libs.ktor.network)
-                implementation(libs.ktor.server.core)
-                implementation(libs.ktor.server.cio)
-                implementation(libs.ktor.client.core)
-                implementation(libs.ktor.client.cio)
-                implementation(libs.jmdns)
-                implementation(libs.krytpo)
-                implementation(libs.kotlinx.serialization.json)
-                implementation(libs.kotlinx.datetime)
-            }
+        commonMain.dependencies {
+            api(compose.runtime)
+            api(compose.foundation)
+            api(compose.material)
+            api(libs.oskit.kmp)
+            api(libs.oskit.compose)
+            api(libs.koin.core)
+            api(libs.kermit)
+            implementation(compose.components.resources)
+            implementation(libs.okio)
+            implementation(libs.kotlinx.atomicfu)
+            implementation(libs.ktor.network)
+            implementation(libs.ktor.server.core)
+            implementation(libs.ktor.server.cio)
+            implementation(libs.ktor.client.core)
+            implementation(libs.ktor.client.cio)
+            implementation(libs.jmdns)
+            implementation(libs.krytpo)
+            implementation(libs.kotlinx.serialization.json)
+            implementation(libs.kotlinx.datetime)
         }
-        val commonTest by getting {
-            dependencies {
-                implementation(kotlin("test"))
-            }
+        commonTest.dependencies {
+            implementation(kotlin("test"))
         }
-        val androidMain by getting {
-            dependencies {
-                implementation(libs.androidx.ui)
-                implementation(libs.androidx.appcompat)
-                implementation(libs.androidx.core.ktx)
-                implementation(libs.androidx.activity.compose)
-            }
+        androidMain.dependencies {
+            implementation(libs.androidx.ui)
+            implementation(libs.androidx.appcompat)
+            implementation(libs.androidx.core.ktx)
+            implementation(libs.androidx.activity.compose)
         }
-        val androidInstrumentedTest by getting {
-            dependencies {
-                implementation(libs.junit)
-            }
+        androidInstrumentedTest.dependencies {
+            implementation(libs.junit)
         }
-        val desktopMain by getting {
-            dependencies {
-                implementation(compose.desktop.currentOs)
-            }
+        desktopMain.dependencies {
+            implementation(compose.desktop.currentOs)
         }
-        val desktopTest by getting
     }
 }
 

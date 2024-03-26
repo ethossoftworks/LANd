@@ -3,7 +3,7 @@ import java.io.FileInputStream
 import java.util.*
 
 fun generateBuildInfo(rootDir: File, buildDir: File) {
-    val directory = File("${buildDir}/generated/com/ethossoftworks/land/")
+    val directory = File("${buildDir}/es-generated/com/ethossoftworks/land/")
     directory.mkdirs()
     val buildInfoProps = readBuildInfoProps(rootDir)
 
