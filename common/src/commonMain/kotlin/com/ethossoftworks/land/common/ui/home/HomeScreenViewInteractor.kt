@@ -12,7 +12,7 @@ import com.outsidesource.oskitkmp.file.IKMPFileHandler
 import com.outsidesource.oskitkmp.file.source
 import com.outsidesource.oskitkmp.interactor.Interactor
 import com.outsidesource.oskitkmp.outcome.Outcome
-import com.outsidesource.oskitkmp.outcome.unwrapOrElse
+import com.outsidesource.oskitkmp.outcome.unwrapOrReturn
 import kotlinx.coroutines.launch
 
 data class HomeViewState(
@@ -85,15 +85,15 @@ class HomeScreenViewInteractor(
 
     fun onDeviceClicked(device: Device) {
         interactorScope.launch onDeviceClickedLaunch@{
-            val files = fileHandler.pickFiles().unwrapOrElse { return@onDeviceClickedLaunch }
+            val files = fileHandler.pickFiles().unwrapOrReturn { return@onDeviceClickedLaunch }
 
             // TODO: Handle providing the user details for early returns
             if (files == null) return@onDeviceClickedLaunch
 
             files.forEach { file ->
                 launch {
-                    val metadata = fileHandler.readMetadata(file).unwrapOrElse { return@launch }
-                    val source = file.source().unwrapOrElse { return@launch }
+                    val metadata = fileHandler.readMetadata(file).unwrapOrReturn { return@launch }
+                    val source = file.source().unwrapOrReturn { return@launch }
 
                     val fileTransfer = FileTransferRequest(
                         senderName = appPreferencesInteractor.state.displayName,

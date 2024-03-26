@@ -1,3 +1,5 @@
+@file:OptIn(ExperimentalResourceApi::class)
+
 package com.ethossoftworks.land.common.ui.home
 
 import androidx.compose.animation.core.animateFloat
@@ -31,7 +33,6 @@ import com.ethossoftworks.land.common.interactor.filetransfer.FileTransfer
 import com.ethossoftworks.land.common.interactor.filetransfer.FileTransferDirection
 import com.ethossoftworks.land.common.entity.Device
 import com.ethossoftworks.land.common.entity.DevicePlatform
-import com.ethossoftworks.land.common.resources.Resources
 import com.ethossoftworks.land.common.ui.common.theme.AppTheme
 import com.outsidesource.oskitcompose.geometry.PopupShape
 import com.outsidesource.oskitcompose.interactor.collectAsState
@@ -43,14 +44,20 @@ import com.outsidesource.oskitcompose.modifier.kmpPointerMoveFilter
 import com.outsidesource.oskitcompose.modifier.outerShadow
 import com.outsidesource.oskitcompose.popup.Popover
 import com.outsidesource.oskitcompose.popup.PopoverAnchors
-import com.outsidesource.oskitcompose.resources.rememberKmpImagePainter
 import com.outsidesource.oskitkmp.lib.Platform
 import com.outsidesource.oskitkmp.lib.current
+import land.common.generated.resources.*
+import land.common.generated.resources.Res
+import land.common.generated.resources.device_desktop_macos
+import land.common.generated.resources.device_mobile_android
+import land.common.generated.resources.device_mobile_ios
+import org.jetbrains.compose.resources.ExperimentalResourceApi
+import org.jetbrains.compose.resources.painterResource
 import org.koin.core.parameter.parametersOf
 import kotlin.math.roundToInt
 
 
-@OptIn(ExperimentalFoundationApi::class)
+@OptIn(ExperimentalFoundationApi::class, ExperimentalResourceApi::class)
 @Composable
 fun DiscoveredDevice(
     device: Device,
@@ -144,14 +151,14 @@ fun DiscoveredDevice(
             )
             Image(
                 modifier = Modifier.width(48.dp),
-                painter = rememberKmpImagePainter(
+                painter = painterResource(
                     when (device.platform) {
-                        DevicePlatform.iOS -> Resources.DeviceMobileIOS
-                        DevicePlatform.Android -> Resources.DeviceMobileAndroid
-                        DevicePlatform.MacOS -> Resources.DeviceDesktopMacOS
-                        DevicePlatform.Windows -> Resources.DeviceDesktopWindows
-                        DevicePlatform.Linux -> Resources.DeviceDesktopLinux
-                        DevicePlatform.Unknown -> Resources.DeviceUnknown
+                        DevicePlatform.iOS -> Res.drawable.device_mobile_ios
+                        DevicePlatform.Android -> Res.drawable.device_mobile_android
+                        DevicePlatform.MacOS -> Res.drawable.device_desktop_macos
+                        DevicePlatform.Windows -> Res.drawable.device_desktop_windows
+                        DevicePlatform.Linux -> Res.drawable.device_desktop_linux
+                        DevicePlatform.Unknown -> Res.drawable.device_unknown
                     }
                 ),
                 contentDescription = null,
@@ -267,9 +274,9 @@ private fun MenuOption(
         Image(
             modifier = Modifier.size(16.dp),
             colorFilter = ColorFilter.tint(Color.White),
-            painter = rememberKmpImagePainter(when (direction) {
-                FileTransferDirection.Receiving -> Resources.Download
-                FileTransferDirection.Sending -> Resources.Upload
+            painter = painterResource(when (direction) {
+                FileTransferDirection.Receiving -> Res.drawable.download
+                FileTransferDirection.Sending -> Res.drawable.upload
             }),
             contentDescription = when (direction) {
                 FileTransferDirection.Receiving -> "Receiving"
@@ -288,7 +295,7 @@ private fun MenuOption(
                 .size(20.dp)
                 .clip(CircleShape)
                 .clickable(onClick = onStopClick),
-            painter = rememberKmpImagePainter(Resources.Stop),
+            painter = painterResource(Res.drawable.stop),
             contentDescription = "Stop",
             colorFilter = ColorFilter.tint(Color.White)
         )
@@ -297,7 +304,7 @@ private fun MenuOption(
                 .size(20.dp)
                 .clip(CircleShape)
                 .clickable(onClick = onDeleteClick),
-            painter = rememberKmpImagePainter(Resources.Delete),
+            painter = painterResource(Res.drawable.delete),
             contentDescription = "Delete",
             colorFilter = ColorFilter.tint(Color.White)
         )

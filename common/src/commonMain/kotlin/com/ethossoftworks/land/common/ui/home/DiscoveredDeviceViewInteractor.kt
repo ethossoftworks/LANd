@@ -12,7 +12,7 @@ import com.outsidesource.oskitcompose.modifier.KMPDragData
 import com.outsidesource.oskitkmp.file.IKMPFileHandler
 import com.outsidesource.oskitkmp.file.source
 import com.outsidesource.oskitkmp.interactor.Interactor
-import com.outsidesource.oskitkmp.outcome.unwrapOrElse
+import com.outsidesource.oskitkmp.outcome.unwrapOrReturn
 import io.ktor.http.*
 import kotlinx.coroutines.launch
 
@@ -81,10 +81,10 @@ class DiscoveredDeviceViewInteractor(
 
         files.forEach { file ->
             interactorScope.launch {
-                val fileRef = fileHandler.resolveRefFromPath(file).unwrapOrElse { return@launch }
-                val metadata = fileHandler.readMetadata(fileRef).unwrapOrElse { return@launch }
+                val fileRef = fileHandler.resolveRefFromPath(file).unwrapOrReturn { return@launch }
+                val metadata = fileHandler.readMetadata(fileRef).unwrapOrReturn { return@launch }
                 if (fileRef.isDirectory) return@launch
-                val source = fileRef.source().unwrapOrElse { return@launch }
+                val source = fileRef.source().unwrapOrReturn { return@launch }
 
                 val fileTransfer = FileTransferRequest(
                     senderName = appPreferencesInteractor.state.displayName,

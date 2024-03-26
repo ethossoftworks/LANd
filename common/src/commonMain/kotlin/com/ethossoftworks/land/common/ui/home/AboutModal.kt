@@ -8,15 +8,18 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.ethossoftworks.land.BuildInfo
-import com.ethossoftworks.land.common.resources.Resources
 import com.ethossoftworks.land.common.ui.common.theme.AppTheme
 import com.outsidesource.oskitcompose.lib.rememberInjectForRoute
 import com.outsidesource.oskitcompose.popup.Modal
-import com.outsidesource.oskitcompose.resources.rememberKmpImagePainter
 import kotlinx.datetime.Clock
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
+import land.common.generated.resources.Res
+import land.common.generated.resources.land_logo
+import org.jetbrains.compose.resources.ExperimentalResourceApi
+import org.jetbrains.compose.resources.painterResource
 
+@OptIn(ExperimentalResourceApi::class)
 @Composable
 fun AboutModal(
     isVisible: Boolean,
@@ -51,7 +54,7 @@ fun AboutModal(
             Box(modifier = Modifier.padding(24.dp)) {
                 Image(
                     modifier = Modifier.size(128.dp),
-                    painter = rememberKmpImagePainter(Resources.Logo),
+                    painter = painterResource(Res.drawable.land_logo),
                     contentDescription = "Logo",
                 )
             }

@@ -1,3 +1,5 @@
+@file:OptIn(ExperimentalResourceApi::class)
+
 package com.ethossoftworks.land.common.ui.home
 
 import androidx.compose.animation.*
@@ -23,17 +25,22 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
-import com.ethossoftworks.land.common.resources.Resources
 import com.ethossoftworks.land.common.ui.common.ImageButton
 import com.ethossoftworks.land.common.ui.common.PrimaryButton
 import com.ethossoftworks.land.common.ui.common.theme.AppTheme
 import com.outsidesource.oskitcompose.interactor.collectAsState
 import com.outsidesource.oskitcompose.layout.WrappableRow
 import com.outsidesource.oskitcompose.lib.rememberInjectForRoute
-import com.outsidesource.oskitcompose.resources.rememberKmpImagePainter
 import com.outsidesource.oskitcompose.systemui.*
 import com.outsidesource.oskitkmp.lib.Platform
 import com.outsidesource.oskitkmp.lib.current
+import land.common.generated.resources.*
+import land.common.generated.resources.Res
+import land.common.generated.resources.add
+import land.common.generated.resources.info
+import land.common.generated.resources.settings
+import org.jetbrains.compose.resources.ExperimentalResourceApi
+import org.jetbrains.compose.resources.painterResource
 
 
 @OptIn(ExperimentalAnimationApi::class)
@@ -64,17 +71,17 @@ fun HomeScreen(
                 .padding(top = 16.dp, end = 16.dp),
         ) {
             ImageButton(
-                resource = Resources.Add,
+                resource = Res.drawable.add,
                 tint = AppTheme.colors.homeScreenButtonTint,
                 onClick = interactor::onAddButtonClicked,
             )
             ImageButton(
-                resource = Resources.Info,
+                resource = Res.drawable.info,
                 tint = AppTheme.colors.homeScreenButtonTint,
                 onClick = interactor::onInfoButtonClicked,
             )
             ImageButton(
-                resource = Resources.Settings,
+                resource = Res.drawable.settings,
                 tint = AppTheme.colors.homeScreenButtonTint,
                 onClick = interactor::onSettingsButtonClicked,
             )
@@ -214,7 +221,7 @@ private fun RadiatingLogo(ringSpacing: Dp) {
                     )
                 }
             },
-        painter = rememberKmpImagePainter(Resources.WifiTethering),
+        painter = painterResource(Res.drawable.wifi_tethering),
         colorFilter = ColorFilter.tint(AppTheme.colors.primary),
         contentDescription = ""
     )

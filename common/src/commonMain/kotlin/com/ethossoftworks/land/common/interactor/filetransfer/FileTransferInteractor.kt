@@ -9,7 +9,7 @@ import com.outsidesource.oskitkmp.file.KMPFileWriteMode
 import com.outsidesource.oskitkmp.file.sink
 import com.outsidesource.oskitkmp.interactor.Interactor
 import com.outsidesource.oskitkmp.outcome.Outcome
-import com.outsidesource.oskitkmp.outcome.unwrapOrElse
+import com.outsidesource.oskitkmp.outcome.unwrapOrReturn
 import kotlinx.atomicfu.atomic
 import kotlinx.atomicfu.update
 import kotlinx.coroutines.Job
@@ -278,12 +278,12 @@ class FileTransferInteractor(
         }
 
         val sink = if (response == FileTransferResponseType.Accepted) {
-            val file = fileHandler.resolveFile(saveFolder, transfer.fileName, create = true).unwrapOrElse {
+            val file = fileHandler.resolveFile(saveFolder, transfer.fileName, create = true).unwrapOrReturn {
                  addTransferMessage(transfer.copy(status = FileTransferStatus.Stopped, stopReason = FileTransferStopReason.UnableToOpenFile))
                  return
             }
 
-            file.sink(mode).unwrapOrElse {
+            file.sink(mode).unwrapOrReturn {
                 addTransferMessage(transfer.copy(status = FileTransferStatus.Stopped, stopReason = FileTransferStopReason.UnableToOpenFile))
                 return
             }
