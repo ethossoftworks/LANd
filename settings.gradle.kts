@@ -21,4 +21,4 @@ dependencyResolutionManagement {
 
 rootProject.name = "LANd"
 
-include(":common")
+include(":composeApp")
