@@ -108,6 +108,7 @@ compose.desktop {
             packageName = "LANd"
             vendor = "Ethos Softworks"
             packageVersion = version.toString()
+            modules("java.sql")
 
             macOS {
                 packageBuildVersion = properties["osbuild.buildNumber"]?.toString()
