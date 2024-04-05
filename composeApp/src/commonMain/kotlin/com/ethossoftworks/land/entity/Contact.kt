@@ -7,5 +7,5 @@ import kotlinx.serialization.Serializable
 @Immutable
 data class Contact(
     val name: String,
-    val ipAddress: String?,
+    val ipAddress: String?, // TODO: Change this to service name in order to resolve the IP address fresh on app launch
 )

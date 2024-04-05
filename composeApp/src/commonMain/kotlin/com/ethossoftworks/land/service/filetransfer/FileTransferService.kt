@@ -98,7 +98,10 @@ class FileTransferService(
             val socketWriteChannel = socket.openWriteChannel()
             outerSocketWriteChannel = socketWriteChannel
 
-            // Write authorization challenge
+            // Read protocol version
+            val protocolVersion = socketReadChannel.readByte().toInt()
+
+            // Send authorization challenge
             val random = SecureRandom.nextBytes(AUTH_CHALLENGE_LENGTH)
             socketWriteChannel.writeFully(random, 0, random.size)
             socketWriteChannel.flush()
@@ -118,7 +121,6 @@ class FileTransferService(
             }
 
             // Read Fixed Header
-            val protocolVersion = socketReadChannel.readByte().toInt()
             val command = socketReadChannel.readByte()
             val ipAddress = ByteArray(17).apply { socketReadChannel.readFully(this) }.toIPString()
             val platform = socketReadChannel.readByte().toDevicePlatform()
@@ -289,6 +291,10 @@ class FileTransferService(
             outerSocket = socket
             outerSocketWriteChannel = socketWriteChannel
 
+            // Send protocol version
+            socketWriteChannel.writeByte(PROTOCOL_VERSION) // Header Version
+            socketWriteChannel.flush()
+
             // Handle auth challenge
             socketReadChannel.readFully(readBuffer, 0, AUTH_CHALLENGE_LENGTH)
             val authChallengeResponse = calculateAuthResponse(readBuffer.copyOfRange(0, AUTH_CHALLENGE_LENGTH))
@@ -296,7 +302,6 @@ class FileTransferService(
             socketWriteChannel.flush()
 
             // Send Fixed Header
-            socketWriteChannel.writeByte(PROTOCOL_VERSION) // Header Version
             socketWriteChannel.writeByte(ClientCommand.FileTransfer) // Command
             socketWriteChannel.writeFully(getLocalIpAddress().toIPBytes())
             socketWriteChannel.writeByte(Platform.current.toDevicePlatform().toByte())
