@@ -139,13 +139,13 @@ class FileTransferInteractor(
                             state.copy(
                                 activeTransfers = state.activeTransfers.toMutableMap().apply { remove(transfer.transferId) },
                                 transferMessageQueue = state.transferMessageQueue.toMutableList().apply {
-                                    if (event.reason is FileTransferStopReason.Cancelled && event.reason.cancelledByLocalUser) return@apply
+                                    if (event.reason is FileTransferStopReason.UserCancelled && event.reason.cancelledByLocalUser) return@apply
                                     add(transfer.copy(stopReason = event.reason, status = FileTransferStatus.Stopped))
                                 }
                             )
                         }
 
-                        if (event.reason is FileTransferStopReason.Cancelled && event.reason.command == CancellationCommand.Delete) {
+                        if (event.reason is FileTransferStopReason.UserCancelled && event.reason.command == CancellationCommand.Delete) {
                             val saveFolder = appPreferencesInteractor.state.saveFolder ?: return@collect
                             fileHandler.delete(saveFolder, transfer.fileName)
                         }
@@ -240,7 +240,7 @@ class FileTransferInteractor(
                             state.copy(
                                 activeTransfers = state.activeTransfers.toMutableMap().apply { remove(event.transferId) },
                                 transferMessageQueue = state.transferMessageQueue.toMutableList().apply {
-                                    if (event.reason is FileTransferStopReason.Cancelled && event.reason.cancelledByLocalUser) return@apply
+                                    if (event.reason is FileTransferStopReason.UserCancelled && event.reason.cancelledByLocalUser) return@apply
                                     add(transfer.copy(stopReason = event.reason, status = FileTransferStatus.Stopped))
                                 },
                             )

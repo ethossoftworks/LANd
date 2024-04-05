@@ -100,6 +100,16 @@ class FileTransferService(
 
             // Read protocol version
             val protocolVersion = socketReadChannel.readByte().toInt()
+            if (protocolVersion > PROTOCOL_VERSION) {
+                eventChannel.send(
+                    FileTransferServerEvent.TransferStopped(
+                        transferId = transferId,
+                        reason = FileTransferStopReason.UnknownProtocol,
+                    )
+                )
+                socket.close()
+                return@asyncOutcome Outcome.Ok(Unit)
+            }
 
             // Send authorization challenge
             val random = SecureRandom.nextBytes(AUTH_CHALLENGE_LENGTH)
@@ -209,7 +219,7 @@ class FileTransferService(
                     eventChannel.send(
                         FileTransferServerEvent.TransferStopped(
                             transferId,
-                            FileTransferStopReason.Cancelled(cancelCommand)
+                            FileTransferStopReason.UserCancelled(cancelCommand)
                         )
                     )
                     break
@@ -238,7 +248,7 @@ class FileTransferService(
                     eventChannel.send(
                         FileTransferServerEvent.TransferStopped(
                             transferId = transferId,
-                            reason = FileTransferStopReason.Cancelled(error.command, cancelledByLocalUser = true)
+                            reason = FileTransferStopReason.UserCancelled(error.command, cancelledByLocalUser = true)
                         )
                     )
                 }
@@ -337,7 +347,7 @@ class FileTransferService(
                     if (!cancellationSignalBuffer.offsetContentEquals(cancellationSignalBytes, 0)) continue
 
                     val command = CancellationCommand.fromByte(cancellationSignalBuffer.last())
-                    send(FileTransferClientEvent.TransferStopped(transferId, FileTransferStopReason.Cancelled(command)))
+                    send(FileTransferClientEvent.TransferStopped(transferId, FileTransferStopReason.UserCancelled(command)))
                     this@sendJob.cancel()
                 }
 
@@ -379,7 +389,7 @@ class FileTransferService(
                     send(
                         FileTransferClientEvent.TransferStopped(
                             transferId = transferId,
-                            reason = FileTransferStopReason.Cancelled(error.command, cancelledByLocalUser = true)
+                            reason = FileTransferStopReason.UserCancelled(error.command, cancelledByLocalUser = true)
                         )
                     )
                 }

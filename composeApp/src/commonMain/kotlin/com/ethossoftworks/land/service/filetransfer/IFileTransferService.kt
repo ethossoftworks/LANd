@@ -81,14 +81,15 @@ sealed class FileTransferServerEvent {
 }
 
 sealed class FileTransferStopReason {
-    object AuthorizationChallengeFail: FileTransferStopReason()
-    object UnableToOpenFile: FileTransferStopReason()
-    object SocketClosed: FileTransferStopReason()
-    data class Cancelled(
+    data object AuthorizationChallengeFail: FileTransferStopReason()
+    data object UnableToOpenFile: FileTransferStopReason()
+    data object SocketClosed: FileTransferStopReason()
+    data object UnknownProtocol: FileTransferStopReason()
+    data class UserCancelled(
         val command: CancellationCommand,
         val cancelledByLocalUser: Boolean = false,
     ): FileTransferStopReason()
-    object Unknown: FileTransferStopReason()
+    data object Unknown: FileTransferStopReason()
 }
 
 sealed class FileTransferClientEvent {
