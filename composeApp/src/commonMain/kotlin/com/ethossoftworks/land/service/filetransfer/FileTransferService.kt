@@ -39,7 +39,7 @@ private val cancellationSignalBytes = ubyteArrayOf(0x75u, 0xE6u, 0x07u, 0x9Eu, 0
 
 private data class CancellationSignal(val transferId: Short, val command: CancellationCommand)
 
-private class LANdTransferCancelledException(val command: CancellationCommand) : CancellationException()
+private class LANdTransferCancelledException(val command: CancellationCommand) : CancellationException("LANd Transfer Cancelled")
 
 class FileTransferService(
     private val getServerDeviceName: () -> String,

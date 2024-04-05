@@ -1,5 +1,7 @@
 package com.ethossoftworks.land
 
+import com.ethossoftworks.land.service.discovery.INSDService
+import com.ethossoftworks.land.service.discovery.IOSNSDService
 import com.outsidesource.oskitkmp.storage.IKMPStorage
 import com.outsidesource.oskitkmp.storage.IOSKMPStorage
 import org.koin.dsl.bind
@@ -11,6 +13,7 @@ actual class DIPlatformContext
 
 actual fun platformModule(platformContext: DIPlatformContext) = module {
     single { IOSKMPStorage() } bind IKMPStorage::class
+    single { IOSNSDService() } bind INSDService::class
 }
 
 fun loadKoinSwiftModules() {

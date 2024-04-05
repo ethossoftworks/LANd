@@ -57,7 +57,7 @@ fun HomeScreen(
 
         Row(
             modifier = Modifier
-                .then(if (Platform.current == Platform.Android) {
+                .then(if (Platform.current.isMobile) {
                     Modifier.windowInsetsPadding(KMPWindowInsets.topInsets)
                 } else {
                     Modifier
