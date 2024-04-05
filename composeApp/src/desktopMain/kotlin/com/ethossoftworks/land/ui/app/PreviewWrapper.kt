@@ -13,7 +13,7 @@ actual fun PreviewWrapper(
     content: @Composable BoxScope.() -> Unit,
 ) {
     initDI(
-        platformContext = DIPlatformContext.Desktop,
+        platformContext = DIPlatformContext(),
         extraModules = arrayOf(*extraModules),
     )
     AppTheme(content = content)

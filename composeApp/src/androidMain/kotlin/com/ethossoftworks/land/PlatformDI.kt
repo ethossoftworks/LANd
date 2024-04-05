@@ -8,12 +8,10 @@ import com.outsidesource.oskitkmp.storage.IKMPStorage
 import org.koin.dsl.bind
 import org.koin.dsl.module
 
-actual sealed class DIPlatformContext {
-    data class Android(val applicationContext: Context): DIPlatformContext()
-}
+actual class DIPlatformContext(val applicationContext: Context)
 
 actual fun platformModule(platformContext: DIPlatformContext) = module {
-    val context = (platformContext as DIPlatformContext.Android).applicationContext
+    val context = platformContext.applicationContext
 
     single { AndroidNSDService(context) } bind INSDService::class
     single { AndroidKMPStorage(context) } bind IKMPStorage::class

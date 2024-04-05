@@ -10,9 +10,7 @@ import com.outsidesource.oskitkmp.storage.IKMPStorage
 import org.koin.dsl.bind
 import org.koin.dsl.module
 
-actual sealed class DIPlatformContext {
-    data object Desktop: DIPlatformContext()
-}
+actual class DIPlatformContext
 
 actual fun platformModule(platformContext: DIPlatformContext) = module {
     factory { DesktopAppViewInteractor(get()) }
