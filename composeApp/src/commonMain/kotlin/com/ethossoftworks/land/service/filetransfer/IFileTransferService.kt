@@ -53,7 +53,7 @@ enum class FileTransferResponseType {
 }
 
 sealed class FileTransferServerEvent {
-    object ServerStarted: FileTransferServerEvent()
+    data object ServerStarted: FileTransferServerEvent()
 
     data class ServerStopped(val error: Any?): FileTransferServerEvent()
 
