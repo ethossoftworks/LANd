@@ -122,7 +122,7 @@ fun HomeScreen(
                         .weight(1f)
                         .zIndex(1f),
                     targetState = state.discoveredDevices,
-                    transitionSpec = { EnterTransition.None with ExitTransition.None },
+                    transitionSpec = { EnterTransition.None togetherWith ExitTransition.None },
                 ) { devices ->
                     WrappableRow(
                         modifier = Modifier.fillMaxWidth(),
