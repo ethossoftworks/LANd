@@ -4,7 +4,9 @@ import ComposeApp
 @main
 struct iOSApp: App {
     init() {
-        loadKoinSwiftModules()
+        loadKoinSwiftModules(
+            nsdService: IOSNSDService()
+        )
     }
     
     
