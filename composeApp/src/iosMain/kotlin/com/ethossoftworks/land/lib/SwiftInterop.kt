@@ -1,13 +1,13 @@
 package com.ethossoftworks.land.lib
 
 import com.outsidesource.oskitkmp.outcome.Outcome
-import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.channels.ProducerScope
-import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlin.coroutines.cancellation.CancellationException
-import kotlin.coroutines.resume
 
 
 sealed class SwiftOutcome<out V, out E>(private val outcome: Outcome<V, E>) {
@@ -24,6 +24,8 @@ sealed class SwiftOutcome<out V, out E>(private val outcome: Outcome<V, E>) {
  *
  * Allows creation of a cold flow in Swift. Supports cancellation but is only checked when trying to emit or by calling
  * ensureActive()
+ *
+ * This has to be a class because Objective-C does not support generics on functions causing all types to be erased
  */
 abstract class SwiftFlow<T : Any> {
     private var scope: ProducerScope<T>? = null
