@@ -1,14 +1,30 @@
 package com.ethossoftworks.land.lib
 
 import com.outsidesource.oskitkmp.outcome.Outcome
+import kotlinx.cinterop.*
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.channels.ProducerScope
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
+import platform.Foundation.NSData
+import platform.Foundation.create
+import platform.posix.memcpy
 import kotlin.coroutines.cancellation.CancellationException
 
+
+@OptIn(ExperimentalForeignApi::class)
+fun dataToKotlinByteArray(data: NSData): ByteArray = ByteArray(data.length.toInt()).apply {
+    usePinned {
+        memcpy(it.addressOf(0), data.bytes, data.length)
+    }
+}
+
+@OptIn(ExperimentalForeignApi::class, BetaInteropApi::class)
+fun kotlinByteArrayToData(data: ByteArray): NSData = memScoped {
+    NSData.create(bytes = allocArrayOf(data), length = data.size.toULong())
+}
 
 sealed class SwiftOutcome<out V, out E>(private val outcome: Outcome<V, E>) {
     data class Ok<out V, out E>(val value: V) : SwiftOutcome<V, E>(outcome = Outcome.Ok(value))
