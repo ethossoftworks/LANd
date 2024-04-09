@@ -317,6 +317,7 @@ class FileTransferService(
             // Send Fixed Header
             socketWriteChannel.writeByte(ClientCommand.FileTransfer) // Command
             socketWriteChannel.writeFully(getLocalIpAddress().toIPBytes())
+            socketWriteChannel.writeShort(FILE_TRANSFER_PORT)
             socketWriteChannel.writeByte(Platform.current.toDevicePlatform().toByte())
             socketWriteChannel.writeByte(file.senderName.length) // Sender Name Length
             socketWriteChannel.writeShort(file.fileName.length.toShort()) // File Name Length
