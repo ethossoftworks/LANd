@@ -8,6 +8,7 @@ data class Device(
     val name: String,
     val platform: DevicePlatform,
     val ipAddress: String,
+    val port: Int,
 )
 
 sealed class DevicePlatform {

@@ -62,6 +62,7 @@ sealed class FileTransferServerEvent {
         val senderName: String,
         val senderPlatform: DevicePlatform,
         val senderIPAddress: String,
+        val senderPort: UShort,
         val fileName: String,
         val length: Long,
     ): FileTransferServerEvent()

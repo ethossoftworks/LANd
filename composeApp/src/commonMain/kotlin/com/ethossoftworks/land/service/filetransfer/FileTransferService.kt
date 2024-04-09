@@ -4,6 +4,7 @@ import com.ethossoftworks.land.lib.bytes.offsetContentEquals
 import com.ethossoftworks.land.entity.Device
 import com.ethossoftworks.land.entity.DevicePlatform
 import com.ethossoftworks.land.entity.toDevicePlatform
+import com.ethossoftworks.land.lib.bytes.toUShort
 import com.outsidesource.oskitkmp.concurrency.asyncOutcome
 import com.outsidesource.oskitkmp.concurrency.awaitOutcome
 import com.outsidesource.oskitkmp.lib.Platform
@@ -25,7 +26,7 @@ import okio.Sink
 import okio.buffer
 import kotlin.experimental.xor
 
-const val FILE_TRANSFER_PORT = 7788
+const val FILE_TRANSFER_PORT = 50077
 private const val AUTH_CHALLENGE_LENGTH = 32
 private const val PROTOCOL_VERSION = 1
 
@@ -133,6 +134,7 @@ class FileTransferService(
             // Read Fixed Header
             val command = socketReadChannel.readByte()
             val ipAddress = ByteArray(17).apply { socketReadChannel.readFully(this) }.toIPString()
+            val port = ByteArray(2).apply { socketReadChannel.readFully(this) }.toUShort()
             val platform = socketReadChannel.readByte().toDevicePlatform()
             val senderNameLength = socketReadChannel.readByte().toInt()
             val fileNameLength = socketReadChannel.readShort().toInt()
@@ -162,6 +164,7 @@ class FileTransferService(
                     senderName,
                     platform,
                     ipAddress,
+                    port,
                     fileName,
                     payloadLength
                 )
@@ -425,6 +428,7 @@ class FileTransferService(
                 socketWriteChannel.writeByte(PROTOCOL_VERSION) // Header Version
                 socketWriteChannel.writeByte(ClientCommand.Connect) // Command (future use)
                 socketWriteChannel.writeFully(getLocalIpAddress().toIPBytes())
+                socketWriteChannel.writeShort(FILE_TRANSFER_PORT)
                 socketWriteChannel.writeByte(0) // Sender Name Length
                 socketWriteChannel.writeShort(0) // File Name Length
                 socketWriteChannel.writeLong(0) // Payload Length
@@ -435,8 +439,8 @@ class FileTransferService(
                 val platform = socketReadChannel.readByte().toDevicePlatform()
                 val nameLength = socketReadChannel.readByte().toInt()
                 val name = ByteArray(nameLength).apply { socketReadChannel.readFully(this) }.decodeToString()
-
-                Outcome.Ok(Device(name = name, platform = platform, ipAddress = destinationIp))
+                
+                Outcome.Ok(Device(name = name, platform = platform, port = FILE_TRANSFER_PORT, ipAddress = destinationIp))
             }
         } catch (e: Exception) {
             Outcome.Error(e)

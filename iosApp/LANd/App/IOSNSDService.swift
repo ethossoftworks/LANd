@@ -70,7 +70,7 @@ class IOSNSDService : INSDService {
             let listener: NWListener
             
             do {
-                guard let port = NWEndpoint.Port(rawValue: UInt16(50053)) else {
+                guard let port = NWEndpoint.Port(rawValue: UInt16(port)) else {
                     continuation.resume(returning: SwiftOutcomeError(error: IOSNSDError(type: IOSNSDErrorType.CouldNotCreateService, error: nil)).unwrap())
                     return
                 }
@@ -247,7 +247,6 @@ private func txtRecordFromProps(props: Dictionary<String, Any>) -> Data {
         }
         data.append(valueData)
     }
-    print(data.count)
     
     return data
 }

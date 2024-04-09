@@ -88,6 +88,7 @@ class FileTransferInteractor(
                                     name = event.senderName,
                                     ipAddress = event.senderIPAddress,
                                     platform = event.senderPlatform,
+                                    port = FILE_TRANSFER_PORT,
                                 )
                             )
                         }
