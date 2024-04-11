@@ -88,14 +88,14 @@ class IOSNSDService : INSDService {
                         break
                     }
                 }
-                listener.newConnectionHandler = { connection in connection.cancel()}
+                listener.newConnectionHandler = { connection in connection.cancel() }
             } catch {
                 continuation.resume(returning: SwiftOutcomeError(error: IOSNSDError(type: .CouldNotCreateService, error: error)).unwrap())
                 return
             }
             
             self.service = listener
-            listener.start(queue: .main)
+            listener.start(queue: .global())
         }
     }
     
@@ -165,7 +165,7 @@ private class ServiceFlow : SwiftFlow<NSDServiceEvent> {
             }
         }
         
-        browser.start(queue: DispatchQueue.main)
+        browser.start(queue: .global())
         
         try await __awaitClose {
             self.browser.cancel()
