@@ -2,6 +2,7 @@ import Foundation
 import Network
 import ComposeApp
 import Combine
+import AsyncDNSResolver
 
 
 class IOSNSDService : INSDService {
@@ -251,35 +252,44 @@ private func txtRecordFromProps(props: Dictionary<String, Any>) -> Data {
     return data
 }
 
-private func resolveServiceHostPort(service: NWBrowser.Result, onResolved: @escaping (_ host: String, _ port: UInt16) -> Void)  {
-    let connection = NWConnection(to: service.endpoint, using: .tcp)
+var resolvingEndpoints: Array<NWEndpoint> = []
 
-    connection.stateUpdateHandler = { state in
-        switch state {
-        case .ready:
-            if let innerEndpoint = connection.currentPath?.remoteEndpoint,
-               case .hostPort(let host, let port) = innerEndpoint {
-                if let ipAddress = ipv4AddressFromHost(from: host) {
-                    onResolved(ipAddress, port.rawValue)
-                }
-                connection.cancel()
-            }
+private func resolveServiceHostPort(
+    service: NWBrowser.Result,
+    onResolved: @escaping (_ host: String, _ port: UInt16) -> Void
+) {
+    Task {
+        let ipAddressRegex = try NSRegularExpression(pattern: #"^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$"#)
+        let name, type, domain: String
+
+        switch(service.endpoint) {
+        case .service(let innerName, let innerType, let innerDomain, _):
+            name = innerName
+            type = innerType
+            domain = innerDomain
         default:
-            break
+            return
         }
-    }
-    
-    connection.start(queue: .global())
-}
-
-private func ipv4AddressFromHost(from host: NWEndpoint.Host) -> String? {
-    if case let .ipv4(ipv4Address) = host {
-        let hostString = String(describing: host)
-        let components = hostString.components(separatedBy: "%")
-        if let ipv4AddressString = components.first { return ipv4AddressString }
-        return ipv4Address.debugDescription
-    } else {
-        return nil
+        
+        do {
+            let resolver = try AsyncDNSResolver()
+            let results = try await resolver.querySRV(name: "\(name).\(type).\(domain)")
+            
+            results.forEach { record in
+                let formattedHost = record.host
+                    .replacingOccurrences(of: ".local", with: "")
+                    .replacingOccurrences(of: "-", with: ".")
+                
+                let range = NSRange(formattedHost.startIndex..., in: formattedHost)
+                if ipAddressRegex.firstMatch(in: formattedHost, options: [], range: range) == nil {
+                    return
+                }
+                
+                onResolved(formattedHost, record.port)
+            }
+        } catch {
+            // Do Nothing
+        }
     }
 }
 
