@@ -196,23 +196,34 @@ class FileTransferService(
             val writer = sink.buffer()
             var totalWritten = response.existingFileLength
 
+            val onComplete = suspend {
+                writer.close()
+                socket.close()
+                if (totalWritten == payloadLength) {
+                    eventChannel.send(FileTransferServerEvent.TransferComplete(transferId))
+                } else {
+                    eventChannel.send(
+                        FileTransferServerEvent.TransferStopped(
+                            transferId,
+                            FileTransferStopReason.SocketClosed
+                        )
+                    )
+                }
+            }
+
             while (isActive) {
+                // iOS does not return -1 when the read channel closes and instead hangs, so we have to explicitly check
+                // if we've written the whole payload
+                if (totalWritten == payloadLength) {
+                    onComplete()
+                    break
+                }
+
                 val read = socketReadChannel.readAvailable(readBuffer, 0, bufferSize)
                 if (read == 0) continue
 
                 if (read == -1) {
-                    writer.close()
-                    socket.close()
-                    if (totalWritten == payloadLength) {
-                        eventChannel.send(FileTransferServerEvent.TransferComplete(transferId))
-                    } else {
-                        eventChannel.send(
-                            FileTransferServerEvent.TransferStopped(
-                                transferId,
-                                FileTransferStopReason.SocketClosed
-                            )
-                        )
-                    }
+                    onComplete()
                     break
                 }
 

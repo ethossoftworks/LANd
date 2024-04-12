@@ -151,7 +151,11 @@ private class ServiceFlow : SwiftFlow<NSDServiceEvent> {
             results.forEach { result in
                 let serviceName = serviceNameFromResult(result: result)
                 
-                resolveServiceHostPort(service: result) { host, port in
+                Task {
+                    guard let (host, port) = try await resolveServiceHostPort(service: result) else {
+                        return
+                    }
+                        
                     let resolved = NSDService(
                         type: self.type,
                         name: serviceName,
@@ -160,7 +164,7 @@ private class ServiceFlow : SwiftFlow<NSDServiceEvent> {
                         iPv6Addresses: [],
                         props: propertiesFromResult(result: result)
                     )
-                    
+                        
                     self.tryEmit(value: NSDServiceEvent.ServiceResolved(service: resolved))
                 }
             }
@@ -255,42 +259,42 @@ private func txtRecordFromProps(props: Dictionary<String, Any>) -> Data {
 var resolvingEndpoints: Array<NWEndpoint> = []
 
 private func resolveServiceHostPort(
-    service: NWBrowser.Result,
-    onResolved: @escaping (_ host: String, _ port: UInt16) -> Void
-) {
-    Task {
-        let ipAddressRegex = try NSRegularExpression(pattern: #"^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$"#)
-        let name, type, domain: String
+    service: NWBrowser.Result
+) async throws -> (host: String, port: UInt16)? {
+    let ipAddressRegex = try NSRegularExpression(pattern: #"^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$"#)
+    let name, type, domain: String
 
-        switch(service.endpoint) {
-        case .service(let innerName, let innerType, let innerDomain, _):
-            name = innerName
-            type = innerType
-            domain = innerDomain
-        default:
-            return
+    switch(service.endpoint) {
+    case .service(let innerName, let innerType, let innerDomain, _):
+        name = innerName
+        type = innerType
+        domain = innerDomain
+    default:
+        return nil
+    }
+    
+    do {
+        let resolver = try AsyncDNSResolver()
+        let results = try await resolver.querySRV(name: "\(name).\(type).\(domain)")
+        
+        for record in results {
+            let formattedHost = record.host
+                .replacingOccurrences(of: ".local", with: "")
+                .replacingOccurrences(of: "-", with: ".")
+            
+            let range = NSRange(formattedHost.startIndex..., in: formattedHost)
+            if ipAddressRegex.firstMatch(in: formattedHost, options: [], range: range) == nil {
+                continue
+            }
+            
+            return (formattedHost, record.port)
         }
         
-        do {
-            let resolver = try AsyncDNSResolver()
-            let results = try await resolver.querySRV(name: "\(name).\(type).\(domain)")
-            
-            results.forEach { record in
-                let formattedHost = record.host
-                    .replacingOccurrences(of: ".local", with: "")
-                    .replacingOccurrences(of: "-", with: ".")
-                
-                let range = NSRange(formattedHost.startIndex..., in: formattedHost)
-                if ipAddressRegex.firstMatch(in: formattedHost, options: [], range: range) == nil {
-                    return
-                }
-                
-                onResolved(formattedHost, record.port)
-            }
-        } catch {
-            // Do Nothing
-        }
+        return nil
+    } catch {
+        throw error
     }
+
 }
 
 enum IOSNSDErrorType {
