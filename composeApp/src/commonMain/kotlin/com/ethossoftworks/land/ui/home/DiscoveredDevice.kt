@@ -184,6 +184,7 @@ fun DiscoveredDevice(
                     if (hasReceive) append("Receiving ${(state.receivingProgress * 100).roundToInt()}%")
                 }
                 state.isWaiting -> "Waiting..."
+                state.isConnecting -> "Connecting..."
                 else -> ""
             },
             style = AppTheme.typography.deviceTransferStatus,
