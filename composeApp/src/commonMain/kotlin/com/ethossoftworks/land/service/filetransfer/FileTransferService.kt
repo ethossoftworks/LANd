@@ -1,5 +1,6 @@
 package com.ethossoftworks.land.service.filetransfer
 
+import co.touchlab.kermit.Logger
 import com.ethossoftworks.land.lib.bytes.offsetContentEquals
 import com.ethossoftworks.land.entity.Device
 import com.ethossoftworks.land.entity.DevicePlatform
@@ -23,6 +24,8 @@ import kotlinx.coroutines.*
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.channels.SendChannel
 import kotlinx.coroutines.flow.*
+import okio.BufferedSink
+import okio.BufferedSource
 import okio.Sink
 import okio.buffer
 import kotlin.experimental.xor
@@ -93,6 +96,7 @@ class FileTransferService(
     ) = coroutineScope {
         val transferId = generateConnectionId()
         var outerSocketWriteChannel: ByteWriteChannel? = null
+        var outerFileWriter: BufferedSink? = null
 
         val receiveJob = asyncOutcome {
             val readBuffer = ByteArray(bufferSize)
@@ -109,8 +113,6 @@ class FileTransferService(
                         reason = FileTransferStopReason.UnknownProtocol,
                     )
                 )
-                socketWriteChannel.close()
-                socket.close()
                 return@asyncOutcome Outcome.Ok(Unit)
             }
 
@@ -129,8 +131,6 @@ class FileTransferService(
                         reason = FileTransferStopReason.AuthorizationChallengeFail,
                     )
                 )
-                socketWriteChannel.close()
-                socket.close()
                 return@asyncOutcome Outcome.Ok(Unit)
             }
 
@@ -151,8 +151,6 @@ class FileTransferService(
                 socketWriteChannel.writeByte(deviceName.length)
                 socketWriteChannel.writeStringUtf8(deviceName)
                 socketWriteChannel.flush()
-                socketWriteChannel.close()
-                socket.close()
                 return@asyncOutcome Outcome.Ok(Unit)
             }
 
@@ -180,8 +178,6 @@ class FileTransferService(
             socketWriteChannel.flush()
 
             if (response.responseType == FileTransferResponseType.Rejected) {
-                socketWriteChannel.close()
-                socket.close()
                 return@asyncOutcome Outcome.Ok(Unit)
             }
 
@@ -193,20 +189,15 @@ class FileTransferService(
                         FileTransferStopReason.UnableToOpenFile
                     )
                 )
-                socketWriteChannel.close()
-                socket.close()
                 return@asyncOutcome Outcome.Ok(Unit)
             }
 
             eventChannel.send(FileTransferServerEvent.TransferProgress(transferId, 0, payloadLength))
             val fileWriter = sink.buffer()
+            outerFileWriter = fileWriter
             var totalWritten = response.existingFileLength
 
             val onComplete = suspend {
-                fileWriter.close()
-                socketWriteChannel.close()
-                socket.close()
-
                 if (totalWritten == payloadLength) {
                     eventChannel.send(FileTransferServerEvent.TransferComplete(transferId))
                 } else {
@@ -250,10 +241,6 @@ class FileTransferService(
                 eventChannel.send(FileTransferServerEvent.TransferProgress(transferId, totalWritten, payloadLength))
             }
 
-            fileWriter.close()
-            socketWriteChannel.close()
-            socket.close()
-
             Outcome.Ok(Unit)
         }
 
@@ -293,9 +280,11 @@ class FileTransferService(
             }
         }
 
+        Logger.i { "File Transfer Service - Closing Receive Resources" }
+        cancellationListenerJob.cancel()
+        outerFileWriter?.close()
         outerSocketWriteChannel?.close()
         socket.close()
-        cancellationListenerJob.cancel()
     }
 
     override suspend fun respondToTransferRequest(
@@ -315,6 +304,7 @@ class FileTransferService(
         val readBuffer = ByteArray(bufferSize)
         var outerSocket: ASocket? = null
         var outerSocketWriteChannel: ByteWriteChannel? = null
+        var outerFileReader: BufferedSource? = null
 
         val sendJob = asyncOutcome sendJob@ {
             send(FileTransferClientEvent.Connecting(transferId))
@@ -359,8 +349,6 @@ class FileTransferService(
                 send(FileTransferClientEvent.TransferResponseReceived(transferId, FileTransferResponseType.Accepted))
             } else if (response == 0x00) {
                 send(FileTransferClientEvent.TransferResponseReceived(transferId, FileTransferResponseType.Rejected))
-                socketWriteChannel.close()
-                socket.close()
                 return@sendJob Outcome.Ok(Unit)
             }
 
@@ -382,6 +370,7 @@ class FileTransferService(
             // Send File
             send(FileTransferClientEvent.TransferProgress(transferId, 0, file.length))
             val fileReader = file.source.buffer().apply { skip(existingFileLength) }
+            outerFileReader = fileReader
             var totalRead = existingFileLength
 
             while (isActive) {
@@ -395,7 +384,6 @@ class FileTransferService(
             socketWriteChannel.flush()
             if (totalRead == file.length) send(FileTransferClientEvent.TransferComplete(transferId))
 
-            fileReader.close()
             recipientCancellationListener.cancel()
             Outcome.Ok(Unit)
         }
@@ -426,9 +414,11 @@ class FileTransferService(
             }
         }
 
+        Logger.i { "File Transfer Service - Closing Send Resources" }
+        cancellationListenerJob.cancel()
+        outerFileReader?.close()
         outerSocketWriteChannel?.close()
         outerSocket?.close()
-        cancellationListenerJob.cancel()
     }.flowOn(Dispatchers.IO)
 
 
