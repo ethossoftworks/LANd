@@ -417,6 +417,7 @@ class FileTransferService(
             }
         }
 
+        outerSocketWriteChannel?.close()
         outerSocket?.close()
         cancellationListenerJob.cancel()
     }.flowOn(Dispatchers.IO)
