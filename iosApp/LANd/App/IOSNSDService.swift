@@ -276,10 +276,11 @@ private func resolveServiceHostPort(
     do {
         let resolver = try AsyncDNSResolver()
         let results = try await resolver.querySRV(name: "\(name).\(type).\(domain)")
+        let formattedDomain = domain.dropLast(1) // Remove last "." character
         
         for record in results {
             let formattedHost = record.host
-                .replacingOccurrences(of: ".local", with: "")
+                .replacingOccurrences(of: ".\(formattedDomain)", with: "")
                 .replacingOccurrences(of: "-", with: ".")
             
             let range = NSRange(formattedHost.startIndex..., in: formattedHost)
