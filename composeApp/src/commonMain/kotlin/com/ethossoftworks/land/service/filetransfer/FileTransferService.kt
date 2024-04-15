@@ -10,6 +10,7 @@ import com.outsidesource.oskitkmp.concurrency.awaitOutcome
 import com.outsidesource.oskitkmp.lib.Platform
 import com.outsidesource.oskitkmp.lib.current
 import com.outsidesource.oskitkmp.outcome.Outcome
+import com.outsidesource.oskitkmp.outcome.runOnError
 import io.ktor.network.selector.*
 import io.ktor.network.sockets.*
 import io.ktor.utils.io.*
@@ -108,6 +109,7 @@ class FileTransferService(
                         reason = FileTransferStopReason.UnknownProtocol,
                     )
                 )
+                socketWriteChannel.close()
                 socket.close()
                 return@asyncOutcome Outcome.Ok(Unit)
             }
@@ -127,6 +129,7 @@ class FileTransferService(
                         reason = FileTransferStopReason.AuthorizationChallengeFail,
                     )
                 )
+                socketWriteChannel.close()
                 socket.close()
                 return@asyncOutcome Outcome.Ok(Unit)
             }
@@ -148,6 +151,7 @@ class FileTransferService(
                 socketWriteChannel.writeByte(deviceName.length)
                 socketWriteChannel.writeStringUtf8(deviceName)
                 socketWriteChannel.flush()
+                socketWriteChannel.close()
                 socket.close()
                 return@asyncOutcome Outcome.Ok(Unit)
             }
@@ -176,6 +180,7 @@ class FileTransferService(
             socketWriteChannel.flush()
 
             if (response.responseType == FileTransferResponseType.Rejected) {
+                socketWriteChannel.close()
                 socket.close()
                 return@asyncOutcome Outcome.Ok(Unit)
             }
@@ -188,17 +193,20 @@ class FileTransferService(
                         FileTransferStopReason.UnableToOpenFile
                     )
                 )
+                socketWriteChannel.close()
                 socket.close()
                 return@asyncOutcome Outcome.Ok(Unit)
             }
 
             eventChannel.send(FileTransferServerEvent.TransferProgress(transferId, 0, payloadLength))
-            val writer = sink.buffer()
+            val fileWriter = sink.buffer()
             var totalWritten = response.existingFileLength
 
             val onComplete = suspend {
-                writer.close()
+                fileWriter.close()
+                socketWriteChannel.close()
                 socket.close()
+
                 if (totalWritten == payloadLength) {
                     eventChannel.send(FileTransferServerEvent.TransferComplete(transferId))
                 } else {
@@ -212,8 +220,6 @@ class FileTransferService(
             }
 
             while (isActive) {
-                // iOS does not return -1 when the read channel closes and instead hangs, so we have to explicitly check
-                // if we've written the whole payload
                 if (totalWritten == payloadLength) {
                     onComplete()
                     break
@@ -239,10 +245,14 @@ class FileTransferService(
                     break
                 }
 
-                writer.write(readBuffer, 0, read)
+                fileWriter.write(readBuffer, 0, read)
                 totalWritten += read
                 eventChannel.send(FileTransferServerEvent.TransferProgress(transferId, totalWritten, payloadLength))
             }
+
+            fileWriter.close()
+            socketWriteChannel.close()
+            socket.close()
 
             Outcome.Ok(Unit)
         }
@@ -252,9 +262,7 @@ class FileTransferService(
             receiveJob.cancel(LANdTransferCancelledException(signal.command))
         }
 
-        val outcome = receiveJob.awaitOutcome()
-        if (outcome is Outcome.Error) {
-            val error = outcome.error
+        receiveJob.awaitOutcome().runOnError { error ->
             when {
                 error is LANdTransferCancelledException -> {
                     outerSocketWriteChannel?.writeFully(cancellationSignalBytes + error.command.toByte(), 0, cancellationSignalBytes.size + 1)
@@ -285,6 +293,7 @@ class FileTransferService(
             }
         }
 
+        outerSocketWriteChannel?.close()
         socket.close()
         cancellationListenerJob.cancel()
     }
@@ -350,6 +359,7 @@ class FileTransferService(
                 send(FileTransferClientEvent.TransferResponseReceived(transferId, FileTransferResponseType.Accepted))
             } else if (response == 0x00) {
                 send(FileTransferClientEvent.TransferResponseReceived(transferId, FileTransferResponseType.Rejected))
+                socketWriteChannel.close()
                 socket.close()
                 return@sendJob Outcome.Ok(Unit)
             }
@@ -371,11 +381,11 @@ class FileTransferService(
 
             // Send File
             send(FileTransferClientEvent.TransferProgress(transferId, 0, file.length))
-            val reader = file.source.buffer().apply { skip(existingFileLength) }
+            val fileReader = file.source.buffer().apply { skip(existingFileLength) }
             var totalRead = existingFileLength
 
             while (isActive) {
-                val read = reader.read(readBuffer, 0, bufferSize)
+                val read = fileReader.read(readBuffer, 0, bufferSize)
                 if (read == -1) break
                 socketWriteChannel.writeFully(readBuffer, 0, read)
                 totalRead += read
@@ -385,6 +395,7 @@ class FileTransferService(
             socketWriteChannel.flush()
             if (totalRead == file.length) send(FileTransferClientEvent.TransferComplete(transferId))
 
+            fileReader.close()
             recipientCancellationListener.cancel()
             Outcome.Ok(Unit)
         }
@@ -394,9 +405,7 @@ class FileTransferService(
             sendJob.cancel(LANdTransferCancelledException(signal.command))
         }
 
-        val outcome = sendJob.awaitOutcome()
-        if (outcome is Outcome.Error) {
-            val error = outcome.error
+        sendJob.awaitOutcome().runOnError { error ->
             when {
                 error is LANdTransferCancelledException -> {
                     outerSocketWriteChannel?.writeFully(cancellationSignalBytes + error.command.toByte(), 0, cancellationSignalBytes.size + 1)
@@ -452,7 +461,10 @@ class FileTransferService(
                 val platform = socketReadChannel.readByte().toDevicePlatform()
                 val nameLength = socketReadChannel.readByte().toInt()
                 val name = ByteArray(nameLength).apply { socketReadChannel.readFully(this) }.decodeToString()
-                
+
+                socketWriteChannel.close()
+                socket.close()
+
                 Outcome.Ok(Device(name = name, platform = platform, port = FILE_TRANSFER_PORT, ipAddress = destinationIp))
             }
         } catch (e: Exception) {
