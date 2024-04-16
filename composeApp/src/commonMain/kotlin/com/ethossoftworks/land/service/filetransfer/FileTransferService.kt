@@ -197,7 +197,7 @@ class FileTransferService(
             outerFileWriter = fileWriter
             var totalWritten = response.existingFileLength
 
-            val onComplete = suspend {
+            val onDone = suspend {
                 if (totalWritten == payloadLength) {
                     eventChannel.send(FileTransferServerEvent.TransferComplete(transferId))
                 } else {
@@ -212,7 +212,7 @@ class FileTransferService(
 
             while (isActive) {
                 if (totalWritten == payloadLength) {
-                    onComplete()
+                    onDone()
                     break
                 }
 
@@ -220,7 +220,7 @@ class FileTransferService(
                 if (read == 0) continue
 
                 if (read == -1) {
-                    onComplete()
+                    onDone()
                     break
                 }
 
