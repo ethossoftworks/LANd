@@ -9,6 +9,7 @@ import com.ethossoftworks.land.lib.bytes.toUShort
 import com.outsidesource.oskitkmp.concurrency.asyncOutcome
 import com.outsidesource.oskitkmp.concurrency.awaitOutcome
 import com.outsidesource.oskitkmp.lib.Platform
+import com.outsidesource.oskitkmp.lib.channelFlowWithDefer
 import com.outsidesource.oskitkmp.lib.coroutineScopeWithDefer
 import com.outsidesource.oskitkmp.lib.current
 import com.outsidesource.oskitkmp.outcome.Outcome
@@ -24,6 +25,7 @@ import kotlinx.atomicfu.update
 import kotlinx.atomicfu.updateAndGet
 import kotlinx.coroutines.*
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.channels.ProducerScope
 import kotlinx.coroutines.channels.SendChannel
 import kotlinx.coroutines.flow.*
 import okio.BufferedSink
@@ -43,12 +45,19 @@ private data class CancellationSignal(val transferId: Short, val command: Cancel
 
 private class LANdTransferCancelledException(val command: CancellationCommand) : CancellationException("LANd Transfer Cancelled")
 
-class TransferContext(
+private class TransferReceiveContext(
     val transferId: Short,
     val readBuffer: ByteArray,
     val socketReadChannel: ByteReadChannel,
     val socketWriteChannel: ByteWriteChannel,
     val eventChannel: SendChannel<FileTransferServerEvent>,
+)
+
+private class TransferSendContext(
+    val transferId: Short,
+    val readBuffer: ByteArray,
+    val socketReadChannel: ByteReadChannel,
+    val socketWriteChannel: ByteWriteChannel,
 )
 
 class FileTransferService(
@@ -107,7 +116,7 @@ class FileTransferService(
         var outerFileWriter: BufferedSink? = null
 
         val receiveJob = asyncOutcome {
-            val transferContext = TransferContext(
+            val transferContext = TransferReceiveContext(
                 transferId = transferId,
                 readBuffer = ByteArray(bufferSize),
                 socketReadChannel = socket.openReadChannel(),
@@ -120,30 +129,30 @@ class FileTransferService(
             defer {
                 Logger.i { "File Transfer Service - Closing Receive Resources" }
                 outerFileWriter?.close()
-                outerSocketWriteChannel?.close()
+                transferContext.socketWriteChannel.close()
                 socket.close()
             }
 
-            receiveReadProtocolVersion(transferContext).unwrapOrReturn {
+            receiverReadProtocolVersion(transferContext).unwrapOrReturn {
                 return@asyncOutcome Outcome.Ok(Unit)
             }
 
-            receiveHandleAuthChallenge(transferContext).unwrapOrReturn {
+            receiverHandleAuthChallenge(transferContext).unwrapOrReturn {
                 return@asyncOutcome Outcome.Ok(Unit)
             }
 
-            val header = receiveReadHeader(transferContext)
+            val header = receiverReadHeader(transferContext)
 
             if (header.command == FileTransferCommand.Connect) {
-                receiveHandleConnectCommand(transferContext)
+                receiverHandleConnectCommand(transferContext)
                 return@asyncOutcome Outcome.Ok(Unit)
             }
 
-            val response = receiveWaitForUserResponse(transferContext, header).unwrapOrReturn {
+            val response = receiverWaitForUserResponse(transferContext, header).unwrapOrReturn {
                 return@asyncOutcome Outcome.Ok(Unit)
             }
 
-            receiveTransferFile(transferContext, header, response) { outerFileWriter = it }.unwrapOrReturn {
+            receiverReceiveFile(transferContext, header, response) { outerFileWriter = it }.unwrapOrReturn {
                 return@asyncOutcome Outcome.Ok(Unit)
             }
 
@@ -186,7 +195,7 @@ class FileTransferService(
         cancellationListenerJob.cancel()
     }
 
-    private suspend fun receiveReadProtocolVersion(ctx: TransferContext): Outcome<Int, Unit> {
+    private suspend fun receiverReadProtocolVersion(ctx: TransferReceiveContext): Outcome<Int, Unit> {
         val protocolVersion = ctx.socketReadChannel.readByte().toInt()
         if (protocolVersion > PROTOCOL_VERSION) {
             ctx.eventChannel.send(
@@ -201,7 +210,7 @@ class FileTransferService(
         return Outcome.Ok(protocolVersion)
     }
 
-    private suspend fun receiveHandleAuthChallenge(ctx: TransferContext): Outcome<Unit, Unit> {
+    private suspend fun receiverHandleAuthChallenge(ctx: TransferReceiveContext): Outcome<Unit, Unit> {
         // Send authorization challenge
         val random = SecureRandom.nextBytes(AUTH_CHALLENGE_LENGTH)
         ctx.socketWriteChannel.writeFully(random, 0, random.size)
@@ -223,7 +232,7 @@ class FileTransferService(
         return Outcome.Ok(Unit)
     }
 
-    private suspend fun receiveReadHeader(ctx: TransferContext): FileTransferRequestHeader {
+    private suspend fun receiverReadHeader(ctx: TransferReceiveContext): FileTransferRequestHeader {
         // Read Fixed Header
         val command = ctx.socketReadChannel.readByte()
         val ipAddress = ByteArray(17).apply { ctx.socketReadChannel.readFully(this) }.toIPString()
@@ -259,7 +268,7 @@ class FileTransferService(
         return header
     }
 
-    private suspend fun receiveHandleConnectCommand(ctx: TransferContext) {
+    private suspend fun receiverHandleConnectCommand(ctx: TransferReceiveContext) {
         val deviceName = getServerDeviceName()
         ctx.socketWriteChannel.writeByte(Platform.current.toDevicePlatform().toByte())
         ctx.socketWriteChannel.writeByte(deviceName.length)
@@ -267,8 +276,8 @@ class FileTransferService(
         ctx.socketWriteChannel.flush()
     }
 
-    private suspend fun receiveWaitForUserResponse(
-        ctx: TransferContext,
+    private suspend fun receiverWaitForUserResponse(
+        ctx: TransferReceiveContext,
         header: FileTransferRequestHeader,
     ): Outcome<FileTransferResponse, Unit> {
         ctx.eventChannel.send(
@@ -303,8 +312,8 @@ class FileTransferService(
         transferResponseFlow.emit(FileTransferResponse(transferId, response, existingFileLength, sink))
     }
 
-    private suspend fun CoroutineScope.receiveTransferFile(
-        ctx: TransferContext,
+    private suspend fun CoroutineScope.receiverReceiveFile(
+        ctx: TransferReceiveContext,
         header: FileTransferRequestHeader,
         response: FileTransferResponse,
         setFileWriter: (BufferedSink) -> Unit,
@@ -383,90 +392,44 @@ class FileTransferService(
     override suspend fun sendFile(
         file: FileTransferRequest,
         destinationIp: String
-    ): Flow<FileTransferClientEvent> = channelFlow {
+    ): Flow<FileTransferClientEvent> = channelFlowWithDefer {defer ->
         val transferId = generateConnectionId()
-        val readBuffer = ByteArray(bufferSize)
-        var outerSocket: ASocket? = null
         var outerSocketWriteChannel: ByteWriteChannel? = null
         var outerFileReader: BufferedSource? = null
 
         val sendJob = asyncOutcome sendJob@ {
             send(FileTransferClientEvent.Connecting(transferId))
             val socket = aSocket(selectorManager).tcp().connect(destinationIp, FILE_TRANSFER_PORT)
-            val socketReadChannel = socket.openReadChannel()
-            val socketWriteChannel = socket.openWriteChannel()
-            outerSocket = socket
-            outerSocketWriteChannel = socketWriteChannel
 
-            // Send protocol version
-            socketWriteChannel.writeByte(PROTOCOL_VERSION) // Header Version
-            socketWriteChannel.flush()
+            val transferContext = TransferSendContext(
+                transferId = transferId,
+                readBuffer = ByteArray(bufferSize),
+                socketReadChannel = socket.openReadChannel(),
+                socketWriteChannel = socket.openWriteChannel(),
+            ).apply {
+                outerSocketWriteChannel = socketWriteChannel
+            }
 
-            // Handle auth challenge
-            socketReadChannel.readFully(readBuffer, 0, AUTH_CHALLENGE_LENGTH)
-            val authChallengeResponse = calculateAuthResponse(readBuffer.copyOfRange(0, AUTH_CHALLENGE_LENGTH))
-            socketWriteChannel.writeFully(authChallengeResponse, 0, AUTH_CHALLENGE_LENGTH)
-            socketWriteChannel.flush()
+            defer {
+                Logger.i { "File Transfer Service - Closing Send Resources" }
+                outerFileReader?.close()
+                transferContext.socketWriteChannel.close()
+                socket.close()
+            }
 
-            // Send Fixed Header
-            socketWriteChannel.writeByte(FileTransferCommand.FileTransfer) // Command
-            socketWriteChannel.writeFully(getLocalIpAddress().toIPBytes())
-            socketWriteChannel.writeShort(FILE_TRANSFER_PORT)
-            socketWriteChannel.writeByte(Platform.current.toDevicePlatform().toByte())
-            socketWriteChannel.writeByte(file.senderName.length) // Sender Name Length
-            socketWriteChannel.writeShort(file.fileName.length.toShort()) // File Name Length
-            socketWriteChannel.writeLong(file.length) // Payload Length
-            socketWriteChannel.writeFully(ByteArray(24) { 0x00 }) // Future use
-            socketWriteChannel.flush()
+            senderSendProtocol(transferContext)
 
-            // Send Dynamic Header
-            socketWriteChannel.writeStringUtf8(file.senderName)
-            socketWriteChannel.writeStringUtf8(file.fileName)
-            socketWriteChannel.flush()
+            senderHandleAuth(transferContext)
 
-            // Await Response
-            send(FileTransferClientEvent.AwaitingAcceptance(transferId))
-            val response = socketReadChannel.readByte().toInt()
-            val existingFileLength = socketReadChannel.readLong()
+            senderSendHeader(transferContext, file)
 
-            if (response == 0x01) {
-                send(FileTransferClientEvent.TransferResponseReceived(transferId, FileTransferResponseType.Accepted))
-            } else if (response == 0x00) {
-                send(FileTransferClientEvent.TransferResponseReceived(transferId, FileTransferResponseType.Rejected))
+            val existingFileLength = senderAwaitResponse(transferContext).unwrapOrReturn {
                 return@sendJob Outcome.Ok(Unit)
             }
 
-            // Start recipient cancellation listener
-            val recipientCancellationListener = asyncOutcome {
-                val cancellationSignalBuffer = ByteArray(cancellationSignalBytes.size + 1)
-                while (isActive) {
-                    socketReadChannel.readAvailable(cancellationSignalBuffer)
-                    if (!cancellationSignalBuffer.offsetContentEquals(cancellationSignalBytes, 0)) continue
+            val recipientCancellationListener = senderAwaitCancellation(transferContext) { this@sendJob.cancel() }
 
-                    val command = CancellationCommand.fromByte(cancellationSignalBuffer.last())
-                    send(FileTransferClientEvent.TransferStopped(transferId, FileTransferStopReason.UserCancelled(command)))
-                    this@sendJob.cancel()
-                }
-
-                Outcome.Ok(Unit)
-            }
-
-            // Send File
-            send(FileTransferClientEvent.TransferProgress(transferId, 0, file.length))
-            val fileReader = file.source.buffer().apply { skip(existingFileLength) }
-            outerFileReader = fileReader
-            var totalRead = existingFileLength
-
-            while (isActive) {
-                val read = fileReader.read(readBuffer, 0, bufferSize)
-                if (read == -1) break
-                socketWriteChannel.writeFully(readBuffer, 0, read)
-                totalRead += read
-                send(FileTransferClientEvent.TransferProgress(transferId, totalRead, file.length))
-            }
-
-            socketWriteChannel.flush()
-            if (totalRead == file.length) send(FileTransferClientEvent.TransferComplete(transferId))
+            senderSendFile(transferContext, file, existingFileLength) { outerFileReader = it }
 
             recipientCancellationListener.cancel()
             Outcome.Ok(Unit)
@@ -498,14 +461,99 @@ class FileTransferService(
             }
         }
 
-        Logger.i { "File Transfer Service - Closing Send Resources" }
         cancellationListenerJob.cancel()
-        outerFileReader?.close()
-        outerSocketWriteChannel?.close()
-        outerSocket?.close()
     }.flowOn(Dispatchers.IO)
 
+    private suspend fun senderSendProtocol(ctx: TransferSendContext) {
+        ctx.socketWriteChannel.writeByte(PROTOCOL_VERSION)
+        ctx.socketWriteChannel.flush()
+    }
 
+    private suspend fun senderHandleAuth(ctx: TransferSendContext) {
+        ctx.socketReadChannel.readFully(ctx.readBuffer, 0, AUTH_CHALLENGE_LENGTH)
+        val authChallengeResponse = calculateAuthResponse(ctx.readBuffer.copyOfRange(0, AUTH_CHALLENGE_LENGTH))
+        ctx.socketWriteChannel.writeFully(authChallengeResponse, 0, AUTH_CHALLENGE_LENGTH)
+        ctx.socketWriteChannel.flush()
+    }
+
+    private suspend fun senderSendHeader(ctx: TransferSendContext, file: FileTransferRequest) {
+        // Send Fixed Header
+        ctx.socketWriteChannel.writeByte(FileTransferCommand.FileTransfer) // Command
+        ctx.socketWriteChannel.writeFully(getLocalIpAddress().toIPBytes())
+        ctx.socketWriteChannel.writeShort(FILE_TRANSFER_PORT)
+        ctx.socketWriteChannel.writeByte(Platform.current.toDevicePlatform().toByte())
+        ctx.socketWriteChannel.writeByte(file.senderName.length) // Sender Name Length
+        ctx.socketWriteChannel.writeShort(file.fileName.length.toShort()) // File Name Length
+        ctx.socketWriteChannel.writeLong(file.length) // Payload Length
+        ctx.socketWriteChannel.writeFully(ByteArray(24) { 0x00 }) // Future use
+        ctx.socketWriteChannel.flush()
+
+        // Send Dynamic Header
+        ctx.socketWriteChannel.writeStringUtf8(file.senderName)
+        ctx.socketWriteChannel.writeStringUtf8(file.fileName)
+        ctx.socketWriteChannel.flush()
+    }
+
+    private suspend fun ProducerScope<FileTransferClientEvent>.senderAwaitResponse(
+        ctx: TransferSendContext
+    ): Outcome<Long, Unit> {
+        send(FileTransferClientEvent.AwaitingAcceptance(ctx.transferId))
+        val response = ctx.socketReadChannel.readByte().toInt()
+        val existingFileLength = ctx.socketReadChannel.readLong()
+
+        if (response == 0x01) {
+            send(FileTransferClientEvent.TransferResponseReceived(ctx.transferId, FileTransferResponseType.Accepted))
+        } else if (response == 0x00) {
+            send(FileTransferClientEvent.TransferResponseReceived(ctx.transferId, FileTransferResponseType.Rejected))
+            return Outcome.Error(Unit)
+        }
+
+        return Outcome.Ok(existingFileLength)
+    }
+
+    private fun ProducerScope<FileTransferClientEvent>.senderAwaitCancellation(
+        ctx: TransferSendContext,
+        onCancel: () -> Unit,
+    ) = asyncOutcome {
+        val cancellationSignalBuffer = ByteArray(cancellationSignalBytes.size + 1)
+        while (isActive) {
+            ctx.socketReadChannel.readAvailable(cancellationSignalBuffer)
+            if (!cancellationSignalBuffer.offsetContentEquals(cancellationSignalBytes, 0)) continue
+
+            val command = CancellationCommand.fromByte(cancellationSignalBuffer.last())
+            send(FileTransferClientEvent.TransferStopped(ctx.transferId, FileTransferStopReason.UserCancelled(command)))
+            onCancel()
+        }
+
+        Outcome.Ok(Unit)
+    }
+
+    private suspend fun ProducerScope<FileTransferClientEvent>.senderSendFile(
+        ctx: TransferSendContext,
+        file: FileTransferRequest,
+        existingFileLength: Long,
+        setFileReader: (BufferedSource) -> Unit
+    ) {
+        send(FileTransferClientEvent.TransferProgress(ctx.transferId, 0, file.length))
+        val fileReader = file.source.buffer().apply { skip(existingFileLength) }
+        setFileReader(fileReader)
+        var totalRead = existingFileLength
+
+        while (isActive) {
+            val read = fileReader.read(ctx.readBuffer, 0, bufferSize)
+            if (read == -1) break
+            ctx.socketWriteChannel.writeFully(ctx.readBuffer, 0, read)
+            totalRead += read
+            send(FileTransferClientEvent.TransferProgress(ctx.transferId, totalRead, file.length))
+        }
+
+        ctx.socketWriteChannel.flush()
+        if (totalRead == file.length) send(FileTransferClientEvent.TransferComplete(ctx.transferId))
+    }
+
+    /**
+     * Test Connection
+     */
     override suspend fun testConnection(destinationIp: String): Outcome<Device, Exception> {
         return try {
             withTimeout(1_000) {
@@ -545,14 +593,14 @@ class FileTransferService(
             Outcome.Error(e)
         }
     }
+}
 
-    private fun calculateAuthResponse(random: ByteArray): ByteArray {
-        val hashedBytes = random.sha256().bytes
-        for (i in hashedBytes.indices) {
-            hashedBytes[i] = hashedBytes[i] xor 0x55
-        }
-        return hashedBytes
+private fun calculateAuthResponse(random: ByteArray): ByteArray {
+    val hashedBytes = random.sha256().bytes
+    for (i in hashedBytes.indices) {
+        hashedBytes[i] = hashedBytes[i] xor 0x55
     }
+    return hashedBytes
 }
 
 expect fun FileTransferService.isClosedConnectionException(exception: Any): Boolean
