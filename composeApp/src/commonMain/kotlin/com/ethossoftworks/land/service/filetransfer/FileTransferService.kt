@@ -128,7 +128,7 @@ class FileTransferService(
 
             defer {
                 Logger.i { "File Transfer Service - Closing Receive Resources" }
-                outerFileWriter?.close()
+                outerFileWriter?.runCatching { close() }
                 transferContext.socketWriteChannel.close()
                 socket.close()
             }
@@ -412,7 +412,7 @@ class FileTransferService(
 
             defer {
                 Logger.i { "File Transfer Service - Closing Send Resources" }
-                outerFileReader?.close()
+                outerFileReader?.runCatching { close() }
                 transferContext.socketWriteChannel.close()
                 socket.close()
             }
