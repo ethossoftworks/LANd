@@ -29,10 +29,10 @@ import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
-import com.ethossoftworks.land.interactor.filetransfer.FileTransfer
-import com.ethossoftworks.land.interactor.filetransfer.FileTransferDirection
 import com.ethossoftworks.land.entity.Device
 import com.ethossoftworks.land.entity.DevicePlatform
+import com.ethossoftworks.land.interactor.filetransfer.FileTransfer
+import com.ethossoftworks.land.interactor.filetransfer.FileTransferDirection
 import com.ethossoftworks.land.ui.common.theme.AppTheme
 import com.outsidesource.oskitcompose.geometry.PopupShape
 import com.outsidesource.oskitcompose.interactor.collectAsState
@@ -47,10 +47,6 @@ import com.outsidesource.oskitcompose.popup.PopoverAnchors
 import com.outsidesource.oskitkmp.lib.Platform
 import com.outsidesource.oskitkmp.lib.current
 import land.composeapp.generated.resources.*
-import land.composeapp.generated.resources.Res
-import land.composeapp.generated.resources.device_desktop_macos
-import land.composeapp.generated.resources.device_mobile_android
-import land.composeapp.generated.resources.device_mobile_ios
 import org.jetbrains.compose.resources.ExperimentalResourceApi
 import org.jetbrains.compose.resources.painterResource
 import org.koin.core.parameter.parametersOf
@@ -210,6 +206,7 @@ private fun StopTransferPopover(
     Popover(
         isVisible = isDiscoveredDeviceHovering.value || isPopoverHovering,
         anchors = PopoverAnchors.ExternalTopAlignCenter,
+        focusable = false, // Setting this to false prevents the popover from breaking hover functionality
         onDismissRequest = {
             isDiscoveredDeviceHovering.value = false
             isPopoverHovering = false

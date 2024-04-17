@@ -115,3 +115,18 @@ sealed class FileTransferClientEvent {
 
     data class TransferComplete(val transferId: Short): FileTransferClientEvent()
 }
+
+data class FileTransferRequestHeader(
+    val command: Byte,
+    val ipAddress: String,
+    val port: UShort,
+    val platform: DevicePlatform,
+    val senderName: String,
+    val fileName: String,
+    val payloadLength: Long,
+)
+
+object FileTransferCommand {
+    const val Connect = 0x00.toByte()
+    const val FileTransfer = 0x01.toByte()
+}
