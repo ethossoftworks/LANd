@@ -3,6 +3,7 @@ package com.ethossoftworks.land.interactor.discovery
 import com.ethossoftworks.land.entity.Device
 import com.ethossoftworks.land.entity.DevicePlatform
 import com.ethossoftworks.land.entity.toDevicePlatform
+import com.ethossoftworks.land.lib.bytes.toUShort
 import com.ethossoftworks.land.service.discovery.INSDService
 import com.ethossoftworks.land.service.discovery.NSDService
 import com.ethossoftworks.land.service.discovery.NSDServiceEvent
@@ -22,8 +23,10 @@ data class DiscoveryState(
     val isBroadcasting: Boolean = false,
 )
 
+const val DNS_SD_PORT = 50076
 private const val DISCOVERY_TYPE = "_land._tcp.local."
 private const val DISCOVERY_PROP_PLATFORM_KEY = "platform"
+private const val DISCOVERY_PROP_PORT_KEY = "port"
 
 class DiscoveryInteractor(
     private val discoveryService: INSDService,
@@ -104,8 +107,14 @@ class DiscoveryInteractor(
         val outcome = discoveryService.registerService(
             type = DISCOVERY_TYPE,
             name = name,
-            port = FILE_TRANSFER_PORT,
-            properties = mapOf(DISCOVERY_PROP_PLATFORM_KEY to Platform.current.toDevicePlatform().toDiscoveryString())
+            port = DNS_SD_PORT,
+            properties = mapOf(
+                DISCOVERY_PROP_PLATFORM_KEY to Platform.current.toDevicePlatform().toDiscoveryString(),
+                DISCOVERY_PROP_PORT_KEY to byteArrayOf(
+                    ((FILE_TRANSFER_PORT shr 8) and 0xFF).toByte(),
+                    (FILE_TRANSFER_PORT and 0xFF).toByte()
+                ),
+            )
         )
 
         if (outcome is Outcome.Ok) {
@@ -137,7 +146,8 @@ class DiscoveryInteractor(
 private fun NSDService.toDevice() = Device(
     name = name,
     platform = props[DISCOVERY_PROP_PLATFORM_KEY]?.decodeToString()?.toPlatform() ?: DevicePlatform.Unknown,
-    ipAddress = iPv4Addresses.firstOrNull() ?: ""
+    port = props[DISCOVERY_PROP_PORT_KEY]?.toUShort()?.toInt() ?: 0,
+    ipAddress = iPv4Addresses.firstOrNull() ?: "",
 )
 
 private fun String.toPlatform() = when(this) {

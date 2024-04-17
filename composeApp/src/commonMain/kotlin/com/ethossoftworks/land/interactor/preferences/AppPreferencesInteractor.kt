@@ -13,6 +13,7 @@ import com.outsidesource.oskitkmp.outcome.unwrapOrDefault
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
+import kotlin.random.Random
 
 data class AppPreferencesState(
     val displayName: String = "",
@@ -42,7 +43,7 @@ class AppPreferencesInteractor(
                         Platform.IOS -> "iOS"
                         Platform.Unknown -> "Unknown"
                     }
-                    val defaultName = "$platform ${(Math.random() * 10_000).roundToInt()}"
+                    val defaultName = "$platform ${(Random.nextFloat() * 10_000).roundToInt()}"
                     setDisplayName(defaultName)
                     update { state -> state.copy(displayName = defaultName) }
                 }

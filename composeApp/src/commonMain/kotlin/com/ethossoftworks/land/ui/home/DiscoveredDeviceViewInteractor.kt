@@ -20,6 +20,7 @@ data class DiscoveredDeviceState(
     val isWaiting: Boolean = false,
     val isSending: Boolean = false,
     val isTransferring: Boolean = false,
+    val isConnecting: Boolean = false,
     val totalProgress: Float = 0f,
     val receivingProgress: Float = 0f,
     val sendingProgress: Float = 0f,
@@ -43,6 +44,7 @@ class DiscoveredDeviceViewInteractor(
         var receivingBytesTotal = 0L
         var receivingBytesTransferred = 0L
         var isTransferring = false
+        var isConnecting = false
 
         val transfers = transferIds.mapNotNull { id ->
             val transfer = fileTransferInteractor.state.activeTransfers[id] ?: return@mapNotNull null
@@ -59,6 +61,7 @@ class DiscoveredDeviceViewInteractor(
                     (transfer.status == FileTransferStatus.AwaitingAcceptance &&
                             transfer.direction == FileTransferDirection.Sending)
             isTransferring = isTransferring || transfer.status == FileTransferStatus.Progress
+            isConnecting = transfer.status == FileTransferStatus.Connecting
 
             transfer
         }
@@ -67,6 +70,7 @@ class DiscoveredDeviceViewInteractor(
         val totalTransferred = receivingBytesTransferred + sendingBytesTransferred
 
         return state.copy(
+            isConnecting = isConnecting,
             isWaiting = isWaiting,
             isTransferring = isTransferring,
             totalProgress = if (totalBytes > 0) (totalTransferred.toFloat() / totalBytes.toFloat()) else 0f,

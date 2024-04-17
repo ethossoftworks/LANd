@@ -6,6 +6,7 @@ plugins {
     alias(libs.plugins.kotlinMultiplatform)
     alias(libs.plugins.androidApplication)
     alias(libs.plugins.jetbrainsCompose)
+    alias(libs.plugins.skie)
     kotlin("plugin.serialization") version(libs.versions.kotlin)
 }
 
@@ -17,6 +18,19 @@ version = buildInfoProps["version"] as? String ?: "0.0.0"
 val buildNumber = buildInfoProps["build"]?.toString()?.toInt() ?: 1
 
 kotlin {
+    listOf(
+        iosX64(),
+        iosArm64(),
+        iosSimulatorArm64()
+    ).forEach { iosTarget ->
+        iosTarget.binaries.framework {
+            baseName = "ComposeApp"
+            isStatic = true
+            export("com.outsidesource:oskit-kmp:4.6.0")
+            export("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.8.0")
+        }
+    }
+
     androidTarget {
         jvmToolchain(17)
     }

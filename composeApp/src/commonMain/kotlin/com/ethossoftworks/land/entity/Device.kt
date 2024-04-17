@@ -8,15 +8,16 @@ data class Device(
     val name: String,
     val platform: DevicePlatform,
     val ipAddress: String,
+    val port: Int,
 )
 
 sealed class DevicePlatform {
-    object iOS: DevicePlatform()
-    object Android: DevicePlatform()
-    object MacOS: DevicePlatform()
-    object Windows: DevicePlatform()
-    object Linux: DevicePlatform()
-    object Unknown: DevicePlatform()
+    data object iOS: DevicePlatform()
+    data object Android: DevicePlatform()
+    data object MacOS: DevicePlatform()
+    data object Windows: DevicePlatform()
+    data object Linux: DevicePlatform()
+    data object Unknown: DevicePlatform()
 }
 
 fun Platform.toDevicePlatform() = when(this) {

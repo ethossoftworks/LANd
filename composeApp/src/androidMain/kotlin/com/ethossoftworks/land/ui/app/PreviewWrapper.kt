@@ -14,7 +14,7 @@ actual fun PreviewWrapper(
     content: @Composable BoxScope.() -> Unit,
 ) {
     initDI(
-        platformContext = DIPlatformContext.Android(LocalContext.current),
+        platformContext = DIPlatformContext(LocalContext.current),
         extraModules = arrayOf(*extraModules),
     )
     AppTheme(content = content)

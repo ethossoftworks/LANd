@@ -57,7 +57,7 @@ fun HomeScreen(
 
         Row(
             modifier = Modifier
-                .then(if (Platform.current == Platform.Android) {
+                .then(if (Platform.current.isMobile) {
                     Modifier.windowInsetsPadding(KMPWindowInsets.topInsets)
                 } else {
                     Modifier
@@ -122,7 +122,7 @@ fun HomeScreen(
                         .weight(1f)
                         .zIndex(1f),
                     targetState = state.discoveredDevices,
-                    transitionSpec = { EnterTransition.None with ExitTransition.None },
+                    transitionSpec = { EnterTransition.None togetherWith ExitTransition.None },
                 ) { devices ->
                     WrappableRow(
                         modifier = Modifier.fillMaxWidth(),
