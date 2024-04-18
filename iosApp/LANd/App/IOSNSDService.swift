@@ -295,7 +295,6 @@ private func resolveServiceHostPort(
     } catch {
         throw error
     }
-
 }
 
 enum IOSNSDErrorType {
