@@ -3,6 +3,7 @@ import Network
 import ComposeApp
 import Combine
 import AsyncDNSResolver
+import Darwin
 
 
 class IOSNSDService : INSDService {
@@ -152,7 +153,7 @@ private class ServiceFlow : SwiftFlow<NSDServiceEvent> {
                 let serviceName = serviceNameFromResult(result: result)
                 
                 Task {
-                    guard let (host, port) = try await resolveServiceHostPort(service: result) else {
+                    guard let (host, port) = try await resolveServiceIPAndPort(service: result) else {
                         return
                     }
                         
@@ -258,7 +259,7 @@ private func txtRecordFromProps(props: Dictionary<String, Any>) -> Data {
 
 var resolvingEndpoints: Array<NWEndpoint> = []
 
-private func resolveServiceHostPort(
+private func resolveServiceIPAndPort(
     service: NWBrowser.Result
 ) async throws -> (host: String, port: UInt16)? {
     let ipAddressRegex = try NSRegularExpression(pattern: #"^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$"#)
@@ -276,19 +277,17 @@ private func resolveServiceHostPort(
     do {
         let resolver = try AsyncDNSResolver()
         let results = try await resolver.querySRV(name: "\(name).\(type).\(domain)")
-        let formattedDomain = domain.dropLast(1) // Remove last "." character
         
         for record in results {
-            let formattedHost = record.host
-                .replacingOccurrences(of: ".\(formattedDomain)", with: "")
-                .replacingOccurrences(of: "-", with: ".")
-            
-            let range = NSRange(formattedHost.startIndex..., in: formattedHost)
-            if ipAddressRegex.firstMatch(in: formattedHost, options: [], range: range) == nil {
-                continue
+            if !ipAddressRegex.matches(in: record.host, range: NSRange(record.host.startIndex..., in: record.host)).isEmpty {
+                return (record.host, record.port)
             }
             
-            return (formattedHost, record.port)
+            guard let ip = try await resolveHostnameToIPv4(hostname: record.host) else {
+                continue
+            }
+
+            return (ip, record.port)
         }
         
         return nil
@@ -296,6 +295,50 @@ private func resolveServiceHostPort(
         throw error
     }
 }
+
+func resolveHostnameToIPv4(hostname: String) async throws -> String? {
+    return await withCheckedContinuation { continuation in
+        var hints = addrinfo()
+        hints.ai_family = AF_INET // IPv4
+        hints.ai_socktype = SOCK_STREAM
+        
+        var address: UnsafeMutablePointer<addrinfo>?
+        let status = getaddrinfo(hostname, nil, &hints, &address)
+        guard status == 0, let addr = address else {
+            continuation.resume(returning: .none)
+            return
+        }
+        
+        defer {
+            freeaddrinfo(addr)
+        }
+        
+        guard let resolvedAddr = addr.pointee.ai_addr else {
+            continuation.resume(returning: .none)
+            return
+        }
+
+        var hostnameBuffer = [CChar](repeating: 0, count: Int(NI_MAXHOST))
+        let sockaddrPtr = UnsafePointer<sockaddr>(resolvedAddr)
+        let nameInfoResult = getnameinfo(
+            sockaddrPtr,
+            socklen_t(addr.pointee.ai_addrlen),
+            &hostnameBuffer,
+            socklen_t(hostnameBuffer.count),
+            nil,
+            0,
+            NI_NUMERICHOST
+        )
+        
+        if (nameInfoResult != 0) {
+            continuation.resume(returning: .none)
+            return
+        }
+        
+        continuation.resume(returning: String(cString: hostnameBuffer))
+    }
+}
+
 
 enum IOSNSDErrorType {
     case CouldNotCreateService
