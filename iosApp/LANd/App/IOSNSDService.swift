@@ -296,7 +296,7 @@ private func resolveServiceIPAndPort(
     }
 }
 
-func resolveHostnameToIPv4(hostname: String) async throws -> String? {
+private func resolveHostnameToIPv4(hostname: String) async throws -> String? {
     return await withCheckedContinuation { continuation in
         var hints = addrinfo()
         hints.ai_family = AF_INET // IPv4
