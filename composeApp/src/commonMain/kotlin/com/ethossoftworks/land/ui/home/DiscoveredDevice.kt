@@ -206,7 +206,7 @@ private fun StopTransferPopover(
     Popover(
         isVisible = isDiscoveredDeviceHovering.value || isPopoverHovering,
         anchors = PopoverAnchors.ExternalTopAlignCenter,
-        focusable = false, // Setting this to false prevents the popover from breaking hover functionality
+        focusable = Platform.current.isMobile, // Setting this to false on Desktop prevents the popover from breaking hover functionality
         onDismissRequest = {
             isDiscoveredDeviceHovering.value = false
             isPopoverHovering = false
