@@ -7,7 +7,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 
-// TODO: This works but it's very slow. Might have some performance improvements moving to Channels instead of MutableStateFlow
+// TODO: This works but it's very slow. Tried just using channels but it was not any faster.
 
 /**
  * [SequentialBufferPool] A buffer pool that allows shared access to sequential buffers across multiple threads.
