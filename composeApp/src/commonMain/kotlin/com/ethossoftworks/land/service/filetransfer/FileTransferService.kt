@@ -540,7 +540,7 @@ class FileTransferService(
         setFileReader(fileReader)
         var totalRead = existingFileLength
 
-        val bufferPool = SequentialBufferPool(10, bufferSize)
+        val bufferPool = SequentialBufferPool(5, bufferSize)
 
         coroutineScope {
             launch {
