@@ -1,8 +1,8 @@
 package com.ethossoftworks.land.interactor.filetransfer
 
+import com.ethossoftworks.land.entity.Device
 import com.ethossoftworks.land.interactor.discovery.DiscoveryInteractor
 import com.ethossoftworks.land.interactor.preferences.AppPreferencesInteractor
-import com.ethossoftworks.land.entity.Device
 import com.ethossoftworks.land.service.filetransfer.*
 import com.outsidesource.oskitkmp.file.IKMPFileHandler
 import com.outsidesource.oskitkmp.file.KMPFileWriteMode

@@ -1,10 +1,11 @@
 package com.ethossoftworks.land.service.filetransfer
 
 import co.touchlab.kermit.Logger
-import com.ethossoftworks.land.lib.bytes.offsetContentEquals
 import com.ethossoftworks.land.entity.Device
 import com.ethossoftworks.land.entity.DevicePlatform
 import com.ethossoftworks.land.entity.toDevicePlatform
+import com.ethossoftworks.land.lib.SequentialBufferPool
+import com.ethossoftworks.land.lib.bytes.offsetContentEquals
 import com.ethossoftworks.land.lib.bytes.toUShort
 import com.outsidesource.oskitkmp.concurrency.asyncOutcome
 import com.outsidesource.oskitkmp.concurrency.awaitOutcome
@@ -539,12 +540,28 @@ class FileTransferService(
         setFileReader(fileReader)
         var totalRead = existingFileLength
 
-        while (isActive) {
-            val read = fileReader.read(ctx.readBuffer, 0, bufferSize)
-            if (read == -1) break
-            ctx.socketWriteChannel.writeFully(ctx.readBuffer, 0, read)
-            totalRead += read
-            send(FileTransferClientEvent.TransferProgress(ctx.transferId, totalRead, file.length))
+        val bufferPool = SequentialBufferPool(10, bufferSize)
+
+        coroutineScope {
+            launch {
+                while (isActive) {
+                    val (bufferId, buffer) = bufferPool.getFreeBuffer()
+                    val read = fileReader.read(buffer, 0, bufferSize)
+                    bufferPool.markBufferFull(bufferId, read)
+                    if (read == -1) break
+                    totalRead += read
+                }
+            }
+
+            launch {
+                while (isActive) {
+                    val (bufferId, read, buffer) = bufferPool.getFullBuffer()
+                    if (read == -1) break
+                    ctx.socketWriteChannel.writeFully(buffer, 0, read)
+                    bufferPool.markBufferFree(bufferId)
+                    send(FileTransferClientEvent.TransferProgress(ctx.transferId, totalRead, file.length))
+                }
+            }
         }
 
         ctx.socketWriteChannel.flush()
