@@ -34,6 +34,7 @@ import okio.BufferedSource
 import okio.Sink
 import okio.buffer
 import kotlin.experimental.xor
+import kotlin.native.concurrent.ThreadLocal
 
 const val FILE_TRANSFER_PORT = 50077
 private const val AUTH_CHALLENGE_LENGTH = 32
@@ -540,14 +541,14 @@ class FileTransferService(
         setFileReader(fileReader)
         var totalRead = existingFileLength
 
-        val bufferPool = SequentialBufferPool(5, bufferSize)
+        val bufferPool = SequentialBufferPool(10, bufferSize)
 
         coroutineScope {
             launch {
                 while (isActive) {
-                    val (bufferId, buffer) = bufferPool.getFreeBuffer()
-                    val read = fileReader.read(buffer, 0, bufferSize)
-                    bufferPool.markBufferFull(bufferId, read)
+                    val buffer = bufferPool.getFreeBuffer()
+                    val read = fileReader.read(buffer.buffer, 0, bufferSize)
+                    bufferPool.markBufferFull(buffer.id, read)
                     if (read == -1) break
                     totalRead += read
                 }
@@ -555,10 +556,10 @@ class FileTransferService(
 
             launch {
                 while (isActive) {
-                    val (bufferId, read, buffer) = bufferPool.getFullBuffer()
-                    if (read == -1) break
-                    ctx.socketWriteChannel.writeFully(buffer, 0, read)
-                    bufferPool.markBufferFree(bufferId)
+                    val buffer = bufferPool.getFullBuffer()
+                    if (buffer.bytesUsed == -1) break
+                    ctx.socketWriteChannel.writeFully(buffer.buffer, 0, buffer.bytesUsed)
+                    bufferPool.markBufferFree(buffer.id)
                     send(FileTransferClientEvent.TransferProgress(ctx.transferId, totalRead, file.length))
                 }
             }
