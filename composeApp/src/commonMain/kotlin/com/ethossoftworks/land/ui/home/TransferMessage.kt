@@ -44,14 +44,14 @@ fun BoxScope.TransferMessage(
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    if (fileTransfer.bytesExisting > 0 && fileTransfer.bytesExisting != fileTransfer.bytesTotal) {
-                        TransferMessageButton(
-                            label = "Reject",
-                            isPrimary = false,
-                            onClick = {
-                                interactor.respondToRequest(fileTransfer, FileTransferResponseType.Rejected)
-                            }
-                        )
+                    TransferMessageButton(
+                        label = "Reject",
+                        isPrimary = false,
+                        onClick = {
+                            interactor.respondToRequest(fileTransfer, FileTransferResponseType.Rejected)
+                        }
+                    )
+                    if (fileTransfer.bytesExisting > 0) {
                         TransferMessageButton(
                             label = "Overwrite",
                             onClick = {
@@ -62,24 +62,19 @@ fun BoxScope.TransferMessage(
                                 )
                             }
                         )
-                        TransferMessageButton(
-                            label = "Continue",
-                            onClick = {
-                                interactor.respondToRequest(
-                                    fileTransfer,
-                                    FileTransferResponseType.Accepted,
-                                    KMPFileWriteMode.Append,
-                                )
-                            }
-                        )
+                        if (fileTransfer.bytesExisting != fileTransfer.bytesTotal) {
+                            TransferMessageButton(
+                                label = "Continue",
+                                onClick = {
+                                    interactor.respondToRequest(
+                                        fileTransfer,
+                                        FileTransferResponseType.Accepted,
+                                        KMPFileWriteMode.Append,
+                                    )
+                                }
+                            )
+                        }
                     } else {
-                        TransferMessageButton(
-                            label = "Reject",
-                            isPrimary = false,
-                            onClick = {
-                                interactor.respondToRequest(fileTransfer, FileTransferResponseType.Rejected)
-                            }
-                        )
                         TransferMessageButton(
                             label = "Accept",
                             onClick = {
