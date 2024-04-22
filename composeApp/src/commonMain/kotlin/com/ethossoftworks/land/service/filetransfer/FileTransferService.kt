@@ -1,3 +1,5 @@
+@file:OptIn(ExperimentalUnsignedTypes::class)
+
 package com.ethossoftworks.land.service.filetransfer
 
 import co.touchlab.kermit.Logger
@@ -37,6 +39,14 @@ import kotlin.experimental.xor
 const val FILE_TRANSFER_PORT = 50077
 private const val AUTH_CHALLENGE_LENGTH = 32
 private const val PROTOCOL_VERSION = 1
+
+@OptIn(ExperimentalUnsignedTypes::class)
+private val AUTH_CHALLENGE_XOR = ubyteArrayOf(
+    0x65u, 0xB7u, 0x79u, 0x96u, 0x76u, 0x04u, 0x6Cu, 0xDEu,
+    0xF2u, 0xD0u, 0x8Cu, 0x0Fu, 0x87u, 0x4Eu, 0x7Au, 0x26u,
+    0x83u, 0xBAu, 0xF0u, 0x80u, 0xFCu, 0x08u, 0x58u, 0x20u,
+    0xA5u, 0xFAu, 0x16u, 0x29u, 0x11u, 0xF5u, 0xACu, 0xBCu,
+)
 
 @OptIn(ExperimentalUnsignedTypes::class)
 private val cancellationSignalBytes = ubyteArrayOf(0x75u, 0xE6u, 0x07u, 0x9Eu, 0x8Du, 0x32u, 0x7Au).toByteArray()
@@ -553,7 +563,7 @@ class FileTransferService(
                 ctx.socketWriteChannel.writeFully(ctx.readBuffer, 0, read)
                 totalRead += read
             }
-            
+
             notifyJob.cancel()
         }
 
@@ -608,7 +618,7 @@ class FileTransferService(
 private fun calculateAuthResponse(random: ByteArray): ByteArray {
     val hashedBytes = random.sha256().bytes
     for (i in hashedBytes.indices) {
-        hashedBytes[i] = hashedBytes[i] xor 0x55
+        hashedBytes[i] = hashedBytes[i] xor AUTH_CHALLENGE_XOR[i].toByte()
     }
     return hashedBytes
 }
