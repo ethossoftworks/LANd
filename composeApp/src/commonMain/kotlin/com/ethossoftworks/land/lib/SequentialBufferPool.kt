@@ -18,41 +18,31 @@ class SequentialBufferPool(private val poolSize: Int, bufferSize: Int) {
     suspend fun getFreeBuffer(): BufferWrapper {
         val id = nextAvailable.value % poolSize
         nextAvailable.incrementAndGet()
-//        println("Awaiting free - $id")
         pool[id].state.awaitFree()
-//        println("Received free - $id")
         return pool[id]
     }
 
     suspend fun getFullBuffer(): BufferWrapper {
         val id = nextFull.value % poolSize
         nextFull.incrementAndGet()
-//        println("Awaiting full - $id")
         pool[id].state.awaitFull()
-//        println("Received full - $id")
-//        val buffer = pool[id].buffer
-//        val bytesUsed = pool[id].bytesUsed
         return pool[id]
     }
 
     fun markBufferFree(id: Int) {
-//        println("Marking free - $id")
         pool[id].state.setFree()
-//        println("Set to free - $id")
     }
 
     fun markBufferFull(id: Int, bytesUsed: Int) {
-//        println("Marking full - $id")
         pool[id].bytesUsed = bytesUsed
         pool[id].state.setFull()
-//        println("Set to full - $id")
     }
 }
 
 class BufferWrapper(
     val id: Int = 0,
     val buffer: ByteArray,
-    var bytesUsed: Int = 0, // TODO: This should be private/internal
+    var bytesUsed: Int = 0, // TODO: This setter needs to be private/internal
     internal val state: BufferStateSignal = BufferStateSignal(),
 )
 
