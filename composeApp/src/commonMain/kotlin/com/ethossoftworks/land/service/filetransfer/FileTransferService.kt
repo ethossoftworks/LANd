@@ -539,12 +539,22 @@ class FileTransferService(
         setFileReader(fileReader)
         var totalRead = existingFileLength
 
-        while (isActive) {
-            val read = fileReader.read(ctx.readBuffer, 0, bufferSize)
-            if (read == -1) break
-            ctx.socketWriteChannel.writeFully(ctx.readBuffer, 0, read)
-            totalRead += read
-            send(FileTransferClientEvent.TransferProgress(ctx.transferId, totalRead, file.length))
+        coroutineScope {
+            val notifyJob = launch {
+                while (isActive) {
+                    delay(100)
+                    send(FileTransferClientEvent.TransferProgress(ctx.transferId, totalRead, file.length))
+                }
+            }
+
+            while (isActive) {
+                val read = fileReader.read(ctx.readBuffer, 0, bufferSize)
+                if (read == -1) break
+                ctx.socketWriteChannel.writeFully(ctx.readBuffer, 0, read)
+                totalRead += read
+            }
+            
+            notifyJob.cancel()
         }
 
         ctx.socketWriteChannel.flush()
