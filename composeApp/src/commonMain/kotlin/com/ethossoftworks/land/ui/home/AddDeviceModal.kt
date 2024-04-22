@@ -8,8 +8,7 @@ import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.unit.dp
 import com.ethossoftworks.land.ui.common.AppTextField
-import com.ethossoftworks.land.ui.common.PrimaryButton
-import com.ethossoftworks.land.ui.common.SecondaryButton
+import com.ethossoftworks.land.ui.common.PrimaryTextButton
 import com.ethossoftworks.land.ui.common.form.FormField
 import com.ethossoftworks.land.ui.common.form.FormFieldNote
 import com.ethossoftworks.land.ui.common.form.FormSection
@@ -67,11 +66,11 @@ fun AddDeviceModal(
                     .fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End),
             ) {
-                SecondaryButton(
+                PrimaryTextButton(
                     label = "Cancel",
                     onClick = interactor::onCancelled
                 )
-                PrimaryButton(
+                PrimaryTextButton(
                     label = "Add",
                     onClick = interactor::onAddClicked,
                 )

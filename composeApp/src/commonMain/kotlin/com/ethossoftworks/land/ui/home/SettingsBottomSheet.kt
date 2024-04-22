@@ -3,14 +3,12 @@ package com.ethossoftworks.land.ui.home
 import androidx.compose.foundation.layout.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.ethossoftworks.land.service.preferences.DeviceVisibility
 import com.ethossoftworks.land.service.preferences.TransferRequestPermissionType
-import com.ethossoftworks.land.ui.common.AppTextField
-import com.ethossoftworks.land.ui.common.PrimaryButton
-import com.ethossoftworks.land.ui.common.Radio
-import com.ethossoftworks.land.ui.common.SecondaryButton
+import com.ethossoftworks.land.ui.common.*
 import com.ethossoftworks.land.ui.common.form.FormField
 import com.ethossoftworks.land.ui.common.form.FormSection
 import com.outsidesource.oskitcompose.interactor.collectAsState
@@ -41,7 +39,10 @@ fun SettingsBottomSheet(
                     Row(
                         modifier = Modifier.fillMaxWidth()
                     ) {
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
                             AppTextField(
                                 modifier = Modifier.weight(1f),
                                 value = if (state.isEditingDisplayName) state.editableDisplayName else state.displayName,
@@ -65,7 +66,7 @@ fun SettingsBottomSheet(
                 }
                 FormField("Visibility") {
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        for (visibility in DeviceVisibility.values()) {
+                        for (visibility in DeviceVisibility.entries) {
                             Radio(
                                 label = visibility.toViewString(),
                                 isSelected = state.deviceVisibility == visibility,
@@ -77,7 +78,10 @@ fun SettingsBottomSheet(
             }
             FormSection("Receiving Files") {
                 FormField("Save Folder") {
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
                         AppTextField(
                             modifier = Modifier.weight(1f),
                             value = state.saveFolder?.name ?: "",

@@ -20,6 +20,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.intl.Locale
+import androidx.compose.ui.text.toUpperCase
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.ethossoftworks.land.ui.common.theme.AppTheme
@@ -116,9 +118,22 @@ fun ImageButton(
 }
 
 @Composable
-fun TextButton(
+fun PrimaryTextButton(
     label: String,
     modifier: Modifier = Modifier,
+    onClick: () -> Unit,
+) = BaseTextButton(
+    label = label,
+    modifier = modifier,
+    color = AppTheme.colors.primaryButtonBg,
+    onClick = onClick,
+)
+
+@Composable
+private fun BaseTextButton(
+    label: String,
+    modifier: Modifier = Modifier,
+    color: Color,
     onClick: () -> Unit,
 ) {
     Text(
@@ -132,5 +147,6 @@ fun TextButton(
             .padding(horizontal = 8.dp, vertical = 4.dp),
         text = label,
         fontSize = 14.sp,
+        color = color,
     )
 }
