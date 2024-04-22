@@ -544,6 +544,13 @@ class FileTransferService(
         val bufferPool = SequentialBufferPool(10, bufferSize)
 
         coroutineScope {
+            val notifyJob = launch {
+                while (isActive) {
+                    delay(100)
+                    send(FileTransferClientEvent.TransferProgress(ctx.transferId, totalRead, file.length))
+                }
+            }
+
             launch {
                 while (isActive) {
                     val buffer = bufferPool.getFreeBuffer()
@@ -560,8 +567,8 @@ class FileTransferService(
                     if (buffer.bytesUsed == -1) break
                     ctx.socketWriteChannel.writeFully(buffer.buffer, 0, buffer.bytesUsed)
                     bufferPool.markBufferFree(buffer.id)
-                    send(FileTransferClientEvent.TransferProgress(ctx.transferId, totalRead, file.length))
                 }
+                notifyJob.cancel()
             }
         }
 
