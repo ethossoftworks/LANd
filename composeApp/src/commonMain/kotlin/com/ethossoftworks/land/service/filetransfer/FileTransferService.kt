@@ -322,7 +322,7 @@ class FileTransferService(
         transferResponseFlow.emit(FileTransferResponse(transferId, response, existingFileLength, sink))
     }
 
-    private suspend fun CoroutineScope.receiverReceiveFile(
+    private suspend fun receiverReceiveFile(
         ctx: TransferReceiveContext,
         header: FileTransferRequestHeader,
         response: FileTransferResponse,
@@ -330,12 +330,8 @@ class FileTransferService(
     ): Outcome<Unit, Unit> {
         val sink = response.sink
         if (sink == null) {
-            ctx.eventChannel.send(
-                FileTransferServerEvent.TransferStopped(
-                    ctx.transferId,
-                    FileTransferStopReason.UnableToOpenFile
-                )
-            )
+            val stopEvent = FileTransferServerEvent.TransferStopped(ctx.transferId, FileTransferStopReason.UnableToOpenFile)
+            ctx.eventChannel.send(stopEvent)
             return Outcome.Error(Unit)
         }
 
@@ -350,46 +346,47 @@ class FileTransferService(
             if (totalWritten == header.payloadLength) {
                 ctx.eventChannel.send(FileTransferServerEvent.TransferComplete(ctx.transferId))
             } else {
-                ctx.eventChannel.send(
-                    FileTransferServerEvent.TransferStopped(
-                        ctx.transferId,
-                        FileTransferStopReason.SocketClosed
-                    )
-                )
+                val stopEvent = FileTransferServerEvent.TransferStopped(ctx.transferId, FileTransferStopReason.SocketClosed)
+                ctx.eventChannel.send(stopEvent)
             }
         }
 
-        while (isActive) {
-            if (totalWritten == header.payloadLength) {
-                onDone()
-                break
+        coroutineScope {
+            val notifyJob = launch {
+                while (isActive) {
+                    delay(100)
+                    val progressEvent = FileTransferServerEvent.TransferProgress(ctx.transferId, totalWritten, header.payloadLength)
+                    ctx.eventChannel.send(progressEvent)
+                }
             }
 
-            val read = ctx.socketReadChannel.readAvailable(ctx.readBuffer, 0, bufferSize)
-            if (read == 0) continue
+            while (isActive) {
+                if (totalWritten == header.payloadLength) {
+                    onDone()
+                    break
+                }
 
-            if (read == -1) {
-                onDone()
-                break
+                val read = ctx.socketReadChannel.readAvailable(ctx.readBuffer, 0, bufferSize)
+                if (read == 0) continue
+
+                if (read == -1) {
+                    onDone()
+                    break
+                }
+
+                // Check for cancellation signal in tail of read buffer
+                if (ctx.readBuffer.offsetContentEquals(cancellationSignalBytes, read - cancellationSignalBytes.size - 1)) {
+                    val cancelCommand = CancellationCommand.fromByte(ctx.readBuffer[read - 1])
+                    val cancelEvent = FileTransferServerEvent.TransferStopped(ctx.transferId, FileTransferStopReason.UserCancelled(cancelCommand))
+                    ctx.eventChannel.send(cancelEvent)
+                    break
+                }
+
+                fileWriter.write(ctx.readBuffer, 0, read)
+                totalWritten += read
             }
 
-            // Check for cancellation signal in tail of read buffer
-            if (ctx.readBuffer.offsetContentEquals(cancellationSignalBytes, read - cancellationSignalBytes.size - 1)) {
-                val cancelCommand = CancellationCommand.fromByte(ctx.readBuffer[read - 1])
-                ctx.eventChannel.send(
-                    FileTransferServerEvent.TransferStopped(
-                        ctx.transferId,
-                        FileTransferStopReason.UserCancelled(cancelCommand)
-                    )
-                )
-                break
-            }
-
-            fileWriter.write(ctx.readBuffer, 0, read)
-            totalWritten += read
-
-            val progressEvent = FileTransferServerEvent.TransferProgress(ctx.transferId, totalWritten, header.payloadLength)
-            ctx.eventChannel.send(progressEvent)
+            notifyJob.cancel()
         }
 
         return Outcome.Ok(Unit)
