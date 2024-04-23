@@ -90,6 +90,7 @@ sealed class FileTransferStopReason {
         val command: CancellationCommand,
         val cancelledByLocalUser: Boolean = false,
     ): FileTransferStopReason()
+    data object UserRejected: FileTransferStopReason()
     data object Unknown: FileTransferStopReason()
 }
 

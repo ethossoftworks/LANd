@@ -144,11 +144,11 @@ class FileTransferService(
             }
 
             receiverReadProtocolVersion(transferContext).unwrapOrReturn {
-                return@asyncOutcome Outcome.Ok(Unit)
+                return@asyncOutcome this
             }
 
             receiverHandleAuthChallenge(transferContext).unwrapOrReturn {
-                return@asyncOutcome Outcome.Ok(Unit)
+                return@asyncOutcome this
             }
 
             val header = receiverReadHeader(transferContext)
@@ -159,11 +159,11 @@ class FileTransferService(
             }
 
             val response = receiverWaitForUserResponse(transferContext, header).unwrapOrReturn {
-                return@asyncOutcome Outcome.Ok(Unit)
+                return@asyncOutcome this
             }
 
             receiverReceiveFile(transferContext, header, response) { outerFileWriter = it }.unwrapOrReturn {
-                return@asyncOutcome Outcome.Ok(Unit)
+                return@asyncOutcome this
             }
 
             Outcome.Ok(Unit)
@@ -176,6 +176,10 @@ class FileTransferService(
 
         receiveJob.awaitOutcome().runOnError { error ->
             when {
+                error == Unit -> { /* Do Nothing */ }
+                error is FileTransferStopReason -> {
+                    eventChannel.send(FileTransferServerEvent.TransferStopped(transferId = transferId, reason = error))
+                }
                 error is LANdTransferCancelledException -> {
                     outerSocketWriteChannel?.writeFully(
                         cancellationSignalBytes + error.command.toByte(),
@@ -189,12 +193,10 @@ class FileTransferService(
                     )
                     eventChannel.send(event)
                 }
-
                 isClosedConnectionException(error) -> {
                     val event = FileTransferServerEvent.TransferStopped(transferId, FileTransferStopReason.SocketClosed)
                     eventChannel.send(event)
                 }
-
                 else -> {
                     val event = FileTransferServerEvent.TransferStopped(transferId, FileTransferStopReason.Unknown)
                     eventChannel.send(event)
@@ -205,22 +207,13 @@ class FileTransferService(
         cancellationListenerJob.cancel()
     }
 
-    private suspend fun receiverReadProtocolVersion(ctx: TransferReceiveContext): Outcome<Int, Unit> {
+    private suspend fun receiverReadProtocolVersion(ctx: TransferReceiveContext): Outcome<Int, FileTransferStopReason> {
         val protocolVersion = ctx.socketReadChannel.readByte().toInt()
-        if (protocolVersion > PROTOCOL_VERSION) {
-            ctx.eventChannel.send(
-                FileTransferServerEvent.TransferStopped(
-                    transferId = ctx.transferId,
-                    reason = FileTransferStopReason.UnknownProtocol,
-                )
-            )
-            return Outcome.Error(Unit)
-        }
-
+        if (protocolVersion > PROTOCOL_VERSION) return Outcome.Error(FileTransferStopReason.UnknownProtocol)
         return Outcome.Ok(protocolVersion)
     }
 
-    private suspend fun receiverHandleAuthChallenge(ctx: TransferReceiveContext): Outcome<Unit, Unit> {
+    private suspend fun receiverHandleAuthChallenge(ctx: TransferReceiveContext): Outcome<Unit, FileTransferStopReason> {
         // Send authorization challenge
         val random = SecureRandom.nextBytes(AUTH_CHALLENGE_LENGTH)
         ctx.socketWriteChannel.writeFully(random, 0, random.size)
@@ -230,13 +223,7 @@ class FileTransferService(
         ctx.socketReadChannel.readFully(ctx.readBuffer, 0, random.size)
         val authResponse = ctx.readBuffer.copyOfRange(0, random.size)
         if (!authResponse.contentEquals(calculateAuthResponse(random))) {
-            ctx.eventChannel.send(
-                FileTransferServerEvent.TransferStopped(
-                    transferId = ctx.transferId,
-                    reason = FileTransferStopReason.AuthorizationChallengeFail,
-                )
-            )
-            return Outcome.Error(Unit)
+            return Outcome.Error(FileTransferStopReason.AuthorizationChallengeFail)
         }
 
         return Outcome.Ok(Unit)
@@ -327,13 +314,8 @@ class FileTransferService(
         header: FileTransferRequestHeader,
         response: FileTransferResponse,
         setFileWriter: (BufferedSink) -> Unit,
-    ): Outcome<Unit, Unit> {
-        val sink = response.sink
-        if (sink == null) {
-            val stopEvent = FileTransferServerEvent.TransferStopped(ctx.transferId, FileTransferStopReason.UnableToOpenFile)
-            ctx.eventChannel.send(stopEvent)
-            return Outcome.Error(Unit)
-        }
+    ): Outcome<Unit, FileTransferStopReason> {
+        val sink = response.sink ?: return Outcome.Error(FileTransferStopReason.UnableToOpenFile)
 
         val event = FileTransferServerEvent.TransferProgress(ctx.transferId, 0, header.payloadLength)
         ctx.eventChannel.send(event)
@@ -345,13 +327,13 @@ class FileTransferService(
         val onDone = suspend {
             if (totalWritten == header.payloadLength) {
                 ctx.eventChannel.send(FileTransferServerEvent.TransferComplete(ctx.transferId))
+                Outcome.Ok(Unit)
             } else {
-                val stopEvent = FileTransferServerEvent.TransferStopped(ctx.transferId, FileTransferStopReason.SocketClosed)
-                ctx.eventChannel.send(stopEvent)
+                Outcome.Error(FileTransferStopReason.SocketClosed)
             }
         }
 
-        coroutineScope {
+        return coroutineScope {
             val notifyJob = launch {
                 while (isActive) {
                     delay(100)
@@ -362,7 +344,7 @@ class FileTransferService(
 
             while (isActive) {
                 if (totalWritten == header.payloadLength) {
-                    onDone()
+                    onDone().unwrapOrReturn { return@coroutineScope this }
                     break
                 }
 
@@ -370,7 +352,7 @@ class FileTransferService(
                 if (read == 0) continue
 
                 if (read == -1) {
-                    onDone()
+                    onDone().unwrapOrReturn { return@coroutineScope this }
                     break
                 }
 
@@ -387,9 +369,8 @@ class FileTransferService(
             }
 
             notifyJob.cancel()
+            Outcome.Ok(Unit)
         }
-
-        return Outcome.Ok(Unit)
     }
 
 
@@ -430,9 +411,7 @@ class FileTransferService(
 
             senderSendHeader(transferContext, file)
 
-            val existingFileLength = senderAwaitResponse(transferContext).unwrapOrReturn {
-                return@sendJob Outcome.Ok(Unit)
-            }
+            val existingFileLength = senderAwaitResponse(transferContext).unwrapOrReturn { return@sendJob this }
 
             val recipientCancellationListener = senderAwaitCancellation(transferContext) { this@sendJob.cancel() }
 
@@ -449,6 +428,7 @@ class FileTransferService(
 
         sendJob.awaitOutcome().runOnError { error ->
             when {
+                error == Unit -> { /* Do Nothing */ }
                 error is LANdTransferCancelledException -> {
                     outerSocketWriteChannel?.writeFully(cancellationSignalBytes + error.command.toByte(), 0, cancellationSignalBytes.size + 1)
                     outerSocketWriteChannel?.flush()
