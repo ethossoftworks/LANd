@@ -8,12 +8,13 @@ import okio.Sink
 import okio.Source
 
 interface IFileTransferService: IFileTransferServer, IFileTransferClient {
-    suspend fun cancelTransfer(transferId: Short, command: CancellationCommand)
+    suspend fun sendCommandSignal(transferId: Short, command: Command)
 }
 
-enum class CancellationCommand {
-    Stop,
-    Delete;
+enum class Command {
+    CancelStop,
+    CancelDelete,
+    Unknown;
 
     companion object
 }
@@ -87,10 +88,9 @@ sealed class FileTransferStopReason {
     data object SocketClosed: FileTransferStopReason()
     data object UnknownProtocol: FileTransferStopReason()
     data class UserCancelled(
-        val command: CancellationCommand,
+        val command: Command,
         val cancelledByLocalUser: Boolean = false,
     ): FileTransferStopReason()
-    data object UserRejected: FileTransferStopReason()
     data object Unknown: FileTransferStopReason()
 }
 

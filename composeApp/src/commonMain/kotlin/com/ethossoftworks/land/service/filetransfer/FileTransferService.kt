@@ -49,11 +49,11 @@ private val AUTH_CHALLENGE_XOR = ubyteArrayOf(
 )
 
 @OptIn(ExperimentalUnsignedTypes::class)
-private val cancellationSignalBytes = ubyteArrayOf(0x75u, 0xE6u, 0x07u, 0x9Eu, 0x8Du, 0x32u, 0x7Au).toByteArray()
+private val commandSignalBytes = ubyteArrayOf(0x75u, 0xE6u, 0x07u, 0x9Eu, 0x8Du, 0x32u, 0x7Au).toByteArray()
 
-private data class CancellationSignal(val transferId: Short, val command: CancellationCommand)
+private data class CommandSignal(val transferId: Short, val command: Command)
 
-private class LANdTransferCancelledException(val command: CancellationCommand) : CancellationException("LANd Transfer Cancelled")
+private class LANdTransferCancelledException(val command: Command) : CancellationException("LANd Transfer Cancelled")
 
 private class TransferReceiveContext(
     val transferId: Short,
@@ -79,16 +79,15 @@ class FileTransferService(
     private val connectionId = atomic<Short>(0)
     private val transferResponseFlow = MutableSharedFlow<FileTransferResponse>()
     private val serverSocket = atomic<ServerSocket?>(null)
-    private val cancellationFlow = MutableSharedFlow<CancellationSignal>()
+    private val commandFlow = MutableSharedFlow<CommandSignal>()
 
     private fun generateConnectionId(): Short {
         if (connectionId.value == Short.MAX_VALUE) return connectionId.updateAndGet { 0 }
         return connectionId.updateAndGet { (it + 1).toShort() }
     }
 
-    override suspend fun cancelTransfer(transferId: Short, command: CancellationCommand) {
-        cancellationFlow.emit(CancellationSignal(transferId, command))
-    }
+    override suspend fun sendCommandSignal(transferId: Short, command: Command) =
+        commandFlow.emit(CommandSignal(transferId, command))
 
     override suspend fun startServer(): Flow<FileTransferServerEvent> {
         return channelFlow {
@@ -169,9 +168,13 @@ class FileTransferService(
             Outcome.Ok(Unit)
         }
 
-        val cancellationListenerJob = launch {
-            val signal = cancellationFlow.first { it.transferId == transferId }
-            receiveJob.cancel(LANdTransferCancelledException(signal.command))
+        val commandListenerJob = launch {
+            val signal = commandFlow.first { it.transferId == transferId }
+            when (signal.command) {
+                Command.CancelStop,
+                Command.CancelDelete -> receiveJob.cancel(LANdTransferCancelledException(signal.command))
+                else -> {}
+            }
         }
 
         receiveJob.awaitOutcome().runOnError { error ->
@@ -182,9 +185,9 @@ class FileTransferService(
                 }
                 error is LANdTransferCancelledException -> {
                     outerSocketWriteChannel?.writeFully(
-                        cancellationSignalBytes + error.command.toByte(),
+                        commandSignalBytes + error.command.toByte(),
                         0,
-                        cancellationSignalBytes.size + 1
+                        commandSignalBytes.size + 1
                     )
                     outerSocketWriteChannel?.flush()
                     val event = FileTransferServerEvent.TransferStopped(
@@ -204,7 +207,7 @@ class FileTransferService(
             }
         }
 
-        cancellationListenerJob.cancel()
+        commandListenerJob.cancel()
     }
 
     private suspend fun receiverReadProtocolVersion(ctx: TransferReceiveContext): Outcome<Int, FileTransferStopReason> {
@@ -356,12 +359,17 @@ class FileTransferService(
                     break
                 }
 
-                // Check for cancellation signal in tail of read buffer
-                if (ctx.readBuffer.offsetContentEquals(cancellationSignalBytes, read - cancellationSignalBytes.size - 1)) {
-                    val cancelCommand = CancellationCommand.fromByte(ctx.readBuffer[read - 1])
-                    val cancelEvent = FileTransferServerEvent.TransferStopped(ctx.transferId, FileTransferStopReason.UserCancelled(cancelCommand))
-                    ctx.eventChannel.send(cancelEvent)
-                    break
+                // Check for command signal in tail of read buffer
+                if (ctx.readBuffer.offsetContentEquals(commandSignalBytes, read - commandSignalBytes.size - 1)) {
+                    when (val command = Command.fromByte(ctx.readBuffer[read - 1])) {
+                        Command.CancelStop,
+                        Command.CancelDelete -> {
+                            val cancelEvent = FileTransferServerEvent.TransferStopped(ctx.transferId, FileTransferStopReason.UserCancelled(command))
+                            ctx.eventChannel.send(cancelEvent)
+                            break
+                        }
+                        else -> {}
+                    }
                 }
 
                 fileWriter.write(ctx.readBuffer, 0, read)
@@ -413,24 +421,37 @@ class FileTransferService(
 
             val existingFileLength = senderAwaitResponse(transferContext).unwrapOrReturn { return@sendJob this }
 
-            val recipientCancellationListener = senderAwaitCancellation(transferContext) { this@sendJob.cancel() }
+            val recipientCommandListener = senderAwaitCommand(transferContext) { command ->
+                when (command) {
+                    Command.CancelStop,
+                    Command.CancelDelete -> {
+                        send(FileTransferClientEvent.TransferStopped(transferId, FileTransferStopReason.UserCancelled(command)))
+                        this@sendJob.cancel()
+                    }
+                    else -> {}
+                }
+            }
 
             senderSendFile(transferContext, file, existingFileLength) { outerFileReader = it }
 
-            recipientCancellationListener.cancel()
+            recipientCommandListener.cancel()
             Outcome.Ok(Unit)
         }
 
-        val cancellationListenerJob = launch {
-            val signal = cancellationFlow.first { it.transferId == transferId }
-            sendJob.cancel(LANdTransferCancelledException(signal.command))
+        val commandListenerJob = launch {
+            val signal = commandFlow.first { it.transferId == transferId }
+            when (signal.command) {
+                Command.CancelStop,
+                Command.CancelDelete -> sendJob.cancel(LANdTransferCancelledException(signal.command))
+                else -> {}
+            }
         }
 
         sendJob.awaitOutcome().runOnError { error ->
             when {
                 error == Unit -> { /* Do Nothing */ }
                 error is LANdTransferCancelledException -> {
-                    outerSocketWriteChannel?.writeFully(cancellationSignalBytes + error.command.toByte(), 0, cancellationSignalBytes.size + 1)
+                    outerSocketWriteChannel?.writeFully(commandSignalBytes + error.command.toByte(), 0, commandSignalBytes.size + 1)
                     outerSocketWriteChannel?.flush()
                     send(
                         FileTransferClientEvent.TransferStopped(
@@ -448,7 +469,7 @@ class FileTransferService(
             }
         }
 
-        cancellationListenerJob.cancel()
+        commandListenerJob.cancel()
     }.flowOn(Dispatchers.IO)
 
     private suspend fun senderSendProtocol(ctx: TransferSendContext) {
@@ -498,18 +519,15 @@ class FileTransferService(
         return Outcome.Ok(existingFileLength)
     }
 
-    private fun ProducerScope<FileTransferClientEvent>.senderAwaitCancellation(
+    private fun ProducerScope<FileTransferClientEvent>.senderAwaitCommand(
         ctx: TransferSendContext,
-        onCancel: () -> Unit,
+        onCommand: suspend (Command) -> Unit,
     ) = asyncOutcome {
-        val cancellationSignalBuffer = ByteArray(cancellationSignalBytes.size + 1)
+        val commandSignalBuffer = ByteArray(commandSignalBytes.size + 1)
         while (isActive) {
-            ctx.socketReadChannel.readAvailable(cancellationSignalBuffer)
-            if (!cancellationSignalBuffer.offsetContentEquals(cancellationSignalBytes, 0)) continue
-
-            val command = CancellationCommand.fromByte(cancellationSignalBuffer.last())
-            send(FileTransferClientEvent.TransferStopped(ctx.transferId, FileTransferStopReason.UserCancelled(command)))
-            onCancel()
+            ctx.socketReadChannel.readAvailable(commandSignalBuffer)
+            if (!commandSignalBuffer.offsetContentEquals(commandSignalBytes, 0)) continue
+            onCommand(Command.fromByte(commandSignalBuffer.last()))
         }
 
         Outcome.Ok(Unit)
@@ -620,15 +638,16 @@ private fun Byte.toDevicePlatform() = when(this) {
     else -> DevicePlatform.Unknown
 }
 
-fun CancellationCommand.toByte() = when (this) {
-    CancellationCommand.Stop -> 0x00.toByte()
-    CancellationCommand.Delete -> 0x01.toByte()
+fun Command.toByte() = when (this) {
+    Command.CancelStop -> 0x00.toByte()
+    Command.CancelDelete -> 0x01.toByte()
+    Command.Unknown -> 0xFF.toByte()
 }
 
-fun CancellationCommand.Companion.fromByte(value: Byte) = when (value) {
-    0x00.toByte() -> CancellationCommand.Stop
-    0x01.toByte() -> CancellationCommand.Delete
-    else -> CancellationCommand.Stop
+fun Command.Companion.fromByte(value: Byte) = when (value) {
+    0x00.toByte() -> Command.CancelStop
+    0x01.toByte() -> Command.CancelDelete
+    else -> Command.Unknown
 }
 
 private fun ByteArray.toIPString(): String {

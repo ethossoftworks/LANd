@@ -146,7 +146,7 @@ class FileTransferInteractor(
                             )
                         }
 
-                        if (event.reason is FileTransferStopReason.UserCancelled && event.reason.command == CancellationCommand.Delete) {
+                        if (event.reason is FileTransferStopReason.UserCancelled && event.reason.command == Command.CancelDelete) {
                             val saveFolder = appPreferencesInteractor.state.saveFolder ?: return@collect
                             fileHandler.delete(saveFolder, transfer.fileName)
                         }
@@ -305,10 +305,10 @@ class FileTransferInteractor(
 
     suspend fun cancelTransfer(
         transferId: Short,
-        command: CancellationCommand = CancellationCommand.Stop,
+        command: Command = Command.CancelStop,
     ) {
         val transfer = state.activeTransfers[transferId] ?: return
-        fileTransferService.cancelTransfer(transfer.transferId, command)
+        fileTransferService.sendCommandSignal(transfer.transferId, command)
     }
 
     suspend fun testConnection(ipAddress: String): Outcome<Device, Exception> =
