@@ -93,7 +93,7 @@ fun BoxScope.TransferMessage(
                 TransferMessageText(
                     text = when (fileTransfer.stopReason) {
                         FileTransferStopReason.UnableToOpenFile -> "Transfer stopped. Unable to create file."
-                        FileTransferStopReason.SocketClosed -> "Transfer stopped due to a connection failure."
+                        FileTransferStopReason.SocketClosed -> "Transfer stopped. Connection closed unexpectedly."
                         FileTransferStopReason.UnknownProtocol -> "The selected device is using a newer version of LANd"
                         is FileTransferStopReason.UserCancelled -> when (fileTransfer.direction) {
                             FileTransferDirection.Receiving -> "\"${fileTransfer.deviceName}\" cancelled sending \"${fileTransfer.fileName}\""
