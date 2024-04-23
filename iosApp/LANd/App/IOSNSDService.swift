@@ -83,9 +83,10 @@ class IOSNSDService : INSDService {
                     switch (newState) {
                     case .failed(let error):
                         continuation.resume(returning: SwiftOutcomeError(error: IOSNSDError(type: .CouldNotCreateService, error: error)).unwrap())
-                        return
+                        listener.stateUpdateHandler = nil
                     case .ready:
                         continuation.resume(returning: SwiftOutcomeOk(value: KotlinUnit()).unwrap())
+                        listener.stateUpdateHandler = nil
                     default:
                         break
                     }
