@@ -22,10 +22,13 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import com.ethossoftworks.land.entity.Device
+import com.ethossoftworks.land.lib.SystemScreenOpener
+import com.ethossoftworks.land.service.discovery.NSDServiceError
 import com.ethossoftworks.land.ui.common.ImageButton
 import com.ethossoftworks.land.ui.common.PrimaryButton
 import com.ethossoftworks.land.ui.common.theme.AppTheme
@@ -69,6 +72,11 @@ fun HomeScreen(
         ) {
             when {
                 !state.hasInitialized -> Spacer(modifier = Modifier.weight(1f))
+                state.discoveryError != null -> DiscoveryErrorView(
+                    error = state.discoveryError,
+                    onRestartDiscoveryClicked = interactor::onRestartDiscoveryClicked,
+                    onOpenSettingsClicked = interactor::onOpenSettingsClicked,
+                )
                 !state.hasSaveFolder -> NoSaveFolderView(interactor::onSelectSaveFolderClicked)
                 state.discoveredDevices.isEmpty() -> NoDevicesView()
                 else -> DeviceListView(state.discoveredDevices, interactor::onDeviceClicked)
@@ -137,6 +145,42 @@ private fun BoxWithConstraintsScope.ToolbarButtons(
             resource = Res.drawable.settings,
             tint = AppTheme.colors.homeScreenButtonTint,
             onClick = onSettingsButtonClicked,
+        )
+    }
+}
+
+@Composable
+private fun ColumnScope.DiscoveryErrorView(
+    error: NSDServiceError,
+    onRestartDiscoveryClicked: () -> Unit,
+    onOpenSettingsClicked: () -> Unit,
+) {
+    Column(
+        modifier = Modifier
+            .weight(1f)
+            .zIndex(1f),
+        verticalArrangement = Arrangement.spacedBy(12.dp, Alignment.CenterVertically),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        when (error) {
+            NSDServiceError.NoPermission -> {
+                Text(
+                    text = when (Platform.current) {
+                        Platform.IOS -> "Discovery could not start.\nPlease allow the Local Network permission in\nSettings \u2192 Privacy & Security \u2192 Local Network."
+                        else -> ""
+                    },
+                    textAlign = TextAlign.Center,
+                )
+                PrimaryButton(
+                    label = "Open Settings",
+                    onClick = onOpenSettingsClicked,
+                )
+            }
+            else -> Text("Discovery could not start")
+        }
+        PrimaryButton(
+            label = "Restart Discovery",
+            onClick = onRestartDiscoveryClicked,
         )
     }
 }

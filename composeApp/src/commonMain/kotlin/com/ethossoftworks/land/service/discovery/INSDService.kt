@@ -21,6 +21,13 @@ sealed class NSDServiceEvent {
     data class ServiceAdded(val service: NSDServicePartial) : NSDServiceEvent()
     data class ServiceResolved(val service: NSDService) : NSDServiceEvent()
     data class ServiceRemoved(val service: NSDServicePartial) : NSDServiceEvent()
+    data class Error(val error: NSDServiceError) : NSDServiceEvent()
+}
+
+enum class NSDServiceError {
+    Unknown,
+    NoPermission,
+    Cancelled,
 }
 
 data class NSDServiceType(

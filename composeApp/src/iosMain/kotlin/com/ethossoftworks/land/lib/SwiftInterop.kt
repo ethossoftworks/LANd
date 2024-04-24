@@ -4,6 +4,7 @@ import com.outsidesource.oskitkmp.outcome.Outcome
 import kotlinx.cinterop.*
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.channels.ProducerScope
+import kotlinx.coroutines.channels.trySendBlocking
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
@@ -54,6 +55,10 @@ abstract class SwiftFlow<T : Any> {
 
     protected fun tryEmit(value: T): Boolean {
         return scope?.trySend(value)?.isSuccess ?: false
+    }
+
+    protected fun tryEmitBlocking(value: T): Boolean {
+        return scope?.trySendBlocking(value)?.isSuccess ?: false
     }
 
     @Throws(SwiftFlowCancellationException::class, CancellationException::class)

@@ -172,6 +172,29 @@ private class ServiceFlow : SwiftFlow<NSDServiceEvent> {
             }
         }
         
+        browser.stateUpdateHandler = { state in
+            switch state {
+            case .failed(_):
+                self.tryEmit(value: NSDServiceEvent.Error(error: NSDServiceError.unknown))
+                self.close()
+            case .cancelled:
+                self.tryEmit(value: NSDServiceEvent.Error(error: NSDServiceError.cancelled))
+                self.close()
+            case .waiting(let error):
+                switch error {
+                case .dns(let type):
+                    if (type == kDNSServiceErr_PolicyDenied) {
+                        self.tryEmit(value: NSDServiceEvent.Error(error: NSDServiceError.noPermission))
+                        self.close()
+                    }
+                default:
+                    return
+                }
+            default:
+                return
+            }
+        }
+        
         browser.start(queue: .global())
         
         try await __awaitClose {

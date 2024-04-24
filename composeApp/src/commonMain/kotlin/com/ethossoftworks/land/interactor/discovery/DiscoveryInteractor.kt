@@ -6,6 +6,7 @@ import com.ethossoftworks.land.entity.toDevicePlatform
 import com.ethossoftworks.land.lib.bytes.toUShort
 import com.ethossoftworks.land.service.discovery.INSDService
 import com.ethossoftworks.land.service.discovery.NSDService
+import com.ethossoftworks.land.service.discovery.NSDServiceError
 import com.ethossoftworks.land.service.discovery.NSDServiceEvent
 import com.ethossoftworks.land.service.filetransfer.FILE_TRANSFER_PORT
 import com.outsidesource.oskitkmp.interactor.Interactor
@@ -21,6 +22,7 @@ data class DiscoveryState(
     val broadcastingDeviceName: String? = null,
     val broadcastIp: String = "",
     val isBroadcasting: Boolean = false,
+    val discoveryError: NSDServiceError? = null,
 )
 
 const val DNS_SD_PORT = 50076
@@ -62,6 +64,8 @@ class DiscoveryInteractor(
 
     fun startDeviceDiscovery() {
         interactorScope.launch {
+            update { state -> state.copy(discoveryError = null) }
+
             discoveryService.observeServices(DISCOVERY_TYPE).collect {
                 when (it) {
                     is NSDServiceEvent.ServiceResolved -> {
@@ -76,7 +80,6 @@ class DiscoveryInteractor(
                             )
                         }
                     }
-
                     is NSDServiceEvent.ServiceRemoved -> {
                         update { state ->
                             state.copy(
@@ -86,7 +89,7 @@ class DiscoveryInteractor(
                             )
                         }
                     }
-
+                    is NSDServiceEvent.Error -> update { state -> state.copy(discoveryError = it.error) }
                     else -> {}
                 }
             }

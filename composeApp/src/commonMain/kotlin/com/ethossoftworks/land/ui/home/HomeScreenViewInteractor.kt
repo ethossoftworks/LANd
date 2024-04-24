@@ -5,6 +5,8 @@ import com.ethossoftworks.land.interactor.discovery.DiscoveryInteractor
 import com.ethossoftworks.land.interactor.filetransfer.FileTransfer
 import com.ethossoftworks.land.interactor.filetransfer.FileTransferInteractor
 import com.ethossoftworks.land.interactor.preferences.AppPreferencesInteractor
+import com.ethossoftworks.land.lib.SystemScreenOpener
+import com.ethossoftworks.land.service.discovery.NSDServiceError
 import com.ethossoftworks.land.service.filetransfer.FileTransferRequest
 import com.ethossoftworks.land.service.preferences.DeviceVisibility
 import com.outsidesource.oskitkmp.file.IKMPFileHandler
@@ -26,6 +28,7 @@ data class HomeViewState(
     val transferMessageQueue: List<FileTransfer> = emptyList(),
     val isAddDeviceModalVisible: Boolean = false,
     val isAboutModalVisible: Boolean = false,
+    val discoveryError: NSDServiceError? = null,
 )
 
 class HomeScreenViewInteractor(
@@ -44,7 +47,8 @@ class HomeScreenViewInteractor(
             displayName = appPreferencesInteractor.state.displayName,
             activeRequests = fileTransferInteractor.state.activeTransfers,
             transferMessageQueue = fileTransferInteractor.state.transferMessageQueue,
-            broadcastIp = discoveryInteractor.state.broadcastIp
+            broadcastIp = discoveryInteractor.state.broadcastIp,
+            discoveryError = discoveryInteractor.state.discoveryError,
         )
     }
 
@@ -104,6 +108,16 @@ class HomeScreenViewInteractor(
                 }
             }
         }
+    }
+
+    fun onRestartDiscoveryClicked() {
+        interactorScope.launch {
+            discoveryInteractor.startDeviceDiscovery()
+        }
+    }
+
+    fun onOpenSettingsClicked() {
+        SystemScreenOpener.openSettings()
     }
 
     fun onSettingsButtonClicked() {
