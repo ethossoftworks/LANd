@@ -1,4 +1,4 @@
-@file:OptIn(ExperimentalResourceApi::class)
+@file:OptIn(ExperimentalResourceApi::class, ExperimentalResourceApi::class)
 
 package com.ethossoftworks.land.ui.home
 
@@ -25,6 +25,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
+import com.ethossoftworks.land.entity.Device
 import com.ethossoftworks.land.ui.common.ImageButton
 import com.ethossoftworks.land.ui.common.PrimaryButton
 import com.ethossoftworks.land.ui.common.theme.AppTheme
@@ -38,8 +39,6 @@ import land.composeapp.generated.resources.*
 import org.jetbrains.compose.resources.ExperimentalResourceApi
 import org.jetbrains.compose.resources.painterResource
 
-
-@OptIn(ExperimentalAnimationApi::class, ExperimentalResourceApi::class)
 @Composable
 fun HomeScreen(
     interactor: HomeScreenViewInteractor = rememberInjectForRoute()
@@ -55,33 +54,11 @@ fun HomeScreen(
     BoxWithConstraints {
         val ringSpacing = maxHeight / 6f
 
-        Row(
-            modifier = Modifier
-                .then(if (Platform.current.isMobile) {
-                    Modifier.windowInsetsPadding(KMPWindowInsets.topInsets)
-                } else {
-                    Modifier
-                })
-                .align(Alignment.TopEnd)
-                .zIndex(1f)
-                .padding(top = 16.dp, end = 16.dp),
-        ) {
-            ImageButton(
-                resource = Res.drawable.add,
-                tint = AppTheme.colors.homeScreenButtonTint,
-                onClick = interactor::onAddButtonClicked,
-            )
-            ImageButton(
-                resource = Res.drawable.info,
-                tint = AppTheme.colors.homeScreenButtonTint,
-                onClick = interactor::onInfoButtonClicked,
-            )
-            ImageButton(
-                resource = Res.drawable.settings,
-                tint = AppTheme.colors.homeScreenButtonTint,
-                onClick = interactor::onSettingsButtonClicked,
-            )
-        }
+        ToolbarButtons(
+            onAddButtonClicked = interactor::onAddButtonClicked,
+            onInfoButtonClicked = interactor::onInfoButtonClicked,
+            onSettingsButtonClicked = interactor::onSettingsButtonClicked,
+        )
 
         Column(
             modifier = Modifier
@@ -90,62 +67,11 @@ fun HomeScreen(
                 .padding(16.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            if (!state.hasInitialized) {
-                Spacer(modifier = Modifier.weight(1f))
-            } else if (!state.hasSaveFolder) {
-                Column(
-                    modifier = Modifier
-                        .weight(1f)
-                        .zIndex(1f),
-                    verticalArrangement = Arrangement.spacedBy(12.dp, Alignment.CenterVertically),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                ) {
-                    Text("Please select a save folder for receiving files")
-                    PrimaryButton(
-                        label = "Select Folder",
-                        onClick = interactor::onSelectSaveFolderClicked
-                    )
-                }
-            } else if (state.discoveredDevices.isEmpty()) {
-                Column(
-                    modifier = Modifier
-                        .weight(1f)
-                        .zIndex(1f),
-                    verticalArrangement = Arrangement.spacedBy(12.dp, Alignment.CenterVertically),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                ) {
-                    Text("Searching for devices...")
-                }
-            } else {
-                AnimatedContent(
-                    modifier = Modifier
-                        .weight(1f)
-                        .zIndex(1f),
-                    targetState = state.discoveredDevices,
-                    transitionSpec = { EnterTransition.None togetherWith ExitTransition.None },
-                ) { devices ->
-                    WrappableRow(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterHorizontally),
-                        verticalAlignment = Alignment.CenterVertically,
-                        verticalSpacing = 16.dp,
-                    ) {
-                        for (device in devices.values) {
-                            Box(
-                                modifier = Modifier.animateEnterExit(
-                                    enter = fadeIn() + scaleIn(initialScale = .85f),
-                                    exit = fadeOut() + scaleOut(targetScale = .85f),
-                                ),
-                                contentAlignment = Alignment.Center,
-                            ) {
-                                DiscoveredDevice(
-                                    device = device,
-                                    onClick = { interactor.onDeviceClicked(device) }
-                                )
-                            }
-                        }
-                    }
-                }
+            when {
+                !state.hasInitialized -> Spacer(modifier = Modifier.weight(1f))
+                !state.hasSaveFolder -> NoSaveFolderView(interactor::onSelectSaveFolderClicked)
+                state.discoveredDevices.isEmpty() -> NoDevicesView()
+                else -> DeviceListView(state.discoveredDevices, interactor::onDeviceClicked)
             }
 
             Column(
@@ -177,6 +103,110 @@ fun HomeScreen(
         )
 
         TransferMessage()
+    }
+}
+
+@Composable
+private fun BoxWithConstraintsScope.ToolbarButtons(
+    onAddButtonClicked: () -> Unit,
+    onInfoButtonClicked: () -> Unit,
+    onSettingsButtonClicked: () -> Unit,
+) {
+    Row(
+        modifier = Modifier
+            .then(if (Platform.current.isMobile) {
+                Modifier.windowInsetsPadding(KMPWindowInsets.topInsets)
+            } else {
+                Modifier
+            })
+            .align(Alignment.TopEnd)
+            .zIndex(1f)
+            .padding(top = 16.dp, end = 16.dp),
+    ) {
+        ImageButton(
+            resource = Res.drawable.add,
+            tint = AppTheme.colors.homeScreenButtonTint,
+            onClick = onAddButtonClicked,
+        )
+        ImageButton(
+            resource = Res.drawable.info,
+            tint = AppTheme.colors.homeScreenButtonTint,
+            onClick = onInfoButtonClicked,
+        )
+        ImageButton(
+            resource = Res.drawable.settings,
+            tint = AppTheme.colors.homeScreenButtonTint,
+            onClick = onSettingsButtonClicked,
+        )
+    }
+}
+
+@Composable
+private fun ColumnScope.NoSaveFolderView(
+    onSelectSaveFolderClicked: () -> Unit,
+) {
+    Column(
+        modifier = Modifier
+            .weight(1f)
+            .zIndex(1f),
+        verticalArrangement = Arrangement.spacedBy(12.dp, Alignment.CenterVertically),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Text("Please select a save folder for receiving files")
+        PrimaryButton(
+            label = "Select Folder",
+            onClick = onSelectSaveFolderClicked,
+        )
+    }
+}
+
+@Composable
+private fun ColumnScope.NoDevicesView() {
+    Column(
+        modifier = Modifier
+            .weight(1f)
+            .zIndex(1f),
+        verticalArrangement = Arrangement.spacedBy(12.dp, Alignment.CenterVertically),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Text("Searching for devices...")
+    }
+}
+
+@OptIn(ExperimentalAnimationApi::class)
+@Composable
+private fun ColumnScope.DeviceListView(
+    discoveredDevices: Map<String, Device>,
+    onDeviceClicked: (device: Device) -> Unit,
+) {
+    AnimatedContent(
+        modifier = Modifier
+            .weight(1f)
+            .zIndex(1f),
+        targetState = discoveredDevices,
+        transitionSpec = { EnterTransition.None togetherWith ExitTransition.None },
+    ) { devices ->
+        WrappableRow(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterHorizontally),
+            verticalAlignment = Alignment.CenterVertically,
+            verticalSpacing = 16.dp,
+        ) {
+            for (device in devices.values) {
+                Box(
+                    modifier = Modifier.animateEnterExit(
+                        enter = fadeIn() + scaleIn(initialScale = .85f),
+                        exit = fadeOut() + scaleOut(targetScale = .85f),
+                    ),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    DiscoveredDevice(
+                        device = device,
+                        onClick = { onDeviceClicked(device) }
+                    )
+                }
+            }
+        }
     }
 }
 

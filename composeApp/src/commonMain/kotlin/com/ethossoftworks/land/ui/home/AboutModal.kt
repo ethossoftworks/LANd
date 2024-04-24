@@ -24,7 +24,6 @@ import org.jetbrains.compose.resources.painterResource
 fun AboutModal(
     isVisible: Boolean,
     onDismissRequest: () -> Unit,
-    interactor: AboutModalViewInteractor = rememberInjectForRoute()
 ) {
     Modal(
         isVisible = isVisible,

@@ -51,9 +51,8 @@ fun commonModule() = module {
     } bind IFileTransferService::class
     single { PreferencesService(get()) } bind IPreferencesService::class
 
-    factory { HomeScreenViewInteractor(get(), get(), get(), get(), get()) }
+    factory { HomeScreenViewInteractor(get(), get(), get(), get()) }
     factory { SettingsBottomSheetViewInteractor(get(), get(), get(), get()) }
-    factory { AboutModalViewInteractor() }
     factory { params -> DiscoveredDeviceViewInteractor(params[0], get(), get(), get()) }
     factory { params -> AddDeviceModalViewInteractor(get(), get(), params[0]) }
     factory { TransferMessageViewInteractor(get()) }

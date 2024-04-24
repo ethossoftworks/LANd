@@ -1,17 +1,17 @@
 package com.ethossoftworks.land.ui.home
 
-import com.ethossoftworks.land.coordinator.AppCoordinator
+import com.ethossoftworks.land.entity.Device
 import com.ethossoftworks.land.interactor.discovery.DiscoveryInteractor
 import com.ethossoftworks.land.interactor.filetransfer.FileTransfer
 import com.ethossoftworks.land.interactor.filetransfer.FileTransferInteractor
 import com.ethossoftworks.land.interactor.preferences.AppPreferencesInteractor
-import com.ethossoftworks.land.entity.Device
 import com.ethossoftworks.land.service.filetransfer.FileTransferRequest
 import com.ethossoftworks.land.service.preferences.DeviceVisibility
 import com.outsidesource.oskitkmp.file.IKMPFileHandler
 import com.outsidesource.oskitkmp.file.source
 import com.outsidesource.oskitkmp.interactor.Interactor
 import com.outsidesource.oskitkmp.outcome.Outcome
+import com.outsidesource.oskitkmp.outcome.runOnError
 import com.outsidesource.oskitkmp.outcome.unwrapOrReturn
 import kotlinx.coroutines.launch
 
@@ -33,7 +33,6 @@ class HomeScreenViewInteractor(
     private val discoveryInteractor: DiscoveryInteractor,
     private val fileTransferInteractor: FileTransferInteractor,
     private val fileHandler: IKMPFileHandler,
-    private val appCoordinator: AppCoordinator,
 ): Interactor<HomeViewState>(
     initialState = HomeViewState(),
     dependencies = listOf(discoveryInteractor, appPreferencesInteractor, fileTransferInteractor)
@@ -76,8 +75,7 @@ class HomeScreenViewInteractor(
             if (folderOutcome !is Outcome.Ok) return@launch
             val folder = folderOutcome.value ?: return@launch
 
-            val saveOutcome = appPreferencesInteractor.setSaveFolder(folder)
-            if (saveOutcome is Outcome.Error) {
+            appPreferencesInteractor.setSaveFolder(folder).runOnError {
                 // TODO: Handle error
             }
         }

@@ -58,7 +58,7 @@ import kotlin.math.roundToInt
 fun DiscoveredDevice(
     device: Device,
     onClick: () -> Unit,
-    interactor: DiscoveredDeviceViewInteractor = rememberInject { parametersOf(device.name) },
+    interactor: DiscoveredDeviceViewInteractor = rememberInject(device.name) { parametersOf(device.name) },
 ) {
     val state = interactor.collectAsState()
     var isDropping by remember { mutableStateOf(false) }
@@ -255,6 +255,7 @@ private fun StopTransferPopover(
     }
 }
 
+@OptIn(ExperimentalResourceApi::class)
 @Composable
 private fun MenuOption(
     label: String,
