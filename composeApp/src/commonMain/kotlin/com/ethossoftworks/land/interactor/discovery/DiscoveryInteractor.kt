@@ -89,7 +89,10 @@ class DiscoveryInteractor(
                             )
                         }
                     }
-                    is NSDServiceEvent.Error -> update { state -> state.copy(discoveryError = it.error) }
+                    is NSDServiceEvent.Error -> {
+                        update { state -> state.copy(discoveryError = it.error) }
+                        stopServiceBroadcasting()
+                    }
                     else -> {}
                 }
             }

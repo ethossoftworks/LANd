@@ -56,16 +56,10 @@ class HomeScreenViewInteractor(
         interactorScope.launch {
             appPreferencesInteractor.awaitInitialization()
 
-            discoveryInteractor.startDeviceDiscovery()
+            startDiscovery()
 
             if (appPreferencesInteractor.state.deviceVisibility != DeviceVisibility.SendOnly) {
                 fileTransferInteractor.startServer()
-            }
-
-            if (!discoveryInteractor.state.isBroadcasting &&
-                appPreferencesInteractor.state.deviceVisibility == DeviceVisibility.Visible
-            ) {
-                discoveryInteractor.startServiceBroadcasting(appPreferencesInteractor.state.displayName)
             }
 
             update { state -> state.copy(hasInitialized = true) }
@@ -111,9 +105,17 @@ class HomeScreenViewInteractor(
     }
 
     fun onRestartDiscoveryClicked() {
-        interactorScope.launch {
-            discoveryInteractor.startDeviceDiscovery()
+        interactorScope.launch { startDiscovery() }
+    }
+
+    private suspend fun startDiscovery() {
+        if (!discoveryInteractor.state.isBroadcasting &&
+            appPreferencesInteractor.state.deviceVisibility == DeviceVisibility.Visible
+        ) {
+            discoveryInteractor.startServiceBroadcasting(appPreferencesInteractor.state.displayName)
         }
+
+        discoveryInteractor.startDeviceDiscovery()
     }
 
     fun onOpenSettingsClicked() {
