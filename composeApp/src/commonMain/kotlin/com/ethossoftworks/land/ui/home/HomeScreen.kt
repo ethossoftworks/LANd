@@ -52,6 +52,8 @@ fun HomeScreen(
         interactor.viewMounted()
     }
 
+    KMPDisableScreenIdleTimeoutEffect(isEnabled = Platform.current == Platform.IOS && state.activeRequests.isNotEmpty())
+
     SystemBarColorEffect(statusBarIconColor = SystemBarIconColor.Dark)
 
     BoxWithConstraints {
