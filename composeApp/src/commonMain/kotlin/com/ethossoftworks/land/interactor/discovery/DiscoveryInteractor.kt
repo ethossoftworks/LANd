@@ -13,6 +13,9 @@ import com.outsidesource.oskitkmp.interactor.Interactor
 import com.outsidesource.oskitkmp.lib.Platform
 import com.outsidesource.oskitkmp.lib.current
 import com.outsidesource.oskitkmp.outcome.Outcome
+import kotlinx.atomicfu.atomic
+import kotlinx.atomicfu.update
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
@@ -23,6 +26,7 @@ data class DiscoveryState(
     val broadcastIp: String = "",
     val isBroadcasting: Boolean = false,
     val discoveryError: NSDServiceError? = null,
+    val hasBroadcastingError: Boolean = false,
 )
 
 const val DNS_SD_PORT = 50076
@@ -35,6 +39,8 @@ class DiscoveryInteractor(
 ): Interactor<DiscoveryState>(
     initialState = DiscoveryState(),
 ) {
+    private val discoveryJob = atomic<Job?>(null)
+
     init {
         interactorScope.launch {
             discoveryService.init()
@@ -63,6 +69,8 @@ class DiscoveryInteractor(
     }
 
     fun startDeviceDiscovery() {
+        discoveryJob.value?.cancel()
+
         interactorScope.launch {
             update { state -> state.copy(discoveryError = null) }
 
@@ -96,7 +104,7 @@ class DiscoveryInteractor(
                     else -> {}
                 }
             }
-        }
+        }.apply { discoveryJob.update { this } }
     }
 
     fun addUnknownDevice(device: Device) {
@@ -106,7 +114,7 @@ class DiscoveryInteractor(
             )
         }
     }
-
+    
     suspend fun startServiceBroadcasting(name: String): Outcome<Unit, Any> {
         update { state -> state.copy(broadcastingDeviceName = name) }
 
@@ -124,9 +132,15 @@ class DiscoveryInteractor(
         )
 
         if (outcome is Outcome.Ok) {
-            update { state -> state.copy(isBroadcasting = true) }
+            update { state -> state.copy(isBroadcasting = true, hasBroadcastingError = false) }
         } else {
-            update { state -> state.copy(isBroadcasting = false, broadcastingDeviceName = null) }
+            update { state ->
+                state.copy(
+                    isBroadcasting = false,
+                    broadcastingDeviceName = null,
+                    hasBroadcastingError = true,
+                )
+            }
         }
 
         return outcome

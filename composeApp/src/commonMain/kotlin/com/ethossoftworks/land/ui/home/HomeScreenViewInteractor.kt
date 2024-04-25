@@ -29,6 +29,8 @@ data class HomeViewState(
     val isAddDeviceModalVisible: Boolean = false,
     val isAboutModalVisible: Boolean = false,
     val discoveryError: NSDServiceError? = null,
+    val hasBroadcastingError: Boolean = false,
+    val hasServerError: Boolean = false,
 )
 
 class HomeScreenViewInteractor(
@@ -49,6 +51,8 @@ class HomeScreenViewInteractor(
             transferMessageQueue = fileTransferInteractor.state.transferMessageQueue,
             broadcastIp = discoveryInteractor.state.broadcastIp,
             discoveryError = discoveryInteractor.state.discoveryError,
+            hasBroadcastingError = discoveryInteractor.state.hasBroadcastingError,
+            hasServerError = fileTransferInteractor.state.hasServerError,
         )
     }
 
@@ -116,6 +120,10 @@ class HomeScreenViewInteractor(
         }
 
         discoveryInteractor.startDeviceDiscovery()
+    }
+
+    fun onRestartServerClicked() {
+        interactorScope.launch { fileTransferInteractor.startServer() }
     }
 
     fun onOpenSettingsClicked() {

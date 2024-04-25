@@ -77,6 +77,8 @@ fun HomeScreen(
                     onRestartDiscoveryClicked = interactor::onRestartDiscoveryClicked,
                     onOpenSettingsClicked = interactor::onOpenSettingsClicked,
                 )
+                state.hasBroadcastingError -> BroadcastingErrorView(interactor::onRestartDiscoveryClicked)
+                state.hasServerError -> ServerErrorView(interactor::onRestartServerClicked)
                 !state.hasSaveFolder -> NoSaveFolderView(interactor::onSelectSaveFolderClicked)
                 state.discoveredDevices.isEmpty() -> NoDevicesView()
                 else -> DeviceListView(state.discoveredDevices, interactor::onDeviceClicked)
@@ -181,6 +183,50 @@ private fun ColumnScope.DiscoveryErrorView(
         PrimaryButton(
             label = "Restart Discovery",
             onClick = onRestartDiscoveryClicked,
+        )
+    }
+}
+
+@Composable
+private fun ColumnScope.BroadcastingErrorView(
+    onRestartClicked: () -> Unit,
+) {
+    Column(
+        modifier = Modifier
+            .weight(1f)
+            .zIndex(1f),
+        verticalArrangement = Arrangement.spacedBy(12.dp, Alignment.CenterVertically),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Text(
+            text = "Could not start broadcasting. Please retry.",
+            textAlign = TextAlign.Center,
+        )
+        PrimaryButton(
+            label = "Restart Broadcasting",
+            onClick = onRestartClicked,
+        )
+    }
+}
+
+@Composable
+private fun ColumnScope.ServerErrorView(
+    onRestartClicked: () -> Unit,
+) {
+    Column(
+        modifier = Modifier
+            .weight(1f)
+            .zIndex(1f),
+        verticalArrangement = Arrangement.spacedBy(12.dp, Alignment.CenterVertically),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Text(
+            text = "Could not start file transfer server. Please retry.",
+            textAlign = TextAlign.Center,
+        )
+        PrimaryButton(
+            label = "Restart Server",
+            onClick = onRestartClicked,
         )
     }
 }

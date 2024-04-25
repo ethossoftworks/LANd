@@ -20,6 +20,7 @@ import kotlin.math.roundToInt
 
 data class FileTransferState(
     val isServerRunning: Boolean = false,
+    val hasServerError: Boolean = false,
     val deviceToTransferIdMap: Map<String, List<Short>> = LinkedHashMap(),
     val activeTransfers: Map<Short, FileTransfer> = LinkedHashMap(),
     val transferMessageQueue: List<FileTransfer> = emptyList(),
@@ -75,8 +76,18 @@ class FileTransferInteractor(
         interactorScope.launch {
             fileTransferService.startServer().collect { event ->
                 when (event) {
-                    is FileTransferServerEvent.ServerStarted -> update { state -> state.copy(isServerRunning = true) }
-                    is FileTransferServerEvent.ServerStopped -> update { state -> state.copy(isServerRunning = false) }
+                    is FileTransferServerEvent.ServerStarted -> update { state ->
+                        state.copy(
+                            isServerRunning = true,
+                            hasServerError = false,
+                        )
+                    }
+                    is FileTransferServerEvent.ServerStopped -> update { state ->
+                        state.copy(
+                            isServerRunning = false,
+                            hasServerError = event.error != null,
+                        )
+                    }
                     is FileTransferServerEvent.TransferRequested -> {
                         // TODO: Implement better early return handling
                         val saveFolder = appPreferencesInteractor.state.saveFolder ?: return@collect
