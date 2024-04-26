@@ -37,7 +37,7 @@ fun commonModule() = module {
     single { AppCoordinator() }
 
     single { DiscoveryInteractor(get()) }
-    single { AppPreferencesInteractor(get()) }
+    single { AppPreferencesInteractor(get(), get()) }
     single { FileTransferInteractor(get(), get(), get(), get()) }
     single { KMPFileHandler() } bind IKMPFileHandler::class
 

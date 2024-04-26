@@ -4,6 +4,7 @@ import com.ethossoftworks.land.entity.Contact
 import com.ethossoftworks.land.service.preferences.DeviceVisibility
 import com.ethossoftworks.land.service.preferences.IPreferencesService
 import com.ethossoftworks.land.service.preferences.TransferRequestPermissionType
+import com.outsidesource.oskitkmp.file.KMPFileHandler
 import com.outsidesource.oskitkmp.file.KMPFileRef
 import com.outsidesource.oskitkmp.interactor.Interactor
 import com.outsidesource.oskitkmp.lib.Platform
@@ -25,6 +26,7 @@ data class AppPreferencesState(
 
 class AppPreferencesInteractor(
     private val preferencesService: IPreferencesService,
+    private val fileHandler: KMPFileHandler,
 ): Interactor<AppPreferencesState>(
     initialState = AppPreferencesState(),
 ) {
@@ -49,7 +51,10 @@ class AppPreferencesInteractor(
                 }
             }
 
-            val saveFolder = preferencesService.getSaveFolder().unwrapOrDefault(null)
+            val saveFolder = preferencesService.getSaveFolder().unwrapOrDefault(null)?.let {
+                if (!fileHandler.exists(it)) return@let null
+                it
+            }
 //            val contacts = preferencesService.getContacts().getOrElse(emptyMap())
             val deviceVisibility = preferencesService.getVisibility().unwrapOrDefault(DeviceVisibility.Visible)
             val requestPermissionType = preferencesService.getTransferRequestPermission().unwrapOrDefault(

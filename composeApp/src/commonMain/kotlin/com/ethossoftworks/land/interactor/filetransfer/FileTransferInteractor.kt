@@ -283,24 +283,11 @@ class FileTransferInteractor(
             )
         }
 
-        val saveFolder = appPreferencesInteractor.state.saveFolder
-        if (saveFolder == null) {
-            addTransferMessage(transfer.copy(status = FileTransferStatus.Stopped, stopReason = FileTransferStopReason.UnableToOpenFile))
-            return
-        }
-
-        val sink = if (response == FileTransferResponseType.Accepted) {
-            val file = fileHandler.resolveFile(saveFolder, transfer.fileName, create = true).unwrapOrReturn {
-                 addTransferMessage(transfer.copy(status = FileTransferStatus.Stopped, stopReason = FileTransferStopReason.UnableToOpenFile))
-                 return
-            }
-
-            file.sink(mode).unwrapOrReturn {
-                addTransferMessage(transfer.copy(status = FileTransferStatus.Stopped, stopReason = FileTransferStopReason.UnableToOpenFile))
-                return
-            }
-        } else {
-            null
+        val sink = run {
+            if (response != FileTransferResponseType.Accepted) return@run null
+            val saveFolder = appPreferencesInteractor.state.saveFolder ?: return@run null
+            val file = fileHandler.resolveFile(saveFolder, transfer.fileName, create = true).unwrapOrReturn { return@run null }
+            file.sink(mode).unwrapOrReturn { return@run null }
         }
 
         fileTransferService.respondToTransferRequest(
