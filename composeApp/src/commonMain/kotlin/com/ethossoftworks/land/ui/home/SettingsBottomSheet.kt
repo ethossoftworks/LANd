@@ -1,16 +1,21 @@
 package com.ethossoftworks.land.ui.home
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.ethossoftworks.land.service.preferences.DeviceVisibility
 import com.ethossoftworks.land.service.preferences.TransferRequestPermissionType
 import com.ethossoftworks.land.ui.common.*
 import com.ethossoftworks.land.ui.common.form.FormField
 import com.ethossoftworks.land.ui.common.form.FormSection
+import com.ethossoftworks.land.ui.common.theme.AppTheme
 import com.outsidesource.oskitcompose.interactor.collectAsState
 import com.outsidesource.oskitcompose.lib.rememberInjectForRoute
 import com.outsidesource.oskitcompose.popup.BottomSheet
@@ -33,7 +38,19 @@ fun SettingsBottomSheet(
         styles = styles,
         onDismissRequest = onDismissRequest,
     ) {
-        Column(verticalArrangement = Arrangement.spacedBy(24.dp)) {
+        Box(
+            modifier = Modifier
+                .offset(y = -(8).dp)
+                .align(Alignment.TopCenter)
+                .width(150.dp)
+                .height(4.dp)
+                .clip(RoundedCornerShape(4.dp))
+                .background(AppTheme.colors.secondary)
+        )
+        Column(
+            modifier = Modifier.padding(top = 8.dp),
+            verticalArrangement = Arrangement.spacedBy(24.dp)
+        ) {
             FormSection("Server Settings") {
                 FormField("Display Name") {
                     Row(
