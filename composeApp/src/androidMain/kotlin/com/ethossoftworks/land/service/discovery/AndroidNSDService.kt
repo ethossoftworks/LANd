@@ -118,18 +118,22 @@ class AndroidNSDService(
         }
     }
 
-    override suspend fun getLocalIpAddress(): String {
-        return getLocalInetAddress().hostAddress ?: ""
+    override suspend fun getLocalIpAddress(): String? {
+        println(getLocalInetAddress())
+        return getLocalInetAddress()?.hostAddress
     }
 
-    private suspend fun getLocalInetAddress(): InetAddress {
+    private suspend fun getLocalInetAddress(): InetAddress? {
         return try {
-            DatagramSocket().use { socket ->
+            val inetAddress = DatagramSocket().use { socket ->
                 socket.connect(InetAddress.getByName("8.8.8.8"), 10002)
                 socket.localAddress
             }
+            if (inetAddress == InetAddress.getLocalHost() || inetAddress.hostAddress == "::") return null
+
+            inetAddress
         } catch (e: Exception) {
-            InetAddress.getLocalHost()
+            null
         }
     }
 

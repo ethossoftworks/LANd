@@ -72,7 +72,7 @@ private class TransferSendContext(
 
 class FileTransferService(
     private val getServerDeviceName: () -> String,
-    private val getLocalIpAddress: suspend () -> String,
+    private val getLocalIpAddress: suspend () -> String?,
 ): IFileTransferService {
     private val selectorManager = SelectorManager(Dispatchers.IO)
     private val bufferSize = 65_536
@@ -659,6 +659,7 @@ private fun ByteArray.toIPString(): String {
 }
 
 // Only support IPV4 for now but leave room for IPV6 expansion
-private fun String.toIPBytes(): ByteArray {
+private fun String?.toIPBytes(): ByteArray {
+    if (this == null) return ByteArray(16)
     return byteArrayOf(0x00) + split(".").map { it.toUInt().toByte() }.take(4).toByteArray() + ByteArray(12)
 }

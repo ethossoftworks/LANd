@@ -83,6 +83,7 @@ fun HomeScreen(
                 state.hasBroadcastingError -> BroadcastingErrorView(interactor::onRestartDiscoveryClicked)
                 state.hasServerError -> ServerErrorView(interactor::onRestartServerClicked)
                 !state.hasSaveFolder -> NoSaveFolderView(interactor::onSelectSaveFolderClicked)
+                state.broadcastIp == null -> WifiDisabledView()
                 state.discoveredDevices.isEmpty() -> NoDevicesView()
                 else -> DeviceListView(state.discoveredDevices, interactor::onDeviceClicked)
             }
@@ -96,7 +97,11 @@ fun HomeScreen(
                     DeviceVisibility.Hidden -> Text("Hidden")
                     DeviceVisibility.SendOnly -> Text("Send Only")
                 }
-                if (state.visibility == DeviceVisibility.Visible || state.visibility == DeviceVisibility.Hidden) {
+                if (
+                    (state.visibility == DeviceVisibility.Visible ||
+                    state.visibility == DeviceVisibility.Hidden) &&
+                    state.broadcastIp != null
+                ) {
                     Text(
                         modifier = Modifier.padding(top = 4.dp),
                         text = state.broadcastIp,
@@ -269,6 +274,22 @@ private fun ColumnScope.NoDevicesView() {
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Text("Searching for devices...")
+    }
+}
+
+@Composable
+private fun ColumnScope.WifiDisabledView() {
+    Column(
+        modifier = Modifier
+            .weight(1f)
+            .zIndex(1f),
+        verticalArrangement = Arrangement.spacedBy(12.dp, Alignment.CenterVertically),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Text(
+            text = "Could not retrieve local IP address.\nMake sure you're connected to a WiFi network.",
+            textAlign = TextAlign.Center,
+        )
     }
 }
 

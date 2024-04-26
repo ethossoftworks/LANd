@@ -23,7 +23,7 @@ import kotlinx.coroutines.launch
 data class DiscoveryState(
     val discoveredDevices: Map<String, Device> = emptyMap(),
     val broadcastingDeviceName: String? = null,
-    val broadcastIp: String = "",
+    val broadcastIp: String? = null,
     val isBroadcasting: Boolean = false,
     val discoveryError: NSDServiceError? = null,
     val hasBroadcastingError: Boolean = false,
@@ -50,7 +50,7 @@ class DiscoveryInteractor(
 
     private fun startIpCheck() {
         interactorScope.launch {
-            while(isActive) {
+            while (isActive) {
                 val ip = getLocalIpAddress()
                 update { state -> state.copy(broadcastIp = ip) }
                 delay(30_000)
@@ -114,7 +114,7 @@ class DiscoveryInteractor(
             )
         }
     }
-    
+
     suspend fun startServiceBroadcasting(name: String): Outcome<Unit, Any> {
         update { state -> state.copy(broadcastingDeviceName = name) }
 
@@ -158,7 +158,7 @@ class DiscoveryInteractor(
         )
     }
 
-    private suspend fun getLocalIpAddress(): String {
+    private suspend fun getLocalIpAddress(): String? {
         return discoveryService.getLocalIpAddress()
     }
 }

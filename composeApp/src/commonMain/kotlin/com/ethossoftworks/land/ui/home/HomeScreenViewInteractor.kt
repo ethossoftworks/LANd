@@ -23,7 +23,7 @@ data class HomeViewState(
     val hasInitialized: Boolean = false,
     val hasSaveFolder: Boolean = false,
     val displayName: String = "",
-    val broadcastIp: String = "",
+    val broadcastIp: String? = null,
     val activeRequests: Map<Short, FileTransfer> = emptyMap(),
     val transferMessageQueue: List<FileTransfer> = emptyList(),
     val isAddDeviceModalVisible: Boolean = false,

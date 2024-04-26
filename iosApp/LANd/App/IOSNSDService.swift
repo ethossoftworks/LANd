@@ -10,15 +10,15 @@ class IOSNSDService : INSDService {
     var service: NWListener? = nil
     
     func __doInit() async throws {}
-           
-    func __getLocalIpAddress() async throws -> String {
+    
+    func __getLocalIpAddress() async throws -> String? {
         // Adapted from: https://gist.github.com/camyoh/aa341e4e40afaa40c84813d899369566
         var address : String?
         
         // Get list of all interfaces on the local machine:
         var ifaddr : UnsafeMutablePointer<ifaddrs>?
-        guard getifaddrs(&ifaddr) == 0 else { return "0.0.0.0" }
-        guard let firstAddr = ifaddr else { return "0.0.0.0" }
+        guard getifaddrs(&ifaddr) == 0 else { return nil }
+        guard let firstAddr = ifaddr else { return nil }
         
         // For each interface ...
         for ifptr in sequence(first: firstAddr, next: { $0.pointee.ifa_next }) {
@@ -48,7 +48,7 @@ class IOSNSDService : INSDService {
         }
         freeifaddrs(ifaddr)
         
-        return address ?? "0.0.0.0"
+        return address
     }
  
     // Using this requires requesting of an Entitlement. Generally most applications do not need to scan for all services unless they are

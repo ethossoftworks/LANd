@@ -50,6 +50,7 @@ fun commonModule() = module {
     single {
         val appPreferencesInteractor: AppPreferencesInteractor = get()
         val nsdService: INSDService = get()
+
         FileTransferService(
             getServerDeviceName = { appPreferencesInteractor.state.displayName },
             getLocalIpAddress = nsdService::getLocalIpAddress,
