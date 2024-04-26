@@ -45,10 +45,10 @@ class DiscoveryInteractor(
         interactorScope.launch {
             discoveryService.init()
         }
-        startIpCheck()
+        startLocalIpRefresh()
     }
 
-    private fun startIpCheck() {
+    private fun startLocalIpRefresh() {
         interactorScope.launch {
             while (isActive) {
                 val ip = getLocalIpAddress()
@@ -107,6 +107,10 @@ class DiscoveryInteractor(
         }.apply { discoveryJob.update { this } }
     }
 
+    fun stopServiceDiscovery() {
+        discoveryJob.value?.cancel()
+    }
+
     fun addUnknownDevice(device: Device) {
         update { state ->
             state.copy(
@@ -116,6 +120,8 @@ class DiscoveryInteractor(
     }
 
     suspend fun startServiceBroadcasting(name: String): Outcome<Unit, Any> {
+        stopServiceBroadcasting()
+
         update { state -> state.copy(broadcastingDeviceName = name) }
 
         val outcome = discoveryService.registerService(

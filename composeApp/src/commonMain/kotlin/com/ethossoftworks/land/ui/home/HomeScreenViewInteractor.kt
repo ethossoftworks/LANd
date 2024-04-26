@@ -13,8 +13,11 @@ import com.outsidesource.oskitkmp.file.IKMPFileHandler
 import com.outsidesource.oskitkmp.file.source
 import com.outsidesource.oskitkmp.interactor.Interactor
 import com.outsidesource.oskitkmp.outcome.Outcome
-import com.outsidesource.oskitkmp.outcome.runOnError
 import com.outsidesource.oskitkmp.outcome.unwrapOrReturn
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.drop
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.skip
 import kotlinx.coroutines.launch
 
 data class HomeViewState(
@@ -43,6 +46,7 @@ class HomeScreenViewInteractor(
     initialState = HomeViewState(),
     dependencies = listOf(discoveryInteractor, appPreferencesInteractor, fileTransferInteractor)
 ) {
+
     override fun computed(state: HomeViewState): HomeViewState {
         return state.copy(
             discoveredDevices = discoveryInteractor.state.discoveredDevices,
@@ -58,15 +62,30 @@ class HomeScreenViewInteractor(
         )
     }
 
+    private fun startIpAddressWatcher() = interactorScope.launch {
+        var lastIp: String? = state.broadcastIp
+
+        flow()
+            .map { it.broadcastIp }
+            .distinctUntilChanged()
+            .collect { newIp ->
+                if (lastIp != null && newIp == null) stopDiscoveryAndBroadcasting()
+                if (lastIp == null && newIp != null) startDiscoveryAndBroadcasting()
+                lastIp = newIp
+            }
+    }
+
     fun viewMounted() {
         interactorScope.launch {
             appPreferencesInteractor.awaitInitialization()
 
-            startDiscovery()
+            startDiscoveryAndBroadcasting()
 
             if (appPreferencesInteractor.state.deviceVisibility != DeviceVisibility.SendOnly) {
                 fileTransferInteractor.startServer()
             }
+
+            startIpAddressWatcher()
 
             update { state -> state.copy(hasInitialized = true) }
         }
@@ -106,10 +125,10 @@ class HomeScreenViewInteractor(
     }
 
     fun onRestartDiscoveryClicked() {
-        interactorScope.launch { startDiscovery() }
+        interactorScope.launch { startDiscoveryAndBroadcasting() }
     }
 
-    private suspend fun startDiscovery() {
+    private suspend fun startDiscoveryAndBroadcasting() {
         if (!discoveryInteractor.state.isBroadcasting &&
             appPreferencesInteractor.state.deviceVisibility == DeviceVisibility.Visible
         ) {
@@ -117,6 +136,11 @@ class HomeScreenViewInteractor(
         }
 
         discoveryInteractor.startDeviceDiscovery()
+    }
+
+    private suspend fun stopDiscoveryAndBroadcasting() {
+        discoveryInteractor.stopServiceDiscovery()
+        discoveryInteractor.stopServiceBroadcasting()
     }
 
     fun onRestartServerClicked() {
