@@ -119,7 +119,6 @@ class AndroidNSDService(
     }
 
     override suspend fun getLocalIpAddress(): String? {
-        println(getLocalInetAddress())
         return getLocalInetAddress()?.hostAddress
     }
 
