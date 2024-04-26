@@ -142,15 +142,11 @@ class FileTransferService(
                 socket.close()
             }
 
-            receiverReadProtocolVersion(transferContext).unwrapOrReturn {
-                return@asyncOutcome this
-            }
-
-            receiverHandleAuthChallenge(transferContext).unwrapOrReturn {
-                return@asyncOutcome this
-            }
-
-            val header = receiverReadHeader(transferContext)
+            val header = withTimeout(1_000) {
+                receiverReadProtocolVersion(transferContext).unwrapOrReturn { return@withTimeout this }
+                receiverHandleAuthChallenge(transferContext).unwrapOrReturn { return@withTimeout this }
+                Outcome.Ok(receiverReadHeader(transferContext))
+            }.unwrapOrReturn { return@asyncOutcome this }
 
             if (header.command == FileTransferCommand.Connect) {
                 receiverHandleConnectCommand(transferContext)
@@ -413,11 +409,11 @@ class FileTransferService(
                 socket.close()
             }
 
-            senderSendProtocol(transferContext)
-
-            senderHandleAuth(transferContext)
-
-            senderSendHeader(transferContext, file)
+            withTimeout(1_000) {
+                senderSendProtocol(transferContext)
+                senderHandleAuth(transferContext)
+                senderSendHeader(transferContext, file)
+            }
 
             val existingFileLength = senderAwaitResponse(transferContext).unwrapOrReturn { return@sendJob this }
 
