@@ -65,6 +65,7 @@ class FileTransferInteractor(
     private val appPreferencesInteractor: AppPreferencesInteractor,
     private val discoveryInteractor: DiscoveryInteractor,
     private val fileHandler: IKMPFileHandler,
+    private val onServerError: (suspend () -> Unit)? = null,
 ): Interactor<FileTransferState>(
     initialState = FileTransferState(),
 ) {
@@ -82,14 +83,16 @@ class FileTransferInteractor(
                             hasServerError = false,
                         )
                     }
-                    is FileTransferServerEvent.ServerStopped -> update { state ->
-                        state.copy(
-                            isServerRunning = false,
-                            hasServerError = event.error != null,
-                        )
+                    is FileTransferServerEvent.ServerStopped -> {
+                        update { state ->
+                            state.copy(
+                                isServerRunning = false,
+                                hasServerError = event.error != null,
+                            )
+                        }
+                        if (event.error != null) onServerError?.invoke()
                     }
                     is FileTransferServerEvent.TransferRequested -> {
-                        // TODO: Implement better early return handling
                         val saveFolder = appPreferencesInteractor.state.saveFolder ?: return@collect
                         val metadataOutcome = fileHandler.readMetadata(saveFolder, event.fileName)
 

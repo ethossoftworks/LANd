@@ -38,7 +38,13 @@ fun commonModule() = module {
 
     single { DiscoveryInteractor(get()) }
     single { AppPreferencesInteractor(get(), get()) }
-    single { FileTransferInteractor(get(), get(), get(), get()) }
+    single {
+        val discoveryInteractor: DiscoveryInteractor = get()
+
+        FileTransferInteractor(get(), get(), get(), get()) {
+            discoveryInteractor.stopServiceBroadcasting()
+        }
+    }
     single { KMPFileHandler() } bind IKMPFileHandler::class
 
     single {

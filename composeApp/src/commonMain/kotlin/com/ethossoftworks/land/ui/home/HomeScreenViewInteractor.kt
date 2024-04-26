@@ -69,7 +69,6 @@ class HomeScreenViewInteractor(
             }
 
             update { state -> state.copy(hasInitialized = true) }
-            // TODO: Need to stop broadcasting if the file transfer server has stopped
         }
     }
 
@@ -78,19 +77,15 @@ class HomeScreenViewInteractor(
             val folderOutcome = fileHandler.pickDirectory()
             if (folderOutcome !is Outcome.Ok) return@launch
             val folder = folderOutcome.value ?: return@launch
-
-            appPreferencesInteractor.setSaveFolder(folder).runOnError {
-                // TODO: Handle error
-            }
+            appPreferencesInteractor.setSaveFolder(folder)
         }
     }
 
     fun onDeviceClicked(device: Device) {
         interactorScope.launch onDeviceClickedLaunch@{
-            val files = fileHandler.pickFiles().unwrapOrReturn { return@onDeviceClickedLaunch }
-
-            // TODO: Handle providing the user details for early returns
-            if (files == null) return@onDeviceClickedLaunch
+            val files = fileHandler
+                .pickFiles()
+                .unwrapOrReturn { return@onDeviceClickedLaunch } ?: return@onDeviceClickedLaunch
 
             files.forEach { file ->
                 launch {
