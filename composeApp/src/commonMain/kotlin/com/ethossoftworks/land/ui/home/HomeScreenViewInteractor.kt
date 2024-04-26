@@ -31,6 +31,7 @@ data class HomeViewState(
     val discoveryError: NSDServiceError? = null,
     val hasBroadcastingError: Boolean = false,
     val hasServerError: Boolean = false,
+    val visibility: DeviceVisibility = DeviceVisibility.Visible,
 )
 
 class HomeScreenViewInteractor(
@@ -53,6 +54,7 @@ class HomeScreenViewInteractor(
             discoveryError = discoveryInteractor.state.discoveryError,
             hasBroadcastingError = discoveryInteractor.state.hasBroadcastingError,
             hasServerError = fileTransferInteractor.state.hasServerError,
+            visibility = appPreferencesInteractor.state.deviceVisibility,
         )
     }
 

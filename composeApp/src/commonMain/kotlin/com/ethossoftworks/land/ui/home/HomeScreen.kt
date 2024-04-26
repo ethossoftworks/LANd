@@ -29,6 +29,7 @@ import androidx.compose.ui.zIndex
 import com.ethossoftworks.land.entity.Device
 import com.ethossoftworks.land.lib.SystemScreenOpener
 import com.ethossoftworks.land.service.discovery.NSDServiceError
+import com.ethossoftworks.land.service.preferences.DeviceVisibility
 import com.ethossoftworks.land.ui.common.ImageButton
 import com.ethossoftworks.land.ui.common.PrimaryButton
 import com.ethossoftworks.land.ui.common.theme.AppTheme
@@ -90,12 +91,18 @@ fun HomeScreen(
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 RadiatingLogo(ringSpacing)
-                Text("Visible as \"${state.displayName}\"")
-                Text(
-                    modifier = Modifier.padding(top = 4.dp ),
-                    text = state.broadcastIp,
-                    style = AppTheme.typography.ipAddress,
-                )
+                when (state.visibility) {
+                    DeviceVisibility.Visible -> Text("Visible as \"${state.displayName}\"")
+                    DeviceVisibility.Hidden -> Text("Hidden")
+                    DeviceVisibility.SendOnly -> Text("Send Only")
+                }
+                if (state.visibility == DeviceVisibility.Visible || state.visibility == DeviceVisibility.Hidden) {
+                    Text(
+                        modifier = Modifier.padding(top = 4.dp),
+                        text = state.broadcastIp,
+                        style = AppTheme.typography.ipAddress,
+                    )
+                }
             }
         }
 
