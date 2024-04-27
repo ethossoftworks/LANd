@@ -19,8 +19,8 @@ class DHKeyTest {
         assertTrue { alicePublicKey != bobPublicKey }
 
         // Compute shared secrets
-        val aliceSharedSecret = DHKey.computeSharedSecret(bobPublicKey, alicePrivateKey)
-        val bobSharedSecret = DHKey.computeSharedSecret(alicePublicKey, bobPrivateKey)
+        val aliceSharedSecret = DHKey.computeSharedKey(bobPublicKey, alicePrivateKey)
+        val bobSharedSecret = DHKey.computeSharedKey(alicePublicKey, bobPrivateKey)
 
         assertTrue { aliceSharedSecret.contentEquals(bobSharedSecret) }
     }

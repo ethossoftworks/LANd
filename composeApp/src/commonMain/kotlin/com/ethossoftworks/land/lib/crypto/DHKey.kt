@@ -27,11 +27,11 @@ object DHKey {
     private val g = BigInteger.TWO
 
     // Generate a random private key in the range [1, p - 1]
-    fun generatePrivateKey(bitCount: Int): BigInteger {
+    fun generatePrivateKey(): BigInteger {
         val range = p - BigInteger.ONE
         var privateKey: BigInteger
         do {
-            val randomBytes = SecureRandom.nextBytes(bitCount / 8) // 256 bytes = 2048 bits
+            val randomBytes = SecureRandom.nextBytes(256) // 256 bytes = 2048 bits
             privateKey = BigInteger.fromByteArray(randomBytes, Sign.POSITIVE)
         } while (privateKey <= BigInteger.ZERO || privateKey >= range)
         return privateKey
@@ -41,9 +41,16 @@ object DHKey {
         return g.powMod(privateKey, p)
     }
 
-    fun computeSharedSecret(publicKey: BigInteger, privateKey: BigInteger): ByteArray {
-        return publicKey.powMod(privateKey, p).toByteArray()
+    fun computeSharedKeyToBytes(publicKey: BigInteger, privateKey: BigInteger): ByteArray {
+        return computeSharedKey(publicKey, privateKey).toByteArray()
     }
+
+    fun computeSharedKey(publicKey: BigInteger, privateKey: BigInteger): BigInteger {
+        return publicKey.powMod(privateKey, p)
+    }
+
+    fun keyToBytes(key: BigInteger) = key.toByteArray()
+    fun keyFromBytes(bytes: ByteArray) = BigInteger.fromByteArray(bytes, Sign.POSITIVE)
 
     private fun BigInteger.powMod(exponent: BigInteger, modulus: BigInteger): BigInteger {
         var result = BigInteger.ONE

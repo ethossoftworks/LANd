@@ -10,10 +10,10 @@ class Encryption {
     @OptIn(ExperimentalStdlibApi::class)
     @Test
     fun encryption() {
-        val alicePrivateKey = DHKey.generatePrivateKey(2_048)
-        val bobPrivateKey = DHKey.generatePrivateKey(2_048)
+        val alicePrivateKey = DHKey.generatePrivateKey()
+        val bobPrivateKey = DHKey.generatePrivateKey()
         val bobPublicKey = DHKey.computePublicKey(bobPrivateKey)
-        val sharedKey = DHKey.computeSharedSecret(bobPublicKey, alicePrivateKey)
+        val sharedKey = DHKey.computeSharedKeyToBytes(bobPublicKey, alicePrivateKey)
 
         val iv = SecureRandom.nextBytes(16)
 
