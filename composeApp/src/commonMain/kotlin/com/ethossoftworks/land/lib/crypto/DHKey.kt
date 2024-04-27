@@ -5,9 +5,10 @@ import com.ionspin.kotlin.bignum.integer.Sign
 import com.ionspin.kotlin.bignum.integer.toBigInteger
 import korlibs.crypto.SecureRandom
 
+// Diffie-Hellman Cyrptographic key generator
 object DHKey {
     // Known 2048-bit prime (taken from RFC 3526)
-    val p = """
+    private val p = """
         FFFFFFFF FFFFFFFF C90FDAA2 2168C234 C4C6628B 80DC1CD1
         29024E08 8A67CC74 020BBEA6 3B139B22 514A0879 8E3404DD
         EF9519B3 CD3A431B 302B0A6D F25F1437 4FE1356D 6D51C245
@@ -40,8 +41,8 @@ object DHKey {
         return g.powMod(privateKey, p)
     }
 
-    fun computeSharedSecret(publicKey: BigInteger, privateKey: BigInteger): BigInteger {
-        return publicKey.powMod(privateKey, p)
+    fun computeSharedSecret(publicKey: BigInteger, privateKey: BigInteger): ByteArray {
+        return publicKey.powMod(privateKey, p).toByteArray()
     }
 
     private fun BigInteger.powMod(exponent: BigInteger, modulus: BigInteger): BigInteger {

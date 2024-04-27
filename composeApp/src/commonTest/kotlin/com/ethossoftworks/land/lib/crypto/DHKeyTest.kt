@@ -3,9 +3,9 @@ package com.ethossoftworks.land.lib.crypto
 import kotlin.test.Test
 import kotlin.test.assertTrue
 
-class DHKeyExchangeTest {
+class DHKeyTest {
     @Test
-    fun dhKeyExchange() {
+    fun dhKey() {
         // Compute Private Keys
         val alicePrivateKey = DHKey.generatePrivateKey(2_048)
         val bobPrivateKey = DHKey.generatePrivateKey(2_048)
@@ -22,6 +22,6 @@ class DHKeyExchangeTest {
         val aliceSharedSecret = DHKey.computeSharedSecret(bobPublicKey, alicePrivateKey)
         val bobSharedSecret = DHKey.computeSharedSecret(alicePublicKey, bobPrivateKey)
 
-        assertTrue { aliceSharedSecret == bobSharedSecret }
+        assertTrue { aliceSharedSecret.contentEquals(bobSharedSecret) }
     }
 }
