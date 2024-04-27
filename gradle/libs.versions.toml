@@ -23,7 +23,8 @@ okio = "3.7.0"
 ktlint = "11.6.1"
 ktor = "2.3.9"
 jmdns = "3.5.8"
-krypto = "4.0.8"
+krypto = "4.0.10"
+bignumber = "0.3.9"
 
 [libraries]
 junit = { group = "junit", name = "junit", version.ref = "junit" }
@@ -46,7 +47,8 @@ koin-core = { module = "io.insert-koin:koin-core", version.ref = "koinCore" }
 oskit-compose = { module = "com.outsidesource:oskit-compose", version.ref = "oskitCompose" }
 oskit-kmp = { module = "com.outsidesource:oskit-kmp", version.ref = "oskitKmp" }
 jmdns = { module = "org.jmdns:jmdns", version.ref = "jmdns" }
-krytpo = { module = "com.soywiz.korlibs.krypto:krypto", version.ref = "krypto" }
+krypto = { module = "com.soywiz.korlibs.krypto:krypto", version.ref = "krypto" }
+bignumber = { module = "com.ionspin.kotlin:bignum", version.ref = "bignumber" }
 
 [plugins]
 androidApplication = { id = "com.android.application", version.ref = "agp" }

@@ -69,7 +69,8 @@ kotlin {
             implementation(libs.ktor.client.core)
             implementation(libs.ktor.client.cio)
             implementation(libs.jmdns)
-            implementation(libs.krytpo)
+            implementation(libs.krypto)
+            implementation(libs.bignumber)
             implementation(libs.kotlinx.serialization.json)
             implementation(libs.kotlinx.datetime)
         }
