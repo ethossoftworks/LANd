@@ -21,6 +21,8 @@ import com.outsidesource.oskitkmp.outcome.unwrapOrReturn
 import io.ktor.network.selector.*
 import io.ktor.network.sockets.*
 import io.ktor.utils.io.*
+import korlibs.crypto.AES
+import korlibs.crypto.CipherPadding
 import korlibs.crypto.SecureRandom
 import korlibs.crypto.sha256
 import kotlinx.atomicfu.atomic
@@ -31,16 +33,13 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.channels.ProducerScope
 import kotlinx.coroutines.channels.SendChannel
 import kotlinx.coroutines.flow.*
-import okio.BufferedSink
-import okio.BufferedSource
-import okio.Sink
-import okio.buffer
+import okio.*
 import kotlin.experimental.xor
 
 const val FILE_TRANSFER_PORT = 50077
 private const val AUTH_CHALLENGE_LENGTH = 32
 private const val PROTOCOL_VERSION = 1
-private val ENCRYPTED_FIXED_HEADER_SIZE = getAESPaddedSize(56 + 16 + 256) // Fixed Header Size + IV size + Key size
+private val FIXED_HEADER_SIZE = 56
 
 // This is not meant to be cryptographically secure. This is just to hopefully prevent non-LANd clients from opening sockets
 @OptIn(ExperimentalUnsignedTypes::class)
@@ -288,14 +287,15 @@ class FileTransferService(
 
     private suspend fun receiverReadHeader(ctx: TransferReceiveContext): FileTransferRequestHeader {
         // Read Fixed Header
-        val command = ctx.socketReadChannel.readByte()
-        val ipAddress = ByteArray(17).apply { ctx.socketReadChannel.readFully(this) }.toIPString()
-        val port = ByteArray(2).apply { ctx.socketReadChannel.readFully(this) }.toUShort()
-        val platform = ctx.socketReadChannel.readByte().toDevicePlatform()
-        val senderNameLength = ctx.socketReadChannel.readByte().toInt()
-        val fileNameLength = ctx.socketReadChannel.readShort().toInt()
-        val payloadLength = ctx.socketReadChannel.readLong()
-        ctx.socketReadChannel.readFully(ByteArray(24)) // Future use
+        val fixedHeaderBuffer = receiverReadSegment(ctx, FIXED_HEADER_SIZE)
+        val command = fixedHeaderBuffer.readByte()
+        val ipAddress = ByteArray(17).apply { fixedHeaderBuffer.readFully(this) }.toIPString()
+        val port = ByteArray(2).apply { fixedHeaderBuffer.readFully(this) }.toUShort()
+        val platform = fixedHeaderBuffer.readByte().toDevicePlatform()
+        val senderNameLength = fixedHeaderBuffer.readByte().toInt()
+        val fileNameLength = fixedHeaderBuffer.readShort().toInt()
+        val payloadLength = fixedHeaderBuffer.readLong()
+        fixedHeaderBuffer.readFully(ByteArray(24)) // Future use
 
         val senderName: String
         val fileName: String
@@ -305,8 +305,9 @@ class FileTransferService(
             senderName = ""
             fileName = ""
         } else {
-            senderName = ByteArray(senderNameLength).apply { ctx.socketReadChannel.readFully(this) }.decodeToString()
-            fileName = ByteArray(fileNameLength).apply { ctx.socketReadChannel.readFully(this) }.decodeToString()
+            val dynamicHeaderBuffer = receiverReadSegment(ctx, senderNameLength + fileNameLength)
+            senderName = ByteArray(senderNameLength).apply { dynamicHeaderBuffer.readFully(this) }.decodeToString()
+            fileName = ByteArray(fileNameLength).apply { dynamicHeaderBuffer.readFully(this) }.decodeToString()
         }
 
         val header = FileTransferRequestHeader(
@@ -324,10 +325,9 @@ class FileTransferService(
 
     private suspend fun receiverHandleConnectCommand(ctx: TransferReceiveContext) {
         val deviceName = getServerDeviceName()
-        ctx.socketWriteChannel.writeByte(Platform.current.toDevicePlatform().toByte())
-        ctx.socketWriteChannel.writeByte(deviceName.length)
-        ctx.socketWriteChannel.writeStringUtf8(deviceName)
-        ctx.socketWriteChannel.flush()
+        val fixedBytes = byteArrayOf(Platform.current.toDevicePlatform().toByte(), deviceName.length.toByte())
+        receiverWriteSegment(ctx, fixedBytes)
+        receiverWriteSegment(ctx, deviceName.encodeToByteArray())
     }
 
     private suspend fun receiverWaitForUserResponse(
@@ -349,9 +349,10 @@ class FileTransferService(
         val response = transferResponseFlow.first { it.transferId == ctx.transferId }
         val responseByte = if (response.responseType == FileTransferResponseType.Accepted) 0x01 else 0x00
 
-        ctx.socketWriteChannel.writeByte(responseByte)
-        ctx.socketWriteChannel.writeLong(response.existingFileLength)
-        ctx.socketWriteChannel.flush()
+        val buffer = Buffer()
+        buffer.writeByte(responseByte)
+        buffer.writeLong(response.existingFileLength)
+        receiverWriteSegment(ctx, buffer.readByteArray())
 
         if (response.responseType == FileTransferResponseType.Rejected) return Outcome.Error(Unit)
         return Outcome.Ok(response)
@@ -433,6 +434,31 @@ class FileTransferService(
             notifyJob.cancel()
             Outcome.Ok(Unit)
         }
+    }
+
+    private suspend inline fun receiverReadSegment(ctx: TransferReceiveContext, size: Int): Buffer {
+        val actualSize = if (ctx.useEncryption) getAESPaddedSize(size) else size
+        val rawBytes = ByteArray(actualSize).apply { ctx.socketReadChannel.readFully(this) }
+        val buffer = Buffer()
+
+        if (ctx.useEncryption) {
+            val decrypted = AES.decryptAesCtr(rawBytes, ctx.encryptionKey, ctx.encryptionIv, CipherPadding.PKCS7Padding)
+            buffer.write(decrypted)
+        } else {
+            buffer.write(rawBytes)
+        }
+
+        return buffer
+    }
+
+    private suspend inline fun receiverWriteSegment(ctx: TransferReceiveContext, bytes: ByteArray) {
+        if (ctx.useEncryption) {
+            val encrypted = AES.encryptAesCtr(bytes, ctx.encryptionKey, ctx.encryptionIv, CipherPadding.PKCS7Padding)
+            ctx.socketWriteChannel.writeFully(encrypted)
+        } else {
+            ctx.socketWriteChannel.writeFully(bytes)
+        }
+        ctx.socketWriteChannel.flush()
     }
 
 
@@ -692,6 +718,7 @@ class FileTransferService(
     }
 }
 
+private fun getAESPaddedSize(unencryptedByteCount: Int) = unencryptedByteCount + (16 - (unencryptedByteCount % 16))
 private fun getAESPaddedSize(unencryptedByteCount: Long) = unencryptedByteCount + (16 - (unencryptedByteCount % 16))
 
 private fun calculateAuthResponse(random: ByteArray): ByteArray {
@@ -704,13 +731,13 @@ private fun calculateAuthResponse(random: ByteArray): ByteArray {
 
 expect fun FileTransferService.isClosedConnectionException(exception: Any): Boolean
 
-private fun DevicePlatform.toByte() = when(this) {
+private fun DevicePlatform.toByte(): Byte = when(this) {
     DevicePlatform.MacOS -> 0x00
     DevicePlatform.Windows -> 0x01
     DevicePlatform.Linux -> 0x02
     DevicePlatform.iOS -> 0x03
     DevicePlatform.Android -> 0x04
-    DevicePlatform.Unknown -> 0xFF
+    DevicePlatform.Unknown -> 0xFF.toByte()
 }
 
 private fun Byte.toDevicePlatform() = when(this) {
