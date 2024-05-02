@@ -118,7 +118,10 @@ class DesktopNSDService : INSDService {
                 socket.connect(InetAddress.getByName("8.8.8.8"), 10002)
                 socket.localAddress
             }
-            if (inetAddress == InetAddress.getLocalHost() || inetAddress.hostAddress == "::") return null
+
+            when (inetAddress.hostAddress) {
+                "0.0.0.0", "127.0.0.1", "::" -> return null
+            }
 
             inetAddress
         } catch (e: Exception) {
