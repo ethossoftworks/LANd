@@ -54,6 +54,7 @@ fun commonModule() = module {
         FileTransferService(
             getServerDeviceName = { appPreferencesInteractor.state.displayName },
             getLocalIpAddress = nsdService::getLocalIpAddress,
+            getUseEncryption = { true } // TODO: Implement this
         )
     } bind IFileTransferService::class
     single { PreferencesService(get()) } bind IPreferencesService::class

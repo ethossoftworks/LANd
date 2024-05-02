@@ -3,6 +3,7 @@ package com.ethossoftworks.land.lib.crypto
 import com.ionspin.kotlin.bignum.integer.BigInteger
 import com.ionspin.kotlin.bignum.integer.Sign
 import com.ionspin.kotlin.bignum.integer.toBigInteger
+import korlibs.crypto.HMAC
 import korlibs.crypto.SecureRandom
 
 // Diffie-Hellman Cyrptographic key generator
@@ -48,6 +49,9 @@ object DHKey {
     fun computeSharedKey(publicKey: BigInteger, privateKey: BigInteger): BigInteger {
         return publicKey.powMod(privateKey, p)
     }
+
+    fun hkdfExtract(key: ByteArray, salt: ByteArray = SecureRandom.nextBytes(32)): ByteArray =
+        HMAC.hmacSHA256(salt, key).bytes
 
     fun keyToBytes(key: BigInteger) = key.toByteArray()
     fun keyFromBytes(bytes: ByteArray) = BigInteger.fromByteArray(bytes, Sign.POSITIVE)
