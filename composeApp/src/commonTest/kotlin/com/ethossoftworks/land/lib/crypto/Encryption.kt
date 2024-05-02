@@ -13,7 +13,7 @@ class Encryption {
         val alicePrivateKey = DHKey.generatePrivateKey()
         val bobPrivateKey = DHKey.generatePrivateKey()
         val bobPublicKey = DHKey.computePublicKey(bobPrivateKey)
-        val sharedKey = DHKey.computeSharedKeyToBytes(bobPublicKey, alicePrivateKey)
+        val sharedKey = DHKey.computeSharedKeyBytes(bobPublicKey, alicePrivateKey)
 
         val iv = SecureRandom.nextBytes(16)
 

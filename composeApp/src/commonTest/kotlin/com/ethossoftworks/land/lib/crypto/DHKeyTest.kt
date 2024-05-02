@@ -7,8 +7,8 @@ class DHKeyTest {
     @Test
     fun dhKey() {
         // Compute Private Keys
-        val alicePrivateKey = DHKey.generatePrivateKey(2_048)
-        val bobPrivateKey = DHKey.generatePrivateKey(2_048)
+        val alicePrivateKey = DHKey.generatePrivateKey()
+        val bobPrivateKey = DHKey.generatePrivateKey()
 
         assertTrue { alicePrivateKey != bobPrivateKey }
 
@@ -19,8 +19,8 @@ class DHKeyTest {
         assertTrue { alicePublicKey != bobPublicKey }
 
         // Compute shared secrets
-        val aliceSharedSecret = DHKey.computeSharedKey(bobPublicKey, alicePrivateKey)
-        val bobSharedSecret = DHKey.computeSharedKey(alicePublicKey, bobPrivateKey)
+        val aliceSharedSecret = DHKey.computeSharedKeyBytes(bobPublicKey, alicePrivateKey)
+        val bobSharedSecret = DHKey.computeSharedKeyBytes(alicePublicKey, bobPrivateKey)
 
         assertTrue { aliceSharedSecret.contentEquals(bobSharedSecret) }
     }

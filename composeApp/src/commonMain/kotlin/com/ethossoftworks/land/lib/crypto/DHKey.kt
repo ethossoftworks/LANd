@@ -41,7 +41,7 @@ object DHKey {
         return g.powMod(privateKey, p)
     }
 
-    fun computeSharedKeyToBytes(publicKey: BigInteger, privateKey: BigInteger): ByteArray {
+    fun computeSharedKeyBytes(publicKey: BigInteger, privateKey: BigInteger): ByteArray {
         return computeSharedKey(publicKey, privateKey).toByteArray()
     }
 

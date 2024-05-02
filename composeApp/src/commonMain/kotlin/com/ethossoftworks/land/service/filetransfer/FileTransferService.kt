@@ -39,6 +39,7 @@ import kotlin.experimental.xor
 const val FILE_TRANSFER_PORT = 50077
 private const val AUTH_CHALLENGE_LENGTH = 32
 private const val PROTOCOL_VERSION = 1
+private val ENCRYPTED_FIXED_HEADER_SIZE = getAESPaddedSize(56 + 16 + 256) // Fixed Header Size + IV size + Key size
 
 @OptIn(ExperimentalUnsignedTypes::class)
 private val AUTH_CHALLENGE_XOR = ubyteArrayOf(
@@ -605,6 +606,8 @@ class FileTransferService(
         }
     }
 }
+
+private fun getAESPaddedSize(unencryptedByteCount: Long) = unencryptedByteCount + (16 - (unencryptedByteCount % 16))
 
 private fun calculateAuthResponse(random: ByteArray): ByteArray {
     val hashedBytes = random.sha256().bytes
