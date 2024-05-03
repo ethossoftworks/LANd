@@ -279,8 +279,10 @@ class FileTransferService(
     ): Outcome<Unit, FileTransferStopReason> {
         val senderPublicKey = ByteArray(256)
         val iv = ByteArray(16)
+        val salt = ByteArray(32)
         ctx.socketReadChannel.readFully(senderPublicKey)
         ctx.socketReadChannel.readFully(iv)
+        ctx.socketReadChannel.readFully(salt)
 
         val receiverPrivateKey = DHKey.generatePrivateKey()
         val receiverPublicKey = DHKey.computePublicKey(receiverPrivateKey)
@@ -288,7 +290,7 @@ class FileTransferService(
         ctx.socketWriteChannel.flush()
 
         val sharedSecret = DHKey.computeSharedKey(DHKey.keyFromBytes(senderPublicKey), receiverPrivateKey)
-        ctx.encryptionKey = DHKey.hkdfExtract(DHKey.keyToBytes(sharedSecret))
+        ctx.encryptionKey = DHKey.hkdfExtract(DHKey.keyToBytes(sharedSecret), salt)
         ctx.encryptionIv = iv
 
         return Outcome.Ok(Unit)
@@ -571,16 +573,18 @@ class FileTransferService(
         val senderPrivateKey = DHKey.generatePrivateKey()
         val senderPublicKey = DHKey.computePublicKey(senderPrivateKey)
         val iv = SecureRandom.nextBytes(16)
+        val salt = SecureRandom.nextBytes(32)
         val receiverPublicKey = ByteArray(256)
 
         ctx.socketWriteChannel.writeFully(DHKey.keyToBytes(senderPublicKey))
         ctx.socketWriteChannel.writeFully(iv)
+        ctx.socketWriteChannel.writeFully(salt)
         ctx.socketWriteChannel.flush()
 
         ctx.socketReadChannel.readFully(receiverPublicKey)
 
         val sharedSecret = DHKey.computeSharedKey(DHKey.keyFromBytes(receiverPublicKey), senderPrivateKey)
-        ctx.encryptionKey = DHKey.hkdfExtract(DHKey.keyToBytes(sharedSecret))
+        ctx.encryptionKey = DHKey.hkdfExtract(DHKey.keyToBytes(sharedSecret), salt)
         ctx.encryptionIv = iv
     }
 
