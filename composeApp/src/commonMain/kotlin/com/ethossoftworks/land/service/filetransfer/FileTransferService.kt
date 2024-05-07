@@ -171,6 +171,7 @@ class FileTransferService(
                 socket.close()
             }
 
+            // TODO: Don't leave this timeout
             val header = withTimeout(15_000) {
                 receiverReadProtocolVersion(transferContext).unwrapOrReturn { return@withTimeout this }
                 receiverHandleAuthChallenge(transferContext).unwrapOrReturn { return@withTimeout this }
@@ -411,13 +412,20 @@ class FileTransferService(
                 }
             }
 
+            // TODO: Don't use this. Make the buffer the correct max size
+//            val actualBufferSize = if (ctx.useEncryption) getAESPaddedSize(bufferSize - 16) else bufferSize
+            val actualBufferSize = bufferSize
+
             while (isActive) {
                 if (totalWritten == header.payloadLength) {
                     onDone().unwrapOrReturn { return@coroutineScope this }
                     break
                 }
 
-                val read = ctx.socketReadChannel.readAvailable(ctx.readBuffer, 0, bufferSize)
+                // TODO: There is a problem with decryption here.
+                //  Reading the from the socket doesn't guarantee the correct size for the decryption step to work.
+                //  Potential Solutions: 1. Write/read fixed block sizes, 2. Manually manage the AES CTR counter in the IV bytes
+                val read = ctx.socketReadChannel.readAvailable(ctx.readBuffer, 0, actualBufferSize)
                 if (read == 0) continue
 
                 if (read == -1) {
@@ -438,15 +446,17 @@ class FileTransferService(
                     }
                 }
 
-                val readBytes = if (ctx.useEncryption) {
-                    val bytes = if (read == ctx.readBuffer.size) ctx.readBuffer else ByteArray(read).apply { ctx.readBuffer.copyOfRange(0, read) }
-                    AES.decryptAesCtr(bytes, ctx.encryptionKey, ctx.encryptionIv, CipherPadding.PKCS7Padding)
+                if (ctx.useEncryption) {
+                    val bytes = ByteArray(read).apply { ctx.readBuffer.copyOfRange(0, read) }
+                    AES.decryptAesCtr(bytes, ctx.encryptionKey, ctx.encryptionIv, CipherPadding.NoPadding)
                 } else {
                     ctx.readBuffer
                 }
 
-                fileWriter.write(readBytes, 0, read)
-                totalWritten += read
+                val actualRead = if (ctx.useEncryption) readBytes.size else read
+
+                fileWriter.write(readBytes, 0, actualRead)
+                totalWritten += actualRead
             }
 
             notifyJob.cancel()
@@ -472,6 +482,7 @@ class FileTransferService(
 
             val transferContext = TransferSendContext(
                 transferId = transferId,
+                // TODO: I should create this when I know if the payload is going to be encrypted. Do the same for send
                 readBuffer = ByteArray(bufferSize),
                 socketReadChannel = socket.openReadChannel(),
                 socketWriteChannel = socket.openWriteChannel(),
@@ -486,6 +497,7 @@ class FileTransferService(
                 socket.close()
             }
 
+            // TODO: Don't leave this timeout
             withTimeout(15_000) {
                 senderSendProtocol(transferContext)
                 senderHandleAuth(transferContext)
@@ -660,16 +672,18 @@ class FileTransferService(
             }
 
             while (isActive) {
-                val read = fileReader.read(ctx.readBuffer, 0, if (ctx.useEncryption) bufferSize - 16 else bufferSize)
+                val read = fileReader.read(ctx.readBuffer, 0, if (ctx.useEncryption) getAESPaddedSize(bufferSize - 16) else bufferSize)
                 if (read == -1) break
 
                 val readBytes = if (ctx.useEncryption) {
                     val bytes = if (read == ctx.readBuffer.size) ctx.readBuffer else ByteArray(read).apply { ctx.readBuffer.copyOfRange(0, read) }
-                    AES.encryptAesCtr(bytes, ctx.encryptionKey, ctx.encryptionIv, CipherPadding.PKCS7Padding)
+                    AES.encryptAesCtr(bytes, ctx.encryptionKey, ctx.encryptionIv, CipherPadding.NoPadding)
                 } else {
                     ctx.readBuffer
                 }
-                ctx.writeSegment(readBytes)
+
+                ctx.socketWriteChannel.writeFully(readBytes)
+//                ctx.writeSegment(readBytes) // TODO: I'd like to use this so I don't have to have the logic above
                 totalRead += read
             }
 
@@ -731,6 +745,7 @@ private suspend inline fun IEncryptorContext.readSegment(size: Int): Buffer {
     val buffer = Buffer()
 
     if (useEncryption) {
+        // CTR Doesn't need padding
         val decrypted = AES.decryptAesCtr(rawBytes, encryptionKey, encryptionIv, CipherPadding.PKCS7Padding)
         buffer.write(decrypted)
     } else {
@@ -742,6 +757,7 @@ private suspend inline fun IEncryptorContext.readSegment(size: Int): Buffer {
 
 private suspend inline fun IEncryptorContext.writeSegment(bytes: ByteArray) {
     if (useEncryption) {
+        // CTR Doesn't need padding
         val encrypted = AES.encryptAesCtr(bytes, encryptionKey, encryptionIv, CipherPadding.PKCS7Padding)
         socketWriteChannel.writeFully(encrypted)
     } else {
@@ -751,7 +767,6 @@ private suspend inline fun IEncryptorContext.writeSegment(bytes: ByteArray) {
 }
 
 private fun getAESPaddedSize(unencryptedByteCount: Int) = unencryptedByteCount + (16 - (unencryptedByteCount % 16))
-private fun getAESPaddedSize(unencryptedByteCount: Long) = unencryptedByteCount + (16 - (unencryptedByteCount % 16))
 
 private fun calculateAuthResponse(random: ByteArray): ByteArray {
     val hashedBytes = random.sha256().bytes

@@ -3,13 +3,14 @@ package com.ethossoftworks.land.lib.crypto
 import korlibs.crypto.AES
 import korlibs.crypto.CipherPadding
 import korlibs.crypto.SecureRandom
+import kotlinx.coroutines.runBlocking
 import kotlin.test.Test
 import kotlin.test.assertTrue
 
 class EncryptionTest {
     @OptIn(ExperimentalStdlibApi::class)
     @Test
-    fun encryption() {
+    fun encryption() = runBlocking {
         val alicePrivateKey = DHKey.generatePrivateKey()
         val bobPrivateKey = DHKey.generatePrivateKey()
         val bobPublicKey = DHKey.computePublicKey(bobPrivateKey)
