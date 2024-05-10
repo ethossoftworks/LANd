@@ -30,6 +30,7 @@ import kotlinx.atomicfu.update
 import kotlinx.atomicfu.updateAndGet
 import kotlinx.coroutines.*
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.channels.ClosedReceiveChannelException
 import kotlinx.coroutines.channels.ProducerScope
 import kotlinx.coroutines.channels.SendChannel
 import kotlinx.coroutines.flow.*
@@ -412,20 +413,19 @@ class FileTransferService(
                 }
             }
 
-            // TODO: Don't use this. Make the buffer the correct max size
-//            val actualBufferSize = if (ctx.useEncryption) getAESPaddedSize(bufferSize - 16) else bufferSize
-            val actualBufferSize = bufferSize
-
             while (isActive) {
                 if (totalWritten == header.payloadLength) {
                     onDone().unwrapOrReturn { return@coroutineScope this }
                     break
                 }
 
-                // TODO: There is a problem with decryption here.
-                //  Reading the from the socket doesn't guarantee the correct size for the decryption step to work.
-                //  Potential Solutions: 1. Write/read fixed block sizes, 2. Manually manage the AES CTR counter in the IV bytes
-                val read = ctx.socketReadChannel.readAvailable(ctx.readBuffer, 0, actualBufferSize)
+                val read = try {
+                    ctx.socketReadChannel.readFully(ctx.readBuffer)
+                    bufferSize
+                } catch (e: ClosedReceiveChannelException) {
+                    -1
+                }
+
                 if (read == 0) continue
 
                 if (read == -1) {
@@ -446,17 +446,15 @@ class FileTransferService(
                     }
                 }
 
-                if (ctx.useEncryption) {
-                    val bytes = ByteArray(read).apply { ctx.readBuffer.copyOfRange(0, read) }
-                    AES.decryptAesCtr(bytes, ctx.encryptionKey, ctx.encryptionIv, CipherPadding.NoPadding)
+                val actualBytes = if (ctx.useEncryption) {
+                    AES.decryptAesCtr(ctx.readBuffer, ctx.encryptionKey, ctx.encryptionIv, CipherPadding.NoPadding)
                 } else {
                     ctx.readBuffer
                 }
 
-                val actualRead = if (ctx.useEncryption) readBytes.size else read
-
-                fileWriter.write(readBytes, 0, actualRead)
-                totalWritten += actualRead
+                val chunkSize = minOf(actualBytes.size.toLong(), (header.payloadLength - totalWritten))
+                fileWriter.write(actualBytes, 0, chunkSize.toInt())
+                totalWritten += chunkSize
             }
 
             notifyJob.cancel()
@@ -664,6 +662,7 @@ class FileTransferService(
         var totalRead = existingFileLength
 
         coroutineScope {
+            var eof = false
             val notifyJob = launch {
                 while (isActive) {
                     delay(100)
@@ -671,20 +670,26 @@ class FileTransferService(
                 }
             }
 
-            while (isActive) {
-                val read = fileReader.read(ctx.readBuffer, 0, if (ctx.useEncryption) getAESPaddedSize(bufferSize - 16) else bufferSize)
-                if (read == -1) break
+            while (isActive && !eof) {
+                var offset = 0
+
+                while (isActive && offset < bufferSize) {
+                    val read = fileReader.read(ctx.readBuffer, offset, bufferSize - offset)
+                    if (read == -1) {
+                        eof = true
+                        break
+                    }
+                    offset += read
+                }
 
                 val readBytes = if (ctx.useEncryption) {
-                    val bytes = if (read == ctx.readBuffer.size) ctx.readBuffer else ByteArray(read).apply { ctx.readBuffer.copyOfRange(0, read) }
-                    AES.encryptAesCtr(bytes, ctx.encryptionKey, ctx.encryptionIv, CipherPadding.NoPadding)
+                    AES.encryptAesCtr(ctx.readBuffer, ctx.encryptionKey, ctx.encryptionIv, CipherPadding.NoPadding)
                 } else {
                     ctx.readBuffer
                 }
 
-                ctx.socketWriteChannel.writeFully(readBytes)
-//                ctx.writeSegment(readBytes) // TODO: I'd like to use this so I don't have to have the logic above
-                totalRead += read
+                ctx.socketWriteChannel.writeFully(readBytes, 0, bufferSize)
+                totalRead += offset
             }
 
             notifyJob.cancel()
