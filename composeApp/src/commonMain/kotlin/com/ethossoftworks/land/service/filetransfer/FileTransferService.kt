@@ -27,19 +27,16 @@ import kotlinx.atomicfu.update
 import kotlinx.atomicfu.updateAndGet
 import kotlinx.coroutines.*
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.channels.ClosedReceiveChannelException
 import kotlinx.coroutines.channels.ProducerScope
 import kotlinx.coroutines.channels.SendChannel
 import kotlinx.coroutines.flow.*
-import okio.BufferedSink
-import okio.BufferedSource
-import okio.Sink
-import okio.buffer
+import okio.*
 import kotlin.experimental.xor
 
 const val FILE_TRANSFER_PORT = 50077
 private const val AUTH_CHALLENGE_LENGTH = 32
 private const val PROTOCOL_VERSION = 1
-private val ENCRYPTED_FIXED_HEADER_SIZE = getAESPaddedSize(56 + 16 + 256) // Fixed Header Size + IV size + Key size
 
 @OptIn(ExperimentalUnsignedTypes::class)
 private val AUTH_CHALLENGE_XOR = ubyteArrayOf(
@@ -348,7 +345,12 @@ class FileTransferService(
                     break
                 }
 
-                val read = ctx.socketReadChannel.readAvailable(ctx.readBuffer, 0, bufferSize)
+                val read = try {
+                    ctx.socketReadChannel.readFully(ctx.readBuffer)
+                    bufferSize
+                } catch (e: ClosedReceiveChannelException) {
+                    -1
+                }
                 if (read == 0) continue
 
                 if (read == -1) {
@@ -369,8 +371,9 @@ class FileTransferService(
                     }
                 }
 
-                fileWriter.write(ctx.readBuffer, 0, read)
-                totalWritten += read
+                val chunkSize = minOf(bufferSize.toLong(), (header.payloadLength - totalWritten))
+                fileWriter.write(ctx.readBuffer, 0, chunkSize.toInt())
+                totalWritten += chunkSize
             }
 
             notifyJob.cancel()
@@ -542,6 +545,7 @@ class FileTransferService(
         var totalRead = existingFileLength
 
         coroutineScope {
+            var eof = false
             val notifyJob = launch {
                 while (isActive) {
                     delay(100)
@@ -549,11 +553,20 @@ class FileTransferService(
                 }
             }
 
-            while (isActive) {
-                val read = fileReader.read(ctx.readBuffer, 0, bufferSize)
-                if (read == -1) break
-                ctx.socketWriteChannel.writeFully(ctx.readBuffer, 0, read)
-                totalRead += read
+            while (isActive && !eof) {
+                var offset = 0
+
+                while (isActive && offset < bufferSize) {
+                    val read = fileReader.read(ctx.readBuffer, offset, bufferSize - offset)
+                    if (read == -1) {
+                        eof = true
+                        break
+                    }
+                    offset += read
+                }
+
+                ctx.socketWriteChannel.writeFully(ctx.readBuffer, 0, bufferSize)
+                totalRead += offset
             }
 
             notifyJob.cancel()
@@ -606,8 +619,6 @@ class FileTransferService(
         }
     }
 }
-
-private fun getAESPaddedSize(unencryptedByteCount: Long) = unencryptedByteCount + (16 - (unencryptedByteCount % 16))
 
 private fun calculateAuthResponse(random: ByteArray): ByteArray {
     val hashedBytes = random.sha256().bytes
