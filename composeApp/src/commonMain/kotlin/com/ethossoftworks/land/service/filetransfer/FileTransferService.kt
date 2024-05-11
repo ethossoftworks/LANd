@@ -426,8 +426,6 @@ class FileTransferService(
                     -1
                 }
 
-                if (read == 0) continue
-
                 if (read == -1) {
                     onDone().unwrapOrReturn { return@coroutineScope this }
                     break
@@ -536,8 +534,13 @@ class FileTransferService(
             when {
                 error == Unit -> { /* Do Nothing */ }
                 error is LANdTransferCancelledException -> {
-                    outerSocketWriteChannel?.writeFully(commandSignalBytes + error.command.toByte(), 0, commandSignalBytes.size + 1)
+                    val cancelFrameBytes = ByteArray(bufferSize)
+                    val signalBytes = (commandSignalBytes + error.command.toByte())
+                    signalBytes.copyInto(cancelFrameBytes, bufferSize - signalBytes.size)
+
+                    outerSocketWriteChannel?.writeFully(cancelFrameBytes)
                     outerSocketWriteChannel?.flush()
+
                     send(
                         FileTransferClientEvent.TransferStopped(
                             transferId = transferId,
