@@ -6,6 +6,7 @@ import co.touchlab.kermit.Logger
 import com.ethossoftworks.land.entity.Device
 import com.ethossoftworks.land.entity.DevicePlatform
 import com.ethossoftworks.land.entity.toDevicePlatform
+import com.ethossoftworks.land.lib.bytes.find
 import com.ethossoftworks.land.lib.bytes.offsetContentEquals
 import com.ethossoftworks.land.lib.bytes.toUShort
 import com.ethossoftworks.land.lib.crypto.DHKey
@@ -395,15 +396,6 @@ class FileTransferService(
         setFileWriter(fileWriter)
         var totalWritten = response.existingFileLength
 
-        val onDone = suspend {
-            if (totalWritten == header.payloadLength) {
-                ctx.eventChannel.send(FileTransferServerEvent.TransferComplete(ctx.transferId))
-                Outcome.Ok(Unit)
-            } else {
-                Outcome.Error(FileTransferStopReason.SocketClosed)
-            }
-        }
-
         return coroutineScope {
             val notifyJob = launch {
                 while (isActive) {
@@ -415,33 +407,19 @@ class FileTransferService(
 
             while (isActive) {
                 if (totalWritten == header.payloadLength) {
-                    onDone().unwrapOrReturn { return@coroutineScope this }
+                    ctx.eventChannel.send(FileTransferServerEvent.TransferComplete(ctx.transferId))
                     break
                 }
 
-                val read = try {
+                try {
                     ctx.socketReadChannel.readFully(ctx.readBuffer)
-                    bufferSize
                 } catch (e: ClosedReceiveChannelException) {
-                    -1
-                }
-
-                if (read == -1) {
-                    onDone().unwrapOrReturn { return@coroutineScope this }
-                    break
-                }
-
-                // Check for command signal in tail of read buffer
-                if (ctx.readBuffer.offsetContentEquals(commandSignalBytes, read - commandSignalBytes.size - 1)) {
-                    when (val command = Command.fromByte(ctx.readBuffer[read - 1])) {
-                        Command.CancelStop,
-                        Command.CancelDelete -> {
-                            val cancelEvent = FileTransferServerEvent.TransferStopped(ctx.transferId, FileTransferStopReason.UserCancelled(command))
-                            ctx.eventChannel.send(cancelEvent)
-                            break
-                        }
-                        else -> {}
+                    notifyJob.cancel()
+                    val stopReason = when (val command = getReadBufferCancellationCommand(ctx)) {
+                        null -> FileTransferStopReason.SocketClosed
+                        else -> FileTransferStopReason.UserCancelled(command)
                     }
+                    return@coroutineScope Outcome.Error(stopReason)
                 }
 
                 val actualBytes = if (ctx.useEncryption) {
@@ -457,6 +435,19 @@ class FileTransferService(
 
             notifyJob.cancel()
             Outcome.Ok(Unit)
+        }
+    }
+
+    private fun getReadBufferCancellationCommand(ctx: TransferReceiveContext): Command? {
+        return try {
+            val commandSignalIndex = ctx.readBuffer.find(commandSignalBytes)
+            if (commandSignalIndex == -1) return null
+
+            val command = Command.fromByte(ctx.readBuffer[commandSignalIndex + commandSignalBytes.size])
+            if (command == Command.Unknown) return null
+            command
+        } catch (e: Exception) {
+            null
         }
     }
 
@@ -534,11 +525,7 @@ class FileTransferService(
             when {
                 error == Unit -> { /* Do Nothing */ }
                 error is LANdTransferCancelledException -> {
-                    val cancelFrameBytes = ByteArray(bufferSize)
-                    val signalBytes = (commandSignalBytes + error.command.toByte())
-                    signalBytes.copyInto(cancelFrameBytes, bufferSize - signalBytes.size)
-
-                    outerSocketWriteChannel?.writeFully(cancelFrameBytes)
+                    outerSocketWriteChannel?.writeFully(commandSignalBytes + error.command.toByte())
                     outerSocketWriteChannel?.flush()
 
                     send(
