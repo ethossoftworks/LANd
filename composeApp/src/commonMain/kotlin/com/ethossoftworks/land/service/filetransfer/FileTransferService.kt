@@ -745,33 +745,29 @@ class FileTransferService(
 }
 
 private suspend inline fun IEncryptorContext.readSegment(size: Int): Buffer {
-    val actualSize = if (useEncryption) getAESPaddedSize(size) else size
-    val rawBytes = ByteArray(actualSize).apply { socketReadChannel.readFully(this) }
+    val rawBytes = ByteArray(size).apply { socketReadChannel.readFully(this) }
     val buffer = Buffer()
 
-    if (useEncryption) {
-        // CTR Doesn't need padding
-        val decrypted = AES.decryptAesCtr(rawBytes, encryptionKey, encryptionIv, CipherPadding.PKCS7Padding)
-        buffer.write(decrypted)
+    val actualBytes = if (useEncryption) {
+        AES.decryptAesCtr(rawBytes, encryptionKey, encryptionIv, CipherPadding.NoPadding)
     } else {
-        buffer.write(rawBytes)
+        rawBytes
     }
 
+    buffer.write(actualBytes)
     return buffer
 }
 
 private suspend inline fun IEncryptorContext.writeSegment(bytes: ByteArray) {
-    if (useEncryption) {
-        // CTR Doesn't need padding
-        val encrypted = AES.encryptAesCtr(bytes, encryptionKey, encryptionIv, CipherPadding.PKCS7Padding)
-        socketWriteChannel.writeFully(encrypted)
+    val actualBytes = if (useEncryption) {
+        AES.encryptAesCtr(bytes, encryptionKey, encryptionIv, CipherPadding.NoPadding)
     } else {
-        socketWriteChannel.writeFully(bytes)
+        bytes
     }
+
+    socketWriteChannel.writeFully(actualBytes)
     socketWriteChannel.flush()
 }
-
-private fun getAESPaddedSize(unencryptedByteCount: Int) = unencryptedByteCount + (16 - (unencryptedByteCount % 16))
 
 private fun calculateAuthResponse(random: ByteArray): ByteArray {
     val hashedBytes = random.sha256().bytes
