@@ -10,6 +10,7 @@ import com.ethossoftworks.land.lib.bytes.find
 import com.ethossoftworks.land.lib.bytes.offsetContentEquals
 import com.ethossoftworks.land.lib.bytes.toUShort
 import com.ethossoftworks.land.lib.crypto.DHKey
+import com.ionspin.kotlin.bignum.integer.BigInteger
 import com.outsidesource.oskitkmp.concurrency.asyncOutcome
 import com.outsidesource.oskitkmp.concurrency.awaitOutcome
 import com.outsidesource.oskitkmp.lib.Platform
@@ -111,6 +112,23 @@ class FileTransferService(
     private val transferResponseFlow = MutableSharedFlow<FileTransferResponse>()
     private val serverSocket = atomic<ServerSocket?>(null)
     private val commandFlow = MutableSharedFlow<CommandSignal>()
+    private val scope = CoroutineScope(Dispatchers.Default + SupervisorJob())
+    private val privateKey = CompletableDeferred<BigInteger>()
+    private val publicKey = CompletableDeferred<BigInteger>()
+
+    init {
+        generateKeys()
+    }
+
+    private fun generateKeys() {
+        scope.launch {
+            val privKey = DHKey.generatePrivateKey()
+            privateKey.complete(privKey)
+
+            val pubKey = DHKey.computePublicKey(privKey)
+            publicKey.complete(pubKey)
+        }
+    }
 
     private fun generateConnectionId(): Short {
         if (connectionId.value == Short.MAX_VALUE) return connectionId.updateAndGet { 0 }
@@ -287,12 +305,10 @@ class FileTransferService(
         ctx.socketReadChannel.readFully(iv)
         ctx.socketReadChannel.readFully(salt)
 
-        val receiverPrivateKey = DHKey.generatePrivateKey()
-        val receiverPublicKey = DHKey.computePublicKey(receiverPrivateKey)
-        ctx.socketWriteChannel.writeFully(DHKey.keyToBytes(receiverPublicKey))
+        ctx.socketWriteChannel.writeFully(DHKey.keyToBytes(publicKey.await()))
         ctx.socketWriteChannel.flush()
 
-        val sharedSecret = DHKey.computeSharedKey(DHKey.keyFromBytes(senderPublicKey), receiverPrivateKey)
+        val sharedSecret = DHKey.computeSharedKey(DHKey.keyFromBytes(senderPublicKey), privateKey.await())
         ctx.encryptionKey = DHKey.hkdfExtract(DHKey.keyToBytes(sharedSecret), salt)
         ctx.encryptionIv = iv
 
@@ -570,20 +586,18 @@ class FileTransferService(
     }
 
     private suspend fun senderHandleEncryptionHandshake(ctx: TransferSendContext) {
-        val senderPrivateKey = DHKey.generatePrivateKey()
-        val senderPublicKey = DHKey.computePublicKey(senderPrivateKey)
         val iv = SecureRandom.nextBytes(16)
         val salt = SecureRandom.nextBytes(32)
         val receiverPublicKey = ByteArray(256)
 
-        ctx.socketWriteChannel.writeFully(DHKey.keyToBytes(senderPublicKey))
+        ctx.socketWriteChannel.writeFully(DHKey.keyToBytes(publicKey.await()))
         ctx.socketWriteChannel.writeFully(iv)
         ctx.socketWriteChannel.writeFully(salt)
         ctx.socketWriteChannel.flush()
 
         ctx.socketReadChannel.readFully(receiverPublicKey)
 
-        val sharedSecret = DHKey.computeSharedKey(DHKey.keyFromBytes(receiverPublicKey), senderPrivateKey)
+        val sharedSecret = DHKey.computeSharedKey(DHKey.keyFromBytes(receiverPublicKey), privateKey.await())
         ctx.encryptionKey = DHKey.hkdfExtract(DHKey.keyToBytes(sharedSecret), salt)
         ctx.encryptionIv = iv
     }
