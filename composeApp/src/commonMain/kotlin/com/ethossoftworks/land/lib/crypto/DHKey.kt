@@ -62,16 +62,13 @@ object DHKey {
         var exp = exponent
 
         while (exp > BigInteger.ZERO) {
-            if (exp.isOdd) {
+            if (exp and BigInteger.ONE != BigInteger.ZERO) { // Check if exp is odd
                 result = (result * base) % modulus
             }
             base = (base * base) % modulus
-            exp /= 2.toBigInteger()
+            exp = exp shr 1 // Divide by 2
         }
 
         return result
     }
-
-    private val BigInteger.isOdd: Boolean
-        get() = this % 2.toBigInteger() == BigInteger.ONE
 }
