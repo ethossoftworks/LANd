@@ -191,8 +191,7 @@ class FileTransferService(
                 socket.close()
             }
 
-            // TODO: Don't leave this timeout
-            val header = withTimeout(15_000) {
+            val header = withTimeout(3_000) {
                 receiverReadProtocolVersion(transferContext).unwrapOrReturn { return@withTimeout this }
                 receiverHandleAuthChallenge(transferContext).unwrapOrReturn { return@withTimeout this }
                 receiverHandleFlags(transferContext).unwrapOrReturn { return@withTimeout this }
@@ -485,7 +484,6 @@ class FileTransferService(
 
             val transferContext = TransferSendContext(
                 transferId = transferId,
-                // TODO: I should create this when I know if the payload is going to be encrypted. Do the same for send
                 readBuffer = ByteArray(bufferSize),
                 socketReadChannel = socket.openReadChannel(),
                 socketWriteChannel = socket.openWriteChannel(),
@@ -500,8 +498,7 @@ class FileTransferService(
                 socket.close()
             }
 
-            // TODO: Don't leave this timeout
-            withTimeout(15_000) {
+            withTimeout(3_000) {
                 senderSendProtocol(transferContext)
                 senderHandleAuth(transferContext)
                 senderSendFlags(transferContext)
