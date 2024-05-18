@@ -61,6 +61,8 @@ fun HomeScreen(
         val ringSpacing = maxHeight / 6f
 
         ToolbarButtons(
+            useEncryption = state.useEncryption,
+            onEncryptButtonClicked = interactor::onEncryptButtonClicked,
             onAddButtonClicked = interactor::onAddButtonClicked,
             onInfoButtonClicked = interactor::onInfoButtonClicked,
             onSettingsButtonClicked = interactor::onSettingsButtonClicked,
@@ -132,6 +134,8 @@ fun HomeScreen(
 
 @Composable
 private fun BoxWithConstraintsScope.ToolbarButtons(
+    useEncryption: Boolean,
+    onEncryptButtonClicked: () -> Unit,
     onAddButtonClicked: () -> Unit,
     onInfoButtonClicked: () -> Unit,
     onSettingsButtonClicked: () -> Unit,
@@ -147,6 +151,11 @@ private fun BoxWithConstraintsScope.ToolbarButtons(
             .zIndex(1f)
             .padding(top = 16.dp, end = 16.dp),
     ) {
+        ImageButton(
+            resource = if (useEncryption) Res.drawable.lock else Res.drawable.lock_open,
+            tint = AppTheme.colors.homeScreenButtonTint,
+            onClick = onEncryptButtonClicked,
+        )
         ImageButton(
             resource = Res.drawable.add,
             tint = AppTheme.colors.homeScreenButtonTint,

@@ -14,6 +14,8 @@ interface IPreferencesService {
     suspend fun getContacts(): Outcome<Map<String, Contact>, Any>
     suspend fun getVisibility(): Outcome<DeviceVisibility, Any>
     suspend fun setVisibility(visibility: DeviceVisibility): Outcome<Unit, Any>
+    suspend fun getUseEncryption(): Outcome<Boolean, Any>
+    suspend fun setUseEncryption(value: Boolean): Outcome<Unit, Any>
     suspend fun getTransferRequestPermission(): Outcome<TransferRequestPermissionType, Any>
     suspend fun setTransferRequestPermission(type: TransferRequestPermissionType): Outcome<Unit, Any>
 }

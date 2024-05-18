@@ -21,6 +21,7 @@ import kotlinx.coroutines.flow.skip
 import kotlinx.coroutines.launch
 
 data class HomeViewState(
+    val useEncryption: Boolean = false,
     val isSettingsBottomSheetVisible: Boolean = false,
     val discoveredDevices: Map<String, Device> = emptyMap(),
     val hasInitialized: Boolean = false,
@@ -59,6 +60,7 @@ class HomeScreenViewInteractor(
             hasBroadcastingError = discoveryInteractor.state.hasBroadcastingError,
             hasServerError = fileTransferInteractor.state.hasServerError,
             visibility = appPreferencesInteractor.state.deviceVisibility,
+            useEncryption = appPreferencesInteractor.state.useEncryption,
         )
     }
 
@@ -161,6 +163,12 @@ class HomeScreenViewInteractor(
 
     fun onAboutModalDismissed() {
         update { state -> state.copy(isAboutModalVisible = false) }
+    }
+
+    fun onEncryptButtonClicked() {
+        interactorScope.launch {
+            appPreferencesInteractor.setUseEncryption(!state.useEncryption)
+        }
     }
 
     fun onAddButtonClicked() {
