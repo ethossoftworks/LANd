@@ -10,6 +10,7 @@ import com.outsidesource.oskitkmp.interactor.Interactor
 import com.outsidesource.oskitkmp.lib.Platform
 import com.outsidesource.oskitkmp.lib.current
 import com.outsidesource.oskitkmp.outcome.Outcome
+import com.outsidesource.oskitkmp.outcome.runOnOk
 import com.outsidesource.oskitkmp.outcome.unwrapOrDefault
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.launch
@@ -22,6 +23,7 @@ data class AppPreferencesState(
     val contacts: Map<String, Contact> = emptyMap(),
     val transferRequestPermissionType: TransferRequestPermissionType = TransferRequestPermissionType.AskAll,
     val deviceVisibility: DeviceVisibility = DeviceVisibility.Visible,
+    val useEncryption: Boolean = false,
 )
 
 class AppPreferencesInteractor(
@@ -59,10 +61,12 @@ class AppPreferencesInteractor(
             val deviceVisibility = preferencesService.getVisibility().unwrapOrDefault(DeviceVisibility.Visible)
             val requestPermissionType = preferencesService.getTransferRequestPermission().unwrapOrDefault(
                 TransferRequestPermissionType.AskAll)
+            val useEncryption = preferencesService.getUseEncryption().unwrapOrDefault(false)
 
             update { state ->
                 state.copy(
 //                    contacts = contacts,
+                    useEncryption = useEncryption,
                     saveFolder = saveFolder,
                     deviceVisibility = deviceVisibility,
                     transferRequestPermissionType = requestPermissionType,
@@ -99,6 +103,11 @@ class AppPreferencesInteractor(
         val outcome = preferencesService.setVisibility(visibility)
         if (outcome is Outcome.Ok) update { state -> state.copy(deviceVisibility = visibility) }
         return outcome
+    }
+
+    suspend fun setUseEncryption(value: Boolean): Outcome<Unit, Any> {
+        val outcome = preferencesService.setUseEncryption(value)
+        return outcome.runOnOk { update { state -> state.copy(useEncryption = value) } }
     }
 
     suspend fun addContact(contact: Contact): Outcome<Unit, Any> {

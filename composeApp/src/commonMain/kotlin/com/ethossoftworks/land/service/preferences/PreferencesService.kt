@@ -13,6 +13,7 @@ import kotlinx.serialization.json.Json
 private const val SAVE_FOLDER_KEY = "saveFolder"
 private const val DISPLAY_NAME_KEY = "displayName"
 private const val CONTACTS_KEY = "contacts"
+private const val USE_ENCRYPTION_KEY = "useEncryption"
 private const val TRANSFER_REQUEST_PERMISSION_KEY = "transferRequestPermission"
 private const val DEVICE_VISIBILITY_KEY = "deviceVisibility"
 private val json = Json { ignoreUnknownKeys = true }
@@ -103,6 +104,23 @@ class PreferencesService(storage: IKMPStorage): IPreferencesService {
     override suspend fun setVisibility(visibility: DeviceVisibility): Outcome<Unit, Any> {
         return try {
             preferences.putInt(DEVICE_VISIBILITY_KEY, visibility.toId())
+        } catch (e: Exception) {
+            Outcome.Error(e)
+        }
+    }
+
+    override suspend fun getUseEncryption(): Outcome<Boolean, Any> {
+        return try {
+            val value = preferences.getBoolean(USE_ENCRYPTION_KEY) ?: false
+            Outcome.Ok(value)
+        } catch (e: Exception) {
+            Outcome.Error(e)
+        }
+    }
+
+    override suspend fun setUseEncryption(value: Boolean): Outcome<Unit, Any> {
+        return try {
+            preferences.putBoolean(USE_ENCRYPTION_KEY, value)
         } catch (e: Exception) {
             Outcome.Error(e)
         }

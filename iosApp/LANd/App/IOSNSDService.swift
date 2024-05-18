@@ -281,8 +281,6 @@ private func txtRecordFromProps(props: Dictionary<String, Any>) -> Data {
     return data
 }
 
-var resolvingEndpoints: Array<NWEndpoint> = []
-
 private func resolveServiceIPAndPort(
     service: NWBrowser.Result
 ) async throws -> (host: String, port: UInt16)? {

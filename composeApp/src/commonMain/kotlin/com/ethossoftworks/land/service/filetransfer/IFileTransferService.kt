@@ -19,6 +19,15 @@ enum class Command {
     companion object
 }
 
+enum class EncryptionMethod(val value: Byte) {
+    Dh2048_AesCtr256(0x00), // Diffie-Hellman 2048-bit key exchange, AES-CTR 256-bit encryption
+    Unknown(0xFF.toByte());
+
+    companion object {
+        fun fromByte(value: Byte): EncryptionMethod = entries.find { it.value == value } ?: Unknown
+    }
+}
+
 interface IFileTransferServer {
     suspend fun startServer(): Flow<FileTransferServerEvent>
     suspend fun respondToTransferRequest(
@@ -87,6 +96,7 @@ sealed class FileTransferStopReason {
     data object UnableToOpenFile: FileTransferStopReason()
     data object SocketClosed: FileTransferStopReason()
     data object UnknownProtocol: FileTransferStopReason()
+    data object UnknownEncryptionMethod: FileTransferStopReason()
     data class UserCancelled(
         val command: Command,
         val cancelledByLocalUser: Boolean = false,
