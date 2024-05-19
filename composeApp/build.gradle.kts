@@ -119,7 +119,12 @@ compose.desktop {
         mainClass = "MainKt"
 
         nativeDistributions {
-            targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.Deb)
+            val osName = System.getProperty("os.name").lowercase()
+            when {
+                osName.contains("mac") -> targetFormats(TargetFormat.Dmg) // Fixes an issue where app won't run on MacOS
+                else -> targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.AppImage)
+            }
+
             packageName = "LANd"
             vendor = "Ethos Softworks"
             packageVersion = version.toString()
