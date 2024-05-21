@@ -9,6 +9,8 @@ import com.ethossoftworks.land.service.discovery.NSDService
 import com.ethossoftworks.land.service.discovery.NSDServiceError
 import com.ethossoftworks.land.service.discovery.NSDServiceEvent
 import com.ethossoftworks.land.service.filetransfer.FILE_TRANSFER_PORT
+import com.outsidesource.oskitcompose.systemui.IKMPAppLifecycleObserver
+import com.outsidesource.oskitcompose.systemui.KMPAppLifecycle
 import com.outsidesource.oskitkmp.interactor.Interactor
 import com.outsidesource.oskitkmp.lib.Platform
 import com.outsidesource.oskitkmp.lib.current
@@ -17,6 +19,7 @@ import kotlinx.atomicfu.atomic
 import kotlinx.atomicfu.update
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 
@@ -36,6 +39,7 @@ private const val DISCOVERY_PROP_PORT_KEY = "port"
 
 class DiscoveryInteractor(
     private val discoveryService: INSDService,
+    private val appLifecycleObserver: IKMPAppLifecycleObserver,
 ): Interactor<DiscoveryState>(
     initialState = DiscoveryState(),
 ) {
@@ -51,11 +55,27 @@ class DiscoveryInteractor(
     private fun startLocalIpRefresh() {
         interactorScope.launch {
             while (isActive) {
-                val ip = getLocalIpAddress()
-                update { state -> state.copy(broadcastIp = ip) }
+                updateLocalIpAddress()
                 delay(30_000)
             }
         }
+
+        interactorScope.launch {
+            appLifecycleObserver.lifecycle.drop(1).collect {
+                when (it) {
+                    KMPAppLifecycle.Active -> {
+                        delay(500)
+                        updateLocalIpAddress()
+                    }
+                    else -> {}
+                }
+            }
+        }
+    }
+
+    private suspend fun updateLocalIpAddress() {
+        val ip = getLocalIpAddress()
+        update { state -> state.copy(broadcastIp = ip) }
     }
 
     fun addManualDevice(device: Device) {

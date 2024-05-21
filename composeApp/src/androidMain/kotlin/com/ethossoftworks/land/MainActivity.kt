@@ -5,6 +5,8 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.core.view.WindowCompat
 import com.ethossoftworks.land.ui.app.App
+import com.outsidesource.oskitcompose.systemui.KMPAppLifecycleObserver
+import com.outsidesource.oskitcompose.systemui.KMPAppLifecycleObserverContext
 import com.outsidesource.oskitkmp.file.IKMPFileHandler
 import com.outsidesource.oskitkmp.file.KMPFileHandlerContext
 import org.koin.java.KoinJavaComponent.inject
@@ -23,6 +25,8 @@ class MainActivity : ComponentActivity() {
                 activity = this,
             )
         )
+
+        KMPAppLifecycleObserver.init(KMPAppLifecycleObserverContext())
 
         setContent {
             App()

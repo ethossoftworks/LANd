@@ -11,6 +11,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.ApplicationScope
 import com.ethossoftworks.land.ui.app.App
 import com.outsidesource.oskitcompose.lib.rememberInject
+import com.outsidesource.oskitcompose.systemui.KMPAppLifecycleObserver
+import com.outsidesource.oskitcompose.systemui.KMPAppLifecycleObserverContext
 import com.outsidesource.oskitcompose.systemui.KMPWindowInsetsHolder
 import com.outsidesource.oskitcompose.systemui.LocalKMPWindowInsets
 import com.outsidesource.oskitcompose.window.SizedWindow
@@ -47,6 +49,7 @@ fun ApplicationScope.DesktopApp(
 
         LaunchedEffect(Unit) {
             interactor.onViewMounted(window)
+            KMPAppLifecycleObserver.init(KMPAppLifecycleObserverContext(window))
         }
 
         if (Platform.current == Platform.MacOS) {

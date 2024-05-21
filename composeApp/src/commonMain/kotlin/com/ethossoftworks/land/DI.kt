@@ -10,6 +10,7 @@ import com.ethossoftworks.land.service.filetransfer.IFileTransferService
 import com.ethossoftworks.land.service.preferences.IPreferencesService
 import com.ethossoftworks.land.service.preferences.PreferencesService
 import com.ethossoftworks.land.ui.home.*
+import com.outsidesource.oskitcompose.systemui.KMPAppLifecycleObserver
 import com.outsidesource.oskitkmp.file.IKMPFileHandler
 import com.outsidesource.oskitkmp.file.KMPFileHandler
 import org.koin.core.KoinApplication
@@ -36,7 +37,7 @@ fun initDI(
 fun commonModule() = module {
     single { AppCoordinator() }
 
-    single { DiscoveryInteractor(get()) }
+    single { DiscoveryInteractor(get(), KMPAppLifecycleObserver) }
     single { AppPreferencesInteractor(get(), get()) }
     single {
         val discoveryInteractor: DiscoveryInteractor = get()
