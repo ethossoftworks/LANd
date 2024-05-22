@@ -32,23 +32,39 @@ I created LANd because existing file transfer apps often have one or more of the
 ### Kotlin Multiplatform
 LANd is built with Kotlin Multiplatform and JetBrains Compose.
 
-### DNS-SD
-LANd uses DNS-SD to discover other devices on the same network.
+### DNS-SD (zero-conf)
+LANd uses DNS-SD over Multicast-DNS to discover other devices on the same network.
 
 ### TCP
-LANd uses a custom TCP socket protocol to transfer files.  
+LANd uses a custom TCP socket protocol to transfer files. It has extremely low overhead and is
+designed to be as close to a raw byte-for-byte transfer as possible.
 
 ## Download/Build
+Prebuilt binaries are provided below. Alternatively, you may build the app yourself using IntelliJ IDEA (Desktop, Android), Android Studio (Desktop, Android), or Xcode (iOS).
+
+[Downloads](https://github.com/ethossoftworks/LANd/releases/latest)
+
 ### Android
-I don't have the app on the Play Store at the moment, so you will have to build it yourself via Android Studio or Intellij IDEA.
+LANd is not on the Play Store at the moment, but an APK is available for sideloading.
 
 ### iOS
-I don't want to pay $100/year to publish this app on the App Store at the moment, so you will have to build it yourself.
+LANd is not available on the App Store at the moment because I don't want to pay $100/year. You will have to build it yourself by opening `iosApp/LANd.xworkspace` in Xcode.
+Unfortunately, building apps like this only function for 7 days, so you will have to rebuild it every week. I am looking into alternative publishing methods.
 
 ### Desktop
-* MacOS
-* Linux
-* Windows
+#### MacOS
+Download the `.dmg` file. Until I set up an Apple developer account, you will need to remove the quarantine attribute from the app to run it. 
+Open Terminal and run the following command:
+```shell
+xattr -dr com.apple.quarantine /Applications/LANd.app
+```
+#### Linux
+Download the `.appimage` file. You may need to make the file executable before running it. Open Terminal and run the following command:
+```shell
+chmod +x LANd-x86_64.AppImage
+```
+#### Windows
+Download the `.msi` file and run the installer.
 
 ## Using LANd
 ### Select Download Folder
