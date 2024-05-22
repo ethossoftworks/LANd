@@ -60,18 +60,27 @@ You can choose to enable encryption for file transfers. This will encrypt the fi
 To toggle encryption click the lock icon in the top right corner of the app. 
 
 ### Visibility
-You can specify your visibility level to other devices on the network.
+You can specify your visibility level to other devices on the network. All devices must be on the same network for discovery
+and transferring of files to work.
 * Visible (default) - Other devices can see your device and send you files.
 * Hidden - Other devices cannot see your device, but you can still send files to them or receive files if your IP address is known.
 * Send Only - Other devices cannot see your device or send files to you. You are able to send files.
 
 ### Manual Connections
-### Transferring Files
-### Cancelling Transfers
+If discovery does not work for some reason, you can manually connect to a device by entering their IP address. Press
+the `+` button in the top right corner of the app to manually connect to a device.
 
-# Roadmap
-* Folder transfers
-* Allow configuration of the port used for file transfers
+### Transferring Files
+To transfer a file, click on a discovered device and select one or more files to send. On desktop, you can drag and drop files onto the device to send them.
+
+### Cancelling Transfers
+Transfers may either be stopped or deleted. Pressing the stop button will simply stop the transfer where it is. Pressing the
+trash button will stop the transfer and delete the partial file on the receiving end.
+### Mobile
+Long press on a discovered device with an active transfer and press either the stop or trash button.
+### Desktop
+Hover over a discovered device with an active transfer and press the stop or trash button
+
 
 ## Changelog
 [Changelog](CHANGELOG.md)
