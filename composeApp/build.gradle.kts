@@ -148,5 +148,9 @@ compose.desktop {
                 iconFile.set(project.file("src/desktopMain/icons/app-icon-linux.png"))
             }
         }
+
+        buildTypes.release.proguard {
+            configurationFiles.from(project.file("compose-desktop.pro"))
+        }
     }
 }

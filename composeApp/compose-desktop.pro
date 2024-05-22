@@ -1,0 +1,7 @@
+-dontwarn javax.annotation.Nullable
+-dontwarn javax.annotation.Nonnull
+-dontwarn javax.annotation.meta.TypeQualifierDefault
+-dontwarn javax.annotation.concurrent.GuardedBy
+-dontwarn javax.annotation.ParametersAreNonnullByDefault
+-dontwarn org.slf4j.**
+-keep class org.lwjgl.system.** { *; }
