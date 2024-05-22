@@ -2,7 +2,7 @@
     <img src="land-logo.svg" width="100" height="100" alt="LANd Logo">
 </div>
 
-# <div align="center">LANd<br><img src="https://img.shields.io/github/v/release/ethossoftworks/LANd"></div>
+# <div align="center">LANd<br><a href="https://github.com/ethossoftworks/LANd/releases/latest"><img src="https://img.shields.io/github/v/release/ethossoftworks/LANd"><a/></div>
 
 LANd is an open-source, cross-platform, wireless file transfer application for Android, iOS, and Desktop (MacOS, Windows, and Linux). 
 It is designed to be a simple and secure way to transfer files quickly between any device on the same network.
