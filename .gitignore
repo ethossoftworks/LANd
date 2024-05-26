@@ -45,3 +45,6 @@ bin/
 
 ### iOS ###
 **/xcuserdata/
+
+/linux-build/LANd.AppDir/usr
+/linux-build/LANd.AppDir/.DirIcon
