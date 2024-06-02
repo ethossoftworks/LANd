@@ -54,8 +54,8 @@ kotlin {
         iosTarget.binaries.framework {
             baseName = "ComposeApp"
             isStatic = true
-            export("com.outsidesource:oskit-kmp:4.6.0")
-            export("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.8.0")
+            export("com.outsidesource:oskit-kmp:${libs.versions.oskitKmp.get()}")
+            export("org.jetbrains.kotlinx:kotlinx-coroutines-core:${libs.versions.kotlinxCoroutinesCore.get()}")
         }
     }
 
