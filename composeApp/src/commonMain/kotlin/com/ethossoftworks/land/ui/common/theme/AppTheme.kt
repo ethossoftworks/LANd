@@ -72,6 +72,7 @@ fun AppTheme(
 interface AppColors {
     val screenBackground: Color
     val primary: Color
+    val onPrimary: Color
     val secondary: Color
     val tertiary: Color
     val primaryButtonBg: Color
@@ -82,6 +83,7 @@ interface AppColors {
 object AppLightTheme : AppColors {
     override val screenBackground = Color.White
     override val primary = Color(0xFF155fd4)
+    override val onPrimary = Color.White
     override val secondary = Color(0xFFCCCCCC)
     override val tertiary = Color(0xFF494C50)
     override val primaryButtonBg = primary
@@ -143,6 +145,11 @@ data class AppTypography internal constructor(
     val ipAddress: TextStyle = TextStyle(
         fontSize = 11.sp,
         color = Color.Black.copy(alpha = .5f)
+    ),
+    val screenTitle: TextStyle = TextStyle(
+        fontSize = 18.sp,
+        fontWeight = FontWeight.SemiBold,
+        lineHeight = 1.5.em,
     ),
     val heading1: TextStyle = TextStyle(
         fontSize = 22.sp,

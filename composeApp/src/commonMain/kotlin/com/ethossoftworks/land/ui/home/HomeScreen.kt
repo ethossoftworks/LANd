@@ -8,6 +8,7 @@ import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
@@ -70,6 +71,7 @@ fun HomeScreen(
 
         Column(
             modifier = Modifier
+                .background(AppTheme.colors.screenBackground)
                 .fillMaxSize()
                 .windowInsetsPadding(KMPWindowInsets.verticalInsets)
                 .padding(16.dp),
@@ -126,6 +128,7 @@ fun HomeScreen(
         AboutModal(
             isVisible = state.isAboutModalVisible,
             onDismissRequest = interactor::onAboutModalDismissed,
+            onOpenSourceLicensesClicked = interactor::onOpenSourceLicensesClicked,
         )
 
         TransferMessage()

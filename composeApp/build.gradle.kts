@@ -7,6 +7,7 @@ plugins {
     alias(libs.plugins.androidApplication)
     alias(libs.plugins.jetbrainsCompose)
     alias(libs.plugins.skie)
+    alias(libs.plugins.openSourceLicenses)
     kotlin("plugin.serialization") version(libs.versions.kotlin)
 }
 
@@ -181,4 +182,10 @@ compose.desktop {
             }
         }
     }
+}
+
+licenseReport {
+    generateJsonReport = true
+    generateHtmlReport = false
+    copyJsonReportToAssets = true
 }

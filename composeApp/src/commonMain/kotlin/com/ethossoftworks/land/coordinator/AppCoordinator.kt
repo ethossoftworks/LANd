@@ -1,8 +1,17 @@
 package com.ethossoftworks.land.coordinator
 
+import androidx.compose.animation.ExperimentalAnimationApi
 import com.ethossoftworks.land.ui.Route
+import com.outsidesource.oskitcompose.router.PushFromRightRouteTransition
 import com.outsidesource.oskitkmp.coordinator.Coordinator
 
-class AppCoordinator : Coordinator(initialRoute = com.ethossoftworks.land.ui.Route.Home) {
+@OptIn(ExperimentalAnimationApi::class)
+class AppCoordinator : Coordinator(
+    initialRoute = Route.Home,
+    defaultTransition = PushFromRightRouteTransition,
+) {
 
+    fun openSourceLicensesClicked() {
+        push(Route.OpenSourceLicenses)
+    }
 }

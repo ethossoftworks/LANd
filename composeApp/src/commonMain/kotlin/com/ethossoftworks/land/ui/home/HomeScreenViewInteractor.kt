@@ -1,5 +1,6 @@
 package com.ethossoftworks.land.ui.home
 
+import com.ethossoftworks.land.coordinator.AppCoordinator
 import com.ethossoftworks.land.entity.Device
 import com.ethossoftworks.land.interactor.discovery.DiscoveryInteractor
 import com.ethossoftworks.land.interactor.filetransfer.FileTransfer
@@ -41,6 +42,7 @@ class HomeScreenViewInteractor(
     private val discoveryInteractor: DiscoveryInteractor,
     private val fileTransferInteractor: FileTransferInteractor,
     private val fileHandler: IKMPFileHandler,
+    private val appCoordinator: AppCoordinator,
 ): Interactor<HomeViewState>(
     initialState = HomeViewState(),
     dependencies = listOf(discoveryInteractor, appPreferencesInteractor, fileTransferInteractor)
@@ -161,6 +163,11 @@ class HomeScreenViewInteractor(
 
     fun onAboutModalDismissed() {
         update { state -> state.copy(isAboutModalVisible = false) }
+    }
+
+    fun onOpenSourceLicensesClicked() {
+        onAboutModalDismissed()
+        appCoordinator.openSourceLicensesClicked()
     }
 
     fun onEncryptButtonClicked() {

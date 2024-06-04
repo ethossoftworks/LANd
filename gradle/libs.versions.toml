@@ -58,3 +58,4 @@ jetbrainsCompose = { id = "org.jetbrains.compose", version.ref = "compose-plugin
 kotlinMultiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }
 skie = { id = "co.touchlab.skie", version.ref = "skie" }
 ktlint = { id = "org.jlleitschuh.gradle.ktlint", version.ref = "ktlint" }
+openSourceLicenses = { id = "com.jaredsburrows.license", version = "0.9.7" }

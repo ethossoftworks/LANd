@@ -3,13 +3,17 @@ package com.ethossoftworks.land
 import com.ethossoftworks.land.coordinator.AppCoordinator
 import com.ethossoftworks.land.interactor.discovery.DiscoveryInteractor
 import com.ethossoftworks.land.interactor.filetransfer.FileTransferInteractor
+import com.ethossoftworks.land.interactor.openSourceLicenses.OpenSourceLicensesInteractor
 import com.ethossoftworks.land.interactor.preferences.AppPreferencesInteractor
 import com.ethossoftworks.land.service.discovery.INSDService
 import com.ethossoftworks.land.service.filetransfer.FileTransferService
 import com.ethossoftworks.land.service.filetransfer.IFileTransferService
+import com.ethossoftworks.land.service.openSourceLicenses.IOpenSourceLicensesService
+import com.ethossoftworks.land.service.openSourceLicenses.OpenSourceLicensesService
 import com.ethossoftworks.land.service.preferences.IPreferencesService
 import com.ethossoftworks.land.service.preferences.PreferencesService
 import com.ethossoftworks.land.ui.home.*
+import com.ethossoftworks.land.ui.openSourceLicenses.OpenSourceLicensesViewInteractor
 import com.outsidesource.oskitcompose.systemui.KMPAppLifecycleObserver
 import com.outsidesource.oskitkmp.file.IKMPFileHandler
 import com.outsidesource.oskitkmp.file.KMPFileHandler
@@ -39,6 +43,7 @@ fun commonModule() = module {
 
     single { DiscoveryInteractor(get(), KMPAppLifecycleObserver) }
     single { AppPreferencesInteractor(get(), get()) }
+    single { OpenSourceLicensesInteractor(get()) }
     single {
         val discoveryInteractor: DiscoveryInteractor = get()
 
@@ -59,10 +64,12 @@ fun commonModule() = module {
         )
     } bind IFileTransferService::class
     single { PreferencesService(get()) } bind IPreferencesService::class
+    single { OpenSourceLicensesService() } bind IOpenSourceLicensesService::class
 
-    factory { HomeScreenViewInteractor(get(), get(), get(), get()) }
+    factory { HomeScreenViewInteractor(get(), get(), get(), get(), get()) }
     factory { SettingsBottomSheetViewInteractor(get(), get(), get(), get()) }
     factory { params -> DiscoveredDeviceViewInteractor(params[0], get(), get(), get()) }
     factory { params -> AddDeviceModalViewInteractor(get(), get(), params[0]) }
     factory { TransferMessageViewInteractor(get()) }
+    factory { OpenSourceLicensesViewInteractor(get(), get()) }
 }
