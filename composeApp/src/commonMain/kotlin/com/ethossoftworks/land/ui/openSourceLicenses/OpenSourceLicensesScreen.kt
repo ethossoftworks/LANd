@@ -6,7 +6,6 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.Divider
 import androidx.compose.material.Icon
@@ -51,17 +50,16 @@ fun OpenSourceLicensesScreen(
     Column(
         modifier = Modifier
             .background(AppTheme.colors.screenBackground)
-            .fillMaxSize()
-            .windowInsetsPadding(KMPWindowInsets.allInsets.exclude(KMPWindowInsets.topInsets))
+            .fillMaxSize(),
     ) {
-        Row(
+        Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .outerShadow(blur = 8.dp, color = Color.Black.copy(alpha = .5f))
                 .background(AppTheme.colors.primary)
                 .padding(horizontal = 8.dp)
                 .windowInsetsPadding(KMPWindowInsets.topInsets),
-            verticalAlignment = Alignment.CenterVertically,
+            contentAlignment = Alignment.CenterStart,
         ) {
             IconButton(
                 onClick = interactor::onBackClicked,
@@ -73,6 +71,7 @@ fun OpenSourceLicensesScreen(
                 )
             }
             Text(
+                modifier = Modifier.align(Alignment.Center),
                 text = "Open Source Licenses",
                 style = AppTheme.typography.screenTitle,
                 color = AppTheme.colors.onPrimary,
@@ -81,9 +80,12 @@ fun OpenSourceLicensesScreen(
         Box {
             LazyColumn(
                 modifier = Modifier
-                    .padding(vertical = 16.dp)
                     .fillMaxSize(),
                 state = scrollState,
+                contentPadding = PaddingValues(
+                    top = 8.dp,
+                    bottom = KMPWindowInsets.bottomInsets.asPaddingValues().calculateBottomPadding()
+                ),
             ) {
                 items(state.dependencies) { dependency ->
                     OpenSourceDependencyItem(dependency)

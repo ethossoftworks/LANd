@@ -147,7 +147,7 @@ data class AppTypography internal constructor(
         color = Color.Black.copy(alpha = .5f)
     ),
     val screenTitle: TextStyle = TextStyle(
-        fontSize = 18.sp,
+        fontSize = 17.sp,
         fontWeight = FontWeight.SemiBold,
         lineHeight = 1.5.em,
     ),
