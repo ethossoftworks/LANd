@@ -74,6 +74,11 @@ Download the `.appimage` file. You may need to make the file executable before r
 ```shell
 chmod +x LANd-x86_64.AppImage
 ```
+On some systems (Raspberry Pi OS bookworm) you may need to set the following environment variable before running the application:
+```shell
+export SKIKO_RENDER_API=SOFTWARE
+```
+There is an app for managing app images called [appimagelauncher](https://github.com/TheAssassin/AppImageLauncher) that may assist using app images.
 
 #### Windows
 Download the `.msi` file and run the installer.
