@@ -190,15 +190,12 @@ class FileTransferService(
                 Outcome.Ok(Unit)
             }.unwrapOrReturn { return@asyncOutcome this }
 
-            if (transferContext.useEncryption) {
-                withTimeout(30_000) { // 30 seconds because sometimes calculating the shared key can be slow on low-end devices
+            val timeout = if (transferContext.useEncryption) 30_000L else 1_000L // 30 seconds because sometimes calculating the shared key can be slow on low-end devices
+            val header = withTimeout(timeout) {
+                if (transferContext.useEncryption) {
                     receiverHandleEncryptionHandshake(transferContext).unwrapOrReturn { return@withTimeout this }
-                    Outcome.Ok(Unit)
-                }.unwrapOrReturn { return@asyncOutcome this }
-            }
-
-            val header = withTimeout(1_000) {
-                Outcome.Ok(receiverReadHeader(transferContext)) as Outcome<FileTransferRequestHeader, FileTransferStopReason>
+                }
+                Outcome.Ok(receiverReadHeader(transferContext))
             }.unwrapOrReturn { return@asyncOutcome this }
 
             if (header.command == FileTransferCommand.Connect) {
@@ -511,13 +508,12 @@ class FileTransferService(
                 senderHandleFlags(transferContext)
             }
 
-            if (transferContext.useEncryption) {
-                withTimeout(30_000) { // 30 seconds because sometimes calculating the shared key can be slow on low-end devices
+            withTimeout(if (transferContext.useEncryption) 30_000 else 1_000) { // 30 seconds because sometimes calculating the shared key can be slow on low-end devices
+                if (transferContext.useEncryption) {
                     senderHandleEncryptionHandshake(transferContext)
                 }
+                senderSendHeader(transferContext, file)
             }
-
-            senderSendHeader(transferContext, file)
 
             val existingFileLength = senderAwaitResponse(transferContext).unwrapOrReturn { return@sendJob this }
 
