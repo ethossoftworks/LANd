@@ -1,28 +1,29 @@
-group = "com.ethossoftworks"
-version = "1.0-SNAPSHOT"
+plugins {
+    // this is necessary to avoid the plugins to be loaded multiple times
+    // in each subproject's classloader
+    alias(libs.plugins.androidApplication) apply false
+    alias(libs.plugins.androidLibrary) apply false
+    alias(libs.plugins.jetbrainsCompose) apply false
+    alias(libs.plugins.kotlinMultiplatform) apply false
+    kotlin("plugin.serialization") version(libs.versions.kotlin) apply false
+}
 
-allprojects {
-    repositories {
-        mavenLocal()
-        google()
-        mavenCentral()
-        maven("https://maven.pkg.jetbrains.space/public/p/compose/dev")
-        maven {
-            url = uri("https://maven.pkg.github.com/outsidesource/OSKit-KMP")
-            credentials {
-                val credentialProperties = java.util.Properties()
-                File(rootDir, "credential.properties").reader().use { stream -> credentialProperties.load(stream) }
-                username = credentialProperties["username"].toString()
-                password = credentialProperties["password"].toString()
+// To get compose compiler metrics run: ./gradlew :desktop:run -PcomposeCompilerReports=true
+subprojects {
+    tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach {
+        kotlinOptions {
+            if (project.findProperty("composeCompilerReports") == "true") {
+                freeCompilerArgs += listOf(
+                    "-P",
+                    "plugin:androidx.compose.compiler.plugins.kotlin:reportsDestination=${project.buildDir.absolutePath}/compose_compiler"
+                )
+            }
+            if (project.findProperty("composeCompilerMetrics") == "true") {
+                freeCompilerArgs += listOf(
+                    "-P",
+                    "plugin:androidx.compose.compiler.plugins.kotlin:metricsDestination=${project.buildDir.absolutePath}/compose_compiler"
+                )
             }
         }
     }
-}
-
-plugins {
-    kotlin("multiplatform") apply false
-    kotlin("android") apply false
-    id("com.android.application") apply false
-    id("com.android.library") apply false
-    id("org.jetbrains.compose") apply false
 }

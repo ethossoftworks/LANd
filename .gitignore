@@ -42,3 +42,9 @@ bin/
 
 ### Mac OS ###
 .DS_Store
+
+### iOS ###
+**/xcuserdata/
+
+/linux-build/LANd.AppDir/usr
+/linux-build/LANd.AppDir/.DirIcon
