@@ -183,16 +183,22 @@ class FileTransferService(
                 socket.close()
             }
 
-            val header = withTimeout(3_000) {
+            withTimeout(1_000) {
                 receiverReadProtocolVersion(transferContext).unwrapOrReturn { return@withTimeout this }
                 receiverHandleAuthChallenge(transferContext).unwrapOrReturn { return@withTimeout this }
                 receiverHandleFlags(transferContext).unwrapOrReturn { return@withTimeout this }
+                Outcome.Ok(Unit)
+            }.unwrapOrReturn { return@asyncOutcome this }
 
-                if (transferContext.useEncryption) {
+            if (transferContext.useEncryption) {
+                withTimeout(30_000) { // 30 seconds because sometimes calculating the shared key can be slow on low-end devices
                     receiverHandleEncryptionHandshake(transferContext).unwrapOrReturn { return@withTimeout this }
-                }
+                    Outcome.Ok(Unit)
+                }.unwrapOrReturn { return@asyncOutcome this }
+            }
 
-                Outcome.Ok(receiverReadHeader(transferContext))
+            val header = withTimeout(1_000) {
+                Outcome.Ok(receiverReadHeader(transferContext)) as Outcome<FileTransferRequestHeader, FileTransferStopReason>
             }.unwrapOrReturn { return@asyncOutcome this }
 
             if (header.command == FileTransferCommand.Connect) {
@@ -499,13 +505,19 @@ class FileTransferService(
                 socket.close()
             }
 
-            withTimeout(3_000) {
+            withTimeout(1_000) {
                 senderSendProtocol(transferContext)
                 senderHandleAuth(transferContext)
-                senderSendFlags(transferContext)
-                if (transferContext.useEncryption) senderHandleEncryptionHandshake(transferContext)
-                senderSendHeader(transferContext, file)
+                senderHandleFlags(transferContext)
             }
+
+            if (transferContext.useEncryption) {
+                withTimeout(30_000) { // 30 seconds because sometimes calculating the shared key can be slow on low-end devices
+                    senderHandleEncryptionHandshake(transferContext)
+                }
+            }
+
+            senderSendHeader(transferContext, file)
 
             val existingFileLength = senderAwaitResponse(transferContext).unwrapOrReturn { return@sendJob this }
 
@@ -573,7 +585,7 @@ class FileTransferService(
         ctx.socketWriteChannel.flush()
     }
 
-    private suspend fun senderSendFlags(ctx: TransferContext<FileTransferClientEvent>) {
+    private suspend fun senderHandleFlags(ctx: TransferContext<FileTransferClientEvent>) {
         val senderFlags = TransferFlags(useEncryption = getUseEncryption())
         ctx.socketWriteChannel.writeByte(TransferFlags.toBytes(senderFlags))
         ctx.socketWriteChannel.flush()
